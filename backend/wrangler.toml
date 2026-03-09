@@ -7,7 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "team8"
-database_id = "23e95bf0-5d3b-4bdc-9f14-7bd4685e658e"
+database_id = "aa32b4b3-cba6-4cb2-8628-2d06454dec62"
 migrations_dir = "drizzle"
 
 [vars]
