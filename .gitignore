@@ -1,11 +1,7 @@
 # Dependencies
 node_modules/
-<<<<<<< Updated upstream
-=======
 .pnp
 .pnp.js
->>>>>>> Stashed changes
-
 # Build
 dist/
 .next/
@@ -22,10 +18,7 @@ build/
 
 # Cloudflare
 .wrangler/
-<<<<<<< Updated upstream
-=======
 .mf/
->>>>>>> Stashed changes
 
 # IDE
 .vscode/
@@ -45,14 +38,12 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 
-# Drizzle
-drizzle/meta/
+# Drizzle (keep migration SQL files, ignore snapshot metadata)
+drizzle/meta/_journal.json
+drizzle/meta/*_snapshot.json
 
 # Testing
 coverage/
-<<<<<<< Updated upstream
 
 # Generated (regenerated via codegen)
 src/graphql/generated/
-=======
->>>>>>> Stashed changes
