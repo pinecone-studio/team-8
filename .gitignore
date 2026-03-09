@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+<<<<<<< Updated upstream
+=======
+.pnp
+.pnp.js
+>>>>>>> Stashed changes
+
+# Build
+dist/
+.next/
+out/
+build/
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.dev.vars
+
+# Cloudflare
+.wrangler/
+<<<<<<< Updated upstream
+=======
+.mf/
+>>>>>>> Stashed changes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Drizzle
+drizzle/meta/
+
+# Testing
+coverage/
+<<<<<<< Updated upstream
+
+# Generated (regenerated via codegen)
+src/graphql/generated/
+=======
+>>>>>>> Stashed changes

@@ -1,0 +1,35 @@
+{
+  "name": "backend",
+  "private": true,
+  "scripts": {
+    "dev": "npm run codegen && wrangler dev",
+    "build": "wrangler deploy --dry-run --outdir=dist",
+    "deploy": "wrangler deploy",
+    "lint": "eslint 'src/**/*.{ts,tsx}'",
+    "codegen": "graphql-codegen --config codegen.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply team8 --local",
+    "db:migrate:remote": "wrangler d1 migrations apply team8 --remote",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@apollo/server": "^4.11.3",
+    "@as-integrations/cloudflare-workers": "^1.1.1",
+    "drizzle-orm": "^0.38.4",
+    "graphql": "^16.10.0",
+    "graphql-tag": "^2.12.6",
+    "nanoid": "^5.1.6"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250214.0",
+    "@graphql-codegen/cli": "^5.0.6",
+    "@graphql-codegen/typescript": "^4.1.5",
+    "@graphql-codegen/typescript-resolvers": "^4.4.4",
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.24.1",
+    "drizzle-kit": "^0.30.4",
+    "eslint": "^8.57.1",
+    "typescript": "^5.7.3",
+    "wrangler": "^3.114.17"
+  }
+}
