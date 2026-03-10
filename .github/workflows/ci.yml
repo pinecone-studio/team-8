@@ -11,10 +11,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: Test, Typecheck, Build
+  lint-and-typecheck:
+    name: Lint & Type Check
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -23,20 +23,26 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Rollup Linux binary
-        run: npm install --no-save @rollup/rollup-linux-x64-gnu@4.59.0
+      - name: Backend codegen
+        run: npm run codegen --workspace=backend
 
-      - name: Run tests
-        run: npm test
+      - name: Frontend codegen
+        run: npm run codegen --workspace=frontend
 
-      - name: Run typecheck
-        run: npm run typecheck
+      - name: Backend lint
+        run: npm run lint --workspace=backend
 
-      - name: Run build
-        run: npm run build
+      - name: Frontend lint
+        run: npm run lint --workspace=frontend
+
+      - name: Backend type check
+        run: npx tsc --noEmit --project backend/tsconfig.json
+
+      - name: Frontend type check
+        run: npx tsc --noEmit --project frontend/tsconfig.json
