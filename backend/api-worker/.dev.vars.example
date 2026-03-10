@@ -1,0 +1,7 @@
+AUTH_JWT_SECRET=replace-with-a-local-secret
+R2_ACCOUNT_ID=replace-with-cloudflare-account-id
+R2_ACCESS_KEY_ID=replace-with-r2-access-key-id
+R2_SECRET_ACCESS_KEY=replace-with-r2-secret-access-key
+R2_BUCKET_NAME=ebms-migration-source
+NOTIFICATION_WEBHOOK_URL=https://example.com/ebms-notifications
+NOTIFICATION_WEBHOOK_SECRET=replace-with-webhook-secret

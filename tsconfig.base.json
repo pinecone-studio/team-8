@@ -1,16 +1,21 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "target": "ES2022",
     "module": "ESNext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "Bundler",
     "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true,
     "resolveJsonModule": true,
-    "isolatedModules": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "lib": ["ES2022", "DOM"],
+    "paths": {
+      "@ebms/config": ["backend/packages/config/src/index.ts"],
+      "@ebms/db": ["backend/packages/db/src/index.ts"],
+      "@ebms/eligibility": ["backend/packages/eligibility/src/index.ts"]
+    }
   }
 }

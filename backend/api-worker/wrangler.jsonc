@@ -1,0 +1,24 @@
+{
+  "name": "ebms-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-03-09",
+  "kv_namespaces": [
+    {
+      "binding": "ELIGIBILITY_CACHE",
+      "id": "924b04fef0dc45e989f3b1fabf94b50a"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ebms-dev",
+      "database_id": "d8d5db63-f82c-4f7b-8774-437b2b4bf72e"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "CONTRACTS_BUCKET",
+      "bucket_name": "ebms-migration-source"
+    }
+  ]
+}

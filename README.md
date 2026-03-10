@@ -1,238 +1,57 @@
-# Team 8
+# EBMS
 
-Monorepo with a **Next.js 14** frontend and an **Apollo GraphQL** backend running on **Cloudflare Workers** with **D1** (SQLite) and **Drizzle ORM**.
+Backend and frontend foundation for the Employee Benefits Management System (EBMS), aligned to the hackathon TDD and reorganized into teacher-style `frontend/` and `backend/` roots.
 
-## Tech Stack
+## What is already scaffolded
 
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js 14, React 18, Apollo Client, TypeScript |
-| API | Apollo GraphQL Server, Cloudflare Workers |
-| Database | Cloudflare D1 (SQLite) |
-| ORM | Drizzle ORM |
-| Codegen | GraphQL Code Generator |
-| Linting | ESLint, TypeScript strict mode |
-| CI/CD | GitHub Actions |
+- Separated `frontend/` and `backend/` roots for clearer ownership
+- D1-compatible SQL schema and Drizzle table definitions
+- Baseline benefit catalog and eligibility rule seed config from the TDD
+- Eligibility engine core for deterministic rule evaluation
+- Audit log and persistence bundle helpers for eligibility recomputation
+- Auth.js-compatible JWT guard for Worker routes
+- Hono + GraphQL Yoga endpoint with protected employee and HR resolvers
+- Contract upload/versioning and R2 signed download flow
+- Notification event outbox plus protected dispatch route
+- OKR and attendance sync ingestion routes with recompute wiring
+- Employee web app with Auth.js session bridge and live GraphQL dashboard
+- HR admin app with Auth.js session bridge and live GraphQL dashboard
+- Wrangler bindings template for D1, KV, and R2
+- Remote D1 demo dataset with employees, eligibility, contracts, requests, notifications, and sync history
 
-## Prerequisites
+## Workspace layout
 
-- **Node.js** >= 20
-- **npm** >= 10
-- A [Cloudflare account](https://dash.cloudflare.com/sign-up) (for backend deployment)
+- `backend/api-worker`: Cloudflare Worker API scaffold
+- `backend/packages/config`: benefit catalog and rule seed data
+- `backend/packages/db`: D1 schema, Drizzle config, SQL migration
+- `backend/packages/eligibility`: pure TypeScript rule evaluator
+- `frontend/employee-web`: Next.js/Auth.js employee portal scaffold
+- `frontend/hr-admin`: Next.js/Auth.js admin portal scaffold
 
-## Getting Started
+## Immediate next steps
 
-### 1. Clone and install
+1. Install dependencies with `npm install`.
+2. Create the local D1 database and apply the D1 migrations.
+3. Bootstrap the local or remote D1 database and seed catalog plus demo operational data.
+4. Copy `frontend/employee-web/.env.local.example` and `frontend/hr-admin/.env.local.example` when setting up fresh local envs.
+5. Start the Worker and frontend apps locally.
+6. Configure an optional notification webhook destination.
+7. Move from local-only verification to staging Cloudflare envs when ready.
 
-```bash
-git clone https://github.com/pinecone-studio/team-8.git
-cd team-8
-npm install
-```
+## Deploy notes
 
-### 2. Set up the local database
+- Cloudflare deployment and shared-session single-login notes live in [CLOUDFLARE_DEPLOY.md](/Users/bumbayarariunbat/Desktop/EBMS/team-8/docs/CLOUDFLARE_DEPLOY.md)
 
-```bash
-# Generate migration SQL from Drizzle schema
-npm run db:generate --workspace=backend
+## Security model
 
-# Apply migration to the local D1 database
-npm run db:migrate:local --workspace=backend
-```
+- `employees` table нь profile, department, role, eligibility-related data хадгална. Password энд хадгалахгүй.
+- Login credential нь тусдаа `access_credentials` table дээр хадгалагдана.
+- Password нь `password_hash`, `password_salt`, `password_iterations`, `password_algorithm` хэлбэрээр PBKDF2-SHA256 hash-аар хадгалагдана.
+- Frontend password эсвэл hash-ийг preview байдлаар авахгүй. Login зөвхөн Worker-ийн `/auth/login` endpoint-оор дамжина.
 
-### 3. Start development servers
+## Suggested execution order while design is in progress
 
-```bash
-# Start both backend and frontend
-npm run dev
-
-# Or start them individually
-npm run dev:backend    # GraphQL API at http://localhost:8787
-npm run dev:frontend   # Next.js app at http://localhost:3000
-```
-
-## Project Structure
-
-```
-team-8/
-├── backend/
-│   ├── src/
-│   │   ├── index.ts                          # Worker entry point
-│   │   ├── db/
-│   │   │   ├── schema.ts                     # Drizzle table definitions
-│   │   │   └── index.ts                      # DB client factory
-│   │   └── graphql/
-│   │       ├── context.ts                    # GraphQLContext type
-│   │       ├── index.ts                      # Re-exports
-│   │       ├── generated/graphql.ts          # Auto-generated resolver types
-│   │       ├── schemas/
-│   │       │   ├── index.ts                  # Merges all schemas
-│   │       │   └── employee.ts               # Employee types, inputs, queries, mutations
-│   │       └── resolvers/
-│   │           ├── queries/
-│   │           │   ├── getEmployees.ts
-│   │           │   └── getEmployee.ts
-│   │           └── mutations/
-│   │               ├── createEmployee.ts
-│   │               ├── updateEmployee.ts
-│   │               └── deleteEmployee.ts
-│   ├── drizzle/                              # Migration SQL files (committed to git)
-│   ├── wrangler.toml                         # Cloudflare Worker config
-│   ├── codegen.ts                            # Backend codegen config
-│   └── drizzle.config.ts                     # Drizzle config
-├── frontend/
-│   ├── src/
-│   │   ├── app/                              # Next.js App Router pages
-│   │   ├── lib/
-│   │   │   ├── apollo-client.ts              # Apollo Client instance
-│   │   │   └── apollo-provider.tsx           # ApolloProvider wrapper
-│   │   └── graphql/
-│   │       ├── queries/employee.graphql       # Query operations
-│   │       ├── mutations/employee.graphql     # Mutation operations
-│   │       └── generated/graphql.ts           # Auto-generated hooks & types
-│   ├── codegen.ts                             # Frontend codegen config
-│   └── next.config.js
-├── .github/workflows/
-│   ├── ci.yml                                # Lint + type check on PRs
-│   └── cd.yml                                # Deploy on push to main
-├── package.json                              # Root workspace config
-└── tsconfig.base.json                        # Shared TypeScript config
-```
-
-## Common Tasks
-
-### Adding a new database table
-
-1. Add the table definition in `backend/src/db/schema.ts`
-2. Generate the migration:
-   ```bash
-   npm run db:generate --workspace=backend
-   ```
-3. Apply it locally:
-   ```bash
-   npm run db:migrate:local --workspace=backend
-   ```
-
-### Adding a new GraphQL entity
-
-1. **Schema** — Create `backend/src/graphql/schemas/myEntity.ts` with types, inputs, queries, and mutations using `extend type Query` / `extend type Mutation`
-2. **Register schema** — Import and add it to the array in `backend/src/graphql/schemas/index.ts`
-3. **Query resolvers** — Create files in `backend/src/graphql/resolvers/queries/` and register in the `queries/index.ts`
-4. **Mutation resolvers** — Create files in `backend/src/graphql/resolvers/mutations/` and register in the `mutations/index.ts`
-5. **Run codegen** to generate resolver types:
-   ```bash
-   npm run codegen --workspace=backend
-   ```
-6. **Frontend operations** — Add `.graphql` files in `frontend/src/graphql/queries/` and `frontend/src/graphql/mutations/`
-7. **Run frontend codegen** to generate hooks:
-   ```bash
-   npm run codegen --workspace=frontend
-   ```
-
-### Using generated hooks in frontend
-
-```tsx
-"use client";
-
-import { useGetEmployeesQuery, useCreateEmployeeMutation } from "@/graphql/generated/graphql";
-
-export default function Page() {
-  const { data, loading } = useGetEmployeesQuery();
-  const [createEmployee] = useCreateEmployeeMutation();
-
-  const handleCreate = () => {
-    createEmployee({
-      variables: {
-        input: {
-          email: "user@company.com",
-          name: "User",
-          role: "engineer",
-          department: "Engineering",
-          hireDate: "2024-01-15",
-        },
-      },
-    });
-  };
-
-  // ...
-}
-```
-
-### Writing a resolver
-
-Resolvers use generated types from codegen for full type safety:
-
-```typescript
-import { MutationResolvers } from "../../generated/graphql";
-import { schema } from "../../../db";
-
-export const createSomething: MutationResolvers["createSomething"] = async (_, { input }, { db }) => {
-  const results = await db.insert(schema.somethings).values(input).returning();
-  return results[0];
-};
-```
-
-## Available Scripts
-
-### Root
-
-| Command | Description |
-|---|---|
-| `npm run dev` | Start backend + frontend concurrently |
-| `npm run dev:backend` | Start backend only |
-| `npm run dev:frontend` | Start frontend only |
-| `npm run lint` | Lint all workspaces |
-
-### Backend (`--workspace=backend`)
-
-| Command | Description |
-|---|---|
-| `npm run dev` | Run codegen + start wrangler dev server |
-| `npm run codegen` | Generate GraphQL resolver types |
-| `npm run deploy` | Deploy worker to Cloudflare |
-| `npm run db:generate` | Generate Drizzle migration from schema changes |
-| `npm run db:migrate:local` | Apply migrations to local D1 |
-| `npm run db:migrate:remote` | Apply migrations to remote D1 |
-| `npm run lint` | Run ESLint |
-
-### Frontend (`--workspace=frontend`)
-
-| Command | Description |
-|---|---|
-| `npm run dev` | Start Next.js dev server |
-| `npm run build` | Run codegen + build for production |
-| `npm run codegen` | Generate GraphQL hooks and types |
-| `npm run codegen:watch` | Watch mode — regenerate on `.graphql` file changes |
-| `npm run lint` | Run ESLint |
-
-## Environment Variables
-
-### Frontend
-
-Create `frontend/.env.local`:
-
-```env
-NEXT_PUBLIC_GRAPHQL_URL=http://localhost:8787
-```
-
-## Deployment
-
-### Backend (Cloudflare Workers)
-
-Handled automatically by CD pipeline on push to `main`. For manual deploy:
-
-```bash
-cd backend
-npx wrangler login          # One-time: login with Cloudflare account
-npx wrangler d1 migrations apply team8 --remote
-npx wrangler deploy
-```
-
-### CI/CD Secrets
-
-Add these in GitHub repo settings (`Settings > Secrets and variables > Actions`):
-
-| Secret | Description |
-|---|---|
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API token with Workers edit permissions |
-| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID |
+1. Keep backend core logic under `backend/`.
+2. Keep employee and admin UIs under `frontend/`.
+3. Extend GraphQL queries and mutations from the existing Worker API.
+4. Let designers shape the final UI on top of the current authenticated shells.

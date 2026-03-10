@@ -1,0 +1,33 @@
+{
+  "name": "@ebms/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "mkdir -p ../../.wrangler/logs && WRANGLER_LOG_PATH=../../.wrangler/logs wrangler d1 execute DB --local --config ../../api-worker/wrangler.jsonc --file ./migrations/0000_initial.sql && WRANGLER_LOG_PATH=../../.wrangler/logs wrangler d1 execute DB --local --config ../../api-worker/wrangler.jsonc --file ./migrations/0003_notification_events.sql && WRANGLER_LOG_PATH=../../.wrangler/logs wrangler d1 execute DB --local --config ../../api-worker/wrangler.jsonc --file ./migrations/0004_sync_runs.sql && WRANGLER_LOG_PATH=../../.wrangler/logs wrangler d1 execute DB --local --config ../../api-worker/wrangler.jsonc --file ./migrations/0008_relax_sync_runs_actor_fk.sql && WRANGLER_LOG_PATH=../../.wrangler/logs wrangler d1 execute DB --local --config ../../api-worker/wrangler.jsonc --file ./migrations/0009_access_credentials.sql",
+    "db:migrate:remote": "wrangler d1 execute DB --remote --config ../../api-worker/wrangler.jsonc --file ./migrations/0000_initial.sql && wrangler d1 execute DB --remote --config ../../api-worker/wrangler.jsonc --file ./migrations/0003_notification_events.sql && wrangler d1 execute DB --remote --config ../../api-worker/wrangler.jsonc --file ./migrations/0004_sync_runs.sql && wrangler d1 execute DB --remote --config ../../api-worker/wrangler.jsonc --file ./migrations/0008_relax_sync_runs_actor_fk.sql && wrangler d1 execute DB --remote --config ../../api-worker/wrangler.jsonc --file ./migrations/0009_access_credentials.sql",
+    "db:seed:generate": "npm run build --workspace @ebms/config && node --experimental-strip-types ./scripts/generate-seed-sql.ts > ./migrations/0001_seed_catalog.sql",
+    "db:seed:local": "npm run db:seed:generate && mkdir -p ../../.wrangler/logs && WRANGLER_LOG_PATH=../../.wrangler/logs wrangler d1 execute DB --local --config ../../api-worker/wrangler.jsonc --file ./migrations/0001_seed_catalog.sql",
+    "db:seed:remote": "npm run db:seed:generate && node --experimental-strip-types ./scripts/strip-transaction-sql.ts ./migrations/0001_seed_catalog.sql ./migrations/0001_seed_catalog.remote.sql && wrangler d1 execute DB --remote --config ../../api-worker/wrangler.jsonc --file ./migrations/0001_seed_catalog.remote.sql",
+    "db:seed:demo:local": "mkdir -p ../../.wrangler/logs && WRANGLER_LOG_PATH=../../.wrangler/logs wrangler d1 execute DB --local --config ../../api-worker/wrangler.jsonc --file ./migrations/0002_demo_data.sql",
+    "db:seed:access:generate": "node --experimental-strip-types ./scripts/generate-access-credentials-seed-sql.ts > ./migrations/0009_access_credentials_seed.sql",
+    "db:seed:access:local": "npm run db:seed:access:generate && mkdir -p ../../.wrangler/logs && WRANGLER_LOG_PATH=../../.wrangler/logs wrangler d1 execute DB --local --config ../../api-worker/wrangler.jsonc --file ./migrations/0009_access_credentials_seed.sql",
+    "db:seed:access:remote": "npm run db:seed:access:generate && node --experimental-strip-types ./scripts/strip-transaction-sql.ts ./migrations/0009_access_credentials_seed.sql ./migrations/0009_access_credentials_seed.remote.sql && wrangler d1 execute DB --remote --config ../../api-worker/wrangler.jsonc --file ./migrations/0009_access_credentials_seed.remote.sql",
+    "db:import:employees:generate": "npm run build --workspace @ebms/config && npm run build --workspace @ebms/eligibility && node --experimental-strip-types ./scripts/generate-employee-import-sql.ts \"$IMPORT_FILE\" > ./migrations/0005_employee_import.sql",
+    "db:import:employees:local": "npm run db:import:employees:generate && mkdir -p ../../.wrangler/logs && WRANGLER_LOG_PATH=../../.wrangler/logs wrangler d1 execute DB --local --config ../../api-worker/wrangler.jsonc --file ./migrations/0005_employee_import.sql",
+    "db:import:employees:remote": "npm run db:import:employees:generate && node --experimental-strip-types ./scripts/strip-transaction-sql.ts ./migrations/0005_employee_import.sql ./migrations/0005_employee_import.remote.sql && wrangler d1 execute DB --remote --config ../../api-worker/wrangler.jsonc --file ./migrations/0005_employee_import.remote.sql",
+    "r2:upload:contracts": "node --experimental-strip-types ./scripts/upload-contract-files.ts ./data/contracts/contract-manifest.json",
+    "db:import:contracts:generate": "node --experimental-strip-types ./scripts/generate-contract-import-sql.ts ./data/contracts/contract-manifest.json > ./migrations/0006_contract_import.sql",
+    "db:import:contracts:remote": "npm run db:import:contracts:generate && node --experimental-strip-types ./scripts/strip-transaction-sql.ts ./migrations/0006_contract_import.sql ./migrations/0006_contract_import.remote.sql && wrangler d1 execute DB --remote --config ../../api-worker/wrangler.jsonc --file ./migrations/0006_contract_import.remote.sql",
+    "db:seed:ops:generate": "npm run build --workspace @ebms/config && node --experimental-strip-types ./scripts/generate-operational-demo-sql.ts > ./migrations/0007_operational_demo.sql",
+    "db:seed:ops:local": "npm run db:seed:ops:generate && mkdir -p ../../.wrangler/logs && WRANGLER_LOG_PATH=../../.wrangler/logs wrangler d1 execute DB --local --config ../../api-worker/wrangler.jsonc --file ./migrations/0007_operational_demo.sql",
+    "db:seed:ops:remote": "npm run db:seed:ops:generate && node --experimental-strip-types ./scripts/strip-transaction-sql.ts ./migrations/0007_operational_demo.sql ./migrations/0007_operational_demo.remote.sql && wrangler d1 execute DB --remote --config ../../api-worker/wrangler.jsonc --file ./migrations/0007_operational_demo.remote.sql"
+  },
+  "dependencies": {
+    "aws4fetch": "^1.0.20",
+    "drizzle-orm": "^0.45.1"
+  }
+}
