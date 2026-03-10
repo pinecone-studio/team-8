@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Rollup Linux binary
+        run: npm install --no-save @rollup/rollup-linux-x64-gnu@4.59.0
+
       - name: Run tests
         run: npm test
 
