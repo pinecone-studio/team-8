@@ -7,5 +7,5 @@ coverage
 .next
 .env.local
 *.tsbuildinfo
-apps/
-packages/
+/apps/
+/packages/

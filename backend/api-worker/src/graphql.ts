@@ -1034,7 +1034,9 @@ const schema = createSchema<GraphQLContext>({
           throw new Error("Employee not found");
         }
 
-        const eligibility = recompute.evaluations.find((entry) => entry.benefitId === args.benefitId);
+        const eligibility = recompute.evaluations.find(
+          (entry: (typeof recompute.evaluations)[number]) => entry.benefitId === args.benefitId
+        );
 
         if (!eligibility || eligibility.status !== "eligible") {
           throw new Error("Benefit is not eligible for request");

@@ -1,6 +1,8 @@
 import {
   buildEligibilityPersistenceBundle,
+  type AuditLogWriteModel,
   type ActorRole,
+  type BenefitEligibilityWriteModel,
   type EligibilityTrigger,
   type EmployeeSnapshot
 } from "@ebms/eligibility";
@@ -87,7 +89,7 @@ export async function recomputeEmployeeEligibility(input: {
     }
   });
 
-  const eligibilityStatements = bundle.benefitEligibilityRows.map((row) =>
+  const eligibilityStatements = bundle.benefitEligibilityRows.map((row: BenefitEligibilityWriteModel) =>
     input.env.DB.prepare(
       `INSERT INTO benefit_eligibility (
         employee_id,
@@ -119,7 +121,7 @@ export async function recomputeEmployeeEligibility(input: {
     )
   );
 
-  const auditStatements = bundle.auditLogRows.map((row) =>
+  const auditStatements = bundle.auditLogRows.map((row: AuditLogWriteModel) =>
     input.env.DB.prepare(
       `INSERT INTO audit_logs (
         id,
@@ -148,7 +150,9 @@ export async function recomputeEmployeeEligibility(input: {
   );
 
   await input.env.DB.batch([...eligibilityStatements, ...auditStatements]);
-  await Promise.all(bundle.cacheKeysToInvalidate.map((key) => input.env.ELIGIBILITY_CACHE.delete(key)));
+  await Promise.all(
+    bundle.cacheKeysToInvalidate.map((key: string) => input.env.ELIGIBILITY_CACHE.delete(key))
+  );
 
   return bundle;
 }
