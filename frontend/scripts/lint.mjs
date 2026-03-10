@@ -9,7 +9,10 @@ const projectRoot = resolve(__dirname, "..");
 const child = spawn("npx", ["next", "lint"], {
   cwd: projectRoot,
   stdio: "inherit",
-  shell: true,
+  env: {
+    ...process.env,
+    ESLINT_USE_FLAT_CONFIG: "false",
+  },
 });
 
 child.on("exit", (code) => {
