@@ -1,45 +1,20 @@
 {
-  "name": "ebms",
-  "version": "0.1.0",
+  "name": "team-8",
   "private": true,
-  "type": "module",
   "workspaces": [
-    "frontend/*",
-    "backend/api-worker",
-    "backend/packages/*"
+    "frontend",
+    "backend"
   ],
-  "engines": {
-    "node": ">=22.0.0"
-  },
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "build": "npm run build --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
-    "dev:backend": "npm run dev --workspace @ebms/api-worker",
-    "dev:frontend": "concurrently \"npm run dev:employee-web\" \"npm run dev:hr-admin\"",
-    "dev:employee-web": "npm run dev --workspace @ebms/employee-web",
-    "dev:hr-admin": "npm run dev --workspace @ebms/hr-admin",
-    "build:backend": "npm run build --workspace @ebms/api-worker && npm run build --workspace @ebms/config && npm run build --workspace @ebms/db && npm run build --workspace @ebms/eligibility",
-    "build:frontend": "npm run build --workspace @ebms/employee-web && npm run build --workspace @ebms/hr-admin",
-    "db:generate": "npm run db:generate --workspace @ebms/db",
-    "db:migrate:local": "npm run db:migrate:local --workspace @ebms/db",
-    "db:seed:generate": "npm run db:seed:generate --workspace @ebms/db",
-    "db:seed:local": "npm run db:seed:local --workspace @ebms/db",
-    "db:seed:demo:local": "npm run db:seed:demo:local --workspace @ebms/db",
-    "db:seed:access:local": "npm run db:seed:access:local --workspace @ebms/db",
-    "db:migrate:remote": "npm run db:migrate:remote --workspace @ebms/db",
-    "db:seed:remote": "npm run db:seed:remote --workspace @ebms/db",
-    "db:seed:access:remote": "npm run db:seed:access:remote --workspace @ebms/db",
-    "db:import:employees:local": "npm run db:import:employees:local --workspace @ebms/db",
-    "db:import:employees:remote": "npm run db:import:employees:remote --workspace @ebms/db"
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:backend": "npm run dev --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "build:backend": "npm run build --workspace=backend",
+    "lint": "npm run lint --workspaces",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260307.1",
     "concurrently": "^9.1.2",
-    "drizzle-kit": "^0.31.9",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.18",
-    "wrangler": "^4.71.0"
+    "typescript": "^5.7.3"
   }
 }
