@@ -7,7 +7,9 @@ export default function Home() {
 
   return (
     <main style={{ padding: "2rem", maxWidth: "800px", margin: "0 auto" }}>
-      <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "1.5rem" }}>
+      <h1
+        style={{ fontSize: "3rem", fontWeight: "bold", marginBottom: "1.5rem" }}
+      >
         Team 8
       </h1>
 
@@ -18,7 +20,14 @@ export default function Home() {
         {error && <p style={{ color: "red" }}>Error: {error.message}</p>}
 
         {data?.getEmployees && (
-          <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <ul
+            style={{
+              listStyle: "none",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.75rem",
+            }}
+          >
             {data.getEmployees.map((emp) => (
               <li
                 key={emp.id}
@@ -30,11 +39,16 @@ export default function Home() {
               >
                 <p style={{ fontWeight: 600 }}>{emp.name}</p>
                 {emp.nameEng && (
-                  <p style={{ color: "#374151", fontSize: "0.875rem" }}>{emp.nameEng}</p>
+                  <p style={{ color: "#374151", fontSize: "0.875rem" }}>
+                    {emp.nameEng}
+                  </p>
                 )}
-                <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>{emp.email}</p>
                 <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
-                  {emp.role} &middot; {emp.department} &middot; {emp.employmentStatus}
+                  {emp.email}
+                </p>
+                <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
+                  {emp.role} &middot; {emp.department} &middot;{" "}
+                  {emp.employmentStatus}
                 </p>
               </li>
             ))}
@@ -42,7 +56,9 @@ export default function Home() {
         )}
 
         {data?.getEmployees?.length === 0 && (
-          <p style={{ color: "#6b7280" }}>No employees found. Create one via the GraphQL API.</p>
+          <p style={{ color: "#6b7280" }}>
+            No employees found. Create one via the GraphQL API.
+          </p>
         )}
       </section>
     </main>
