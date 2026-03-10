@@ -9,3 +9,8 @@ coverage
 *.tsbuildinfo
 /apps/
 /packages/
+/backend/packages/*/dist/
+/backend/packages/*/node_modules/
+/backend/packages/*/.wrangler/
+/backend/packages/config/src/*.js
+/backend/packages/eligibility/src/*.js
