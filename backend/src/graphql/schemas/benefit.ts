@@ -15,12 +15,14 @@ export const benefitTypeDefs = gql`
   }
 
   type FailedRule {
+    ruleType: String!
     errorMessage: String!
   }
 
   type Benefit {
     id: String!
     name: String!
+    nameEng: String
     category: String!
     subsidyPercent: Int!
     vendorName: String
@@ -51,6 +53,7 @@ export const benefitTypeDefs = gql`
   extend type Query {
     benefits(category: String): [Benefit!]!
     myBenefits(employeeId: String!): [BenefitEligibility!]!
+    getEmployeeBenefits(employeeId: String!): [BenefitEligibility!]!
   }
 
   input RequestBenefitInput {

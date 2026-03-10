@@ -3,6 +3,8 @@ import { employeeTypeDefs } from "./employee";
 import { benefitTypeDefs } from "./benefit";
 
 const baseSchema = gql`
+  scalar DateTime
+
   type Query
   type Mutation
 `;

@@ -103,7 +103,7 @@ export function evaluateBenefit(
   benefitId: string;
   status: "eligible" | "locked";
   ruleEvaluation: RuleEvaluation[];
-  failedRule?: { errorMessage: string };
+  failedRule?: { ruleType: string; errorMessage: string };
 } {
   const benefit = getBenefitConfig(benefitId);
   if (!benefit) {
@@ -111,7 +111,7 @@ export function evaluateBenefit(
       benefitId,
       status: "locked",
       ruleEvaluation: [],
-      failedRule: { errorMessage: "Unknown benefit." },
+      failedRule: { ruleType: "unknown", errorMessage: "Unknown benefit." },
     };
   }
 
@@ -124,7 +124,7 @@ export function evaluateBenefit(
         benefitId,
         status: "locked",
         ruleEvaluation,
-        failedRule: { errorMessage: rule.errorMessage },
+        failedRule: { ruleType: rule.type, errorMessage: rule.errorMessage },
       };
     }
   }

@@ -16,6 +16,7 @@ export type RuleConfig = {
 export type BenefitConfig = {
   id: string;
   name: string;
+  nameEng?: string | null;
   category: string;
   subsidyPercent: number;
   vendorName: string | null;
@@ -36,12 +37,18 @@ export type RuleEvaluation = {
   reason: string;
 };
 
+/** Which rule failed (for LOCKED status) */
+export type FailedRuleInfo = {
+  ruleType: string;
+  errorMessage: string;
+};
+
 /** Result for one benefit (rule evaluation only) */
 export type BenefitEligibilityResult = {
   benefitId: string;
   status: "eligible" | "locked";
   ruleEvaluation: RuleEvaluation[];
-  failedRule?: { errorMessage: string };
+  failedRule?: FailedRuleInfo;
 };
 
 /** Display status for dashboard (TDD FR-01) */
@@ -70,5 +77,5 @@ export type ComputeStatusResult = {
   benefitId: string;
   status: EligibilityDisplayStatus;
   ruleEvaluation: RuleEvaluation[];
-  failedRule?: { errorMessage: string };
+  failedRule?: FailedRuleInfo;
 };
