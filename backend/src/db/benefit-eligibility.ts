@@ -1,9 +1,4 @@
-import {
-  sqliteTable,
-  text,
-  integer,
-  primaryKey,
-} from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, primaryKey } from "drizzle-orm/sqlite-core";
 
 export const benefitEligibility = sqliteTable(
   "benefit_eligibility",

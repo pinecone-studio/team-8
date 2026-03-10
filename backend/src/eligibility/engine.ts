@@ -4,7 +4,6 @@ import type {
   EligibilityConfig,
   RuleConfig,
   RuleEvaluation,
-  EligibilityDisplayStatus,
   ComputeStatusResult,
 } from "../config/types";
 import configJson from "../config/eligibility-rules.json";
