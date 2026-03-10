@@ -10,5 +10,16 @@ database_name = "team8"
 database_id = "aa32b4b3-cba6-4cb2-8628-2d06454dec62"
 migrations_dir = "drizzle"
 
+# R2 — vendor contract PDFs (TDD §11)
+[[r2_buckets]]
+binding = "CONTRACTS_BUCKET"
+bucket_name = "team8-ebms-contracts"
+
+# KV — short-lived tokens for contract view URL (TTL 7 days)
+[[kv_namespaces]]
+binding = "CONTRACT_VIEW_TOKENS"
+id = "4c59f29697b94e30b57fedf8b7a2d7c4"
+preview_id = "3bad0be611ac489abc5641ea713e0ea6"
+
 [vars]
 ENVIRONMENT = "development"
