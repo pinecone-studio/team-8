@@ -57,7 +57,7 @@ export default function Home() {
 
         {data?.getEmployees?.length === 0 && (
           <p style={{ color: "#6b7280" }}>
-            No employees found. Create one via the GraphQL API.
+            No employees found. Create one via the GraphQL API...
           </p>
         )}
       </section>
