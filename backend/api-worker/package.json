@@ -1,0 +1,19 @@
+{
+  "name": "@ebms/api-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ebms/eligibility": "0.1.0",
+    "aws4fetch": "^1.0.20",
+    "graphql": "^16.13.1",
+    "graphql-yoga": "^5.18.1",
+    "hono": "^4.12.5",
+    "jose": "^6.2.1"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "wrangler dev --port 8787 --local"
+  }
+}
