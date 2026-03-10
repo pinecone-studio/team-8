@@ -6,16 +6,16 @@
     "dev": "next dev",
     "build": "npm run codegen && next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "codegen": "graphql-codegen --config codegen.ts",
     "codegen:watch": "graphql-codegen --config codegen.ts --watch"
   },
   "dependencies": {
     "@apollo/client": "^3.12.9",
     "graphql": "^16.10.0",
-    "next": "^14.2.25",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "next": "^16.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.6",
@@ -23,12 +23,12 @@
     "@graphql-codegen/typescript-operations": "^4.4.1",
     "@graphql-codegen/typescript-react-apollo": "^4.3.2",
     "@types/node": "^22.13.5",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "@typescript-eslint/eslint-plugin": "^8.24.1",
     "@typescript-eslint/parser": "^8.24.1",
-    "eslint": "^8.57.1",
-    "eslint-config-next": "^14.2.25",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^16.1.6",
     "typescript": "^5.7.3"
   }
 }
