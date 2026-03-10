@@ -12,6 +12,9 @@ const config: CodegenConfig = {
         inputMaybeValue: "T | undefined",
         mappers: {
           Employee: "../../db/schema#Employee as EmployeeModel",
+          Benefit: "../../db/schema#Benefit as BenefitModel",
+          BenefitRule: "../../db/schema#BenefitRule as BenefitRuleModel",
+          BenefitRequest: "../../db/schema#BenefitRequest as BenefitRequestModel",
         },
       },
     },

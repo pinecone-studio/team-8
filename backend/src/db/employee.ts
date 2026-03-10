@@ -12,6 +12,7 @@ export const employees = sqliteTable("employees", {
   employmentStatus: text("employment_status").notNull().default("active"),
   hireDate: text("hire_date").notNull(),
   okrSubmitted: integer("okr_submitted").notNull().default(0),
+  okrScore: integer("okr_score").notNull().default(0),
   lateArrivalCount: integer("late_arrival_count").notNull().default(0),
   lateArrivalUpdatedAt: text("late_arrival_updated_at"),
   createdAt: text("created_at")

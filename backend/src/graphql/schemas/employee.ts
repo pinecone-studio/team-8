@@ -28,6 +28,7 @@ export const employeeTypeDefs = gql`
     employmentStatus: EmploymentStatus!
     hireDate: String!
     okrSubmitted: Int!
+    okrScore: Int!
     lateArrivalCount: Int!
     lateArrivalUpdatedAt: String
     createdAt: String!
@@ -44,6 +45,7 @@ export const employeeTypeDefs = gql`
     responsibilityLevel: Int
     employmentStatus: EmploymentStatus
     hireDate: String!
+    okrScore: Int
   }
 
   input UpdateEmployeeInput {
@@ -55,6 +57,7 @@ export const employeeTypeDefs = gql`
     responsibilityLevel: Int
     employmentStatus: EmploymentStatus
     okrSubmitted: Int
+    okrScore: Int
     lateArrivalCount: Int
     lateArrivalUpdatedAt: String
   }
