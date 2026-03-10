@@ -30,16 +30,16 @@ jobs:
         run: npm ci
 
       - name: Backend codegen
-        run: npm run codegen --workspace=backend
+        run: npm --workspace=backend run codegen
 
       - name: Frontend codegen
-        run: npm run codegen --workspace=frontend
+        run: npm --workspace=frontend run codegen
 
       - name: Backend lint
-        run: npm run lint --workspace=backend
+        run: npm --workspace=backend run lint
 
       - name: Frontend lint
-        run: npm run lint --workspace=frontend
+        run: npm --workspace=frontend run lint
 
       - name: Backend type check
         run: npx tsc --noEmit --project backend/tsconfig.json
