@@ -1,8 +1,11 @@
 "use client";
+import { use } from "react";
 import Header from "@/app/_features/Header";
 import Sidebar from "../_components/SideBar";
 
-export default function Requests() {
+type PageProps = { params?: Promise<Record<string, string | string[]>> };
+export default function Requests({ params }: PageProps) {
+  if (params) use(params);
   return (
     <div className="flex min-h-screen bg-[#f8f8f9]">
       <Sidebar />

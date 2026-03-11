@@ -60,10 +60,11 @@ export const employeeTypeDefs = gql`
     lateArrivalUpdatedAt: String
   }
 
-  # Query
+  # Query — session nemeh esehee shiideh: check current user from session
   extend type Query {
     getEmployees: [Employee!]!
     getEmployee(id: String!): Employee
+    session(employeeId: String): Employee
   }
 
   # Mutation
