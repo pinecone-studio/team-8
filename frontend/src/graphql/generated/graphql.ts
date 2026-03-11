@@ -17,6 +17,46 @@ export type Scalars = {
   Float: { input: number; output: number; }
 };
 
+export type Benefit = {
+  __typename?: 'Benefit';
+  category: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  requiresContract: Scalars['Boolean']['output'];
+  subsidyPercent: Scalars['Int']['output'];
+  vendorName?: Maybe<Scalars['String']['output']>;
+};
+
+export type BenefitEligibility = {
+  __typename?: 'BenefitEligibility';
+  benefit: Benefit;
+  benefitId: Scalars['String']['output'];
+  failedRule?: Maybe<FailedRule>;
+  ruleEvaluation: Array<RuleEvaluation>;
+  status: BenefitEligibilityStatus;
+};
+
+export enum BenefitEligibilityStatus {
+  Active = 'ACTIVE',
+  Eligible = 'ELIGIBLE',
+  Locked = 'LOCKED',
+  Pending = 'PENDING'
+}
+
+export type BenefitRequest = {
+  __typename?: 'BenefitRequest';
+  benefitId: Scalars['String']['output'];
+  contractAcceptedAt?: Maybe<Scalars['String']['output']>;
+  contractVersionAccepted?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['String']['output'];
+  employeeId: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  reviewedBy?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  updatedAt: Scalars['String']['output'];
+  viewContractUrl?: Maybe<Scalars['String']['output']>;
+};
+
 export type CreateEmployeeInput = {
   department: Scalars['String']['input'];
   email: Scalars['String']['input'];
@@ -60,11 +100,24 @@ export enum EmploymentStatus {
   Terminated = 'terminated'
 }
 
+export type FailedRule = {
+  __typename?: 'FailedRule';
+  errorMessage: Scalars['String']['output'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
+  confirmBenefitRequest: BenefitRequest;
   createEmployee: Employee;
   deleteEmployee: Scalars['Boolean']['output'];
+  requestBenefit: BenefitRequest;
   updateEmployee?: Maybe<Employee>;
+};
+
+
+export type MutationConfirmBenefitRequestArgs = {
+  contractAccepted: Scalars['Boolean']['input'];
+  requestId: Scalars['String']['input'];
 };
 
 
@@ -78,6 +131,11 @@ export type MutationDeleteEmployeeArgs = {
 };
 
 
+export type MutationRequestBenefitArgs = {
+  input: RequestBenefitInput;
+};
+
+
 export type MutationUpdateEmployeeArgs = {
   id: Scalars['String']['input'];
   input: UpdateEmployeeInput;
@@ -85,13 +143,39 @@ export type MutationUpdateEmployeeArgs = {
 
 export type Query = {
   __typename?: 'Query';
+  benefits: Array<Benefit>;
   getEmployee?: Maybe<Employee>;
   getEmployees: Array<Employee>;
+  myBenefits: Array<BenefitEligibility>;
+};
+
+
+export type QueryBenefitsArgs = {
+  category?: InputMaybe<Scalars['String']['input']>;
 };
 
 
 export type QueryGetEmployeeArgs = {
   id: Scalars['String']['input'];
+};
+
+
+export type QueryMyBenefitsArgs = {
+  employeeId: Scalars['String']['input'];
+};
+
+export type RequestBenefitInput = {
+  benefitId: Scalars['String']['input'];
+  contractAcceptedAt?: InputMaybe<Scalars['String']['input']>;
+  contractVersionAccepted?: InputMaybe<Scalars['String']['input']>;
+  employeeId: Scalars['String']['input'];
+};
+
+export type RuleEvaluation = {
+  __typename?: 'RuleEvaluation';
+  passed: Scalars['Boolean']['output'];
+  reason: Scalars['String']['output'];
+  ruleType: Scalars['String']['output'];
 };
 
 export type UpdateEmployeeInput = {

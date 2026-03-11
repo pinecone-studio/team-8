@@ -16,7 +16,7 @@ export const employeeTypeDefs = gql`
     terminated
   }
 
-  # type
+  # type (hireDate, createdAt, updatedAt = ISO 8601 via DateTime)
   type Employee {
     id: String!
     email: String!
@@ -26,12 +26,13 @@ export const employeeTypeDefs = gql`
     department: String!
     responsibilityLevel: Int!
     employmentStatus: EmploymentStatus!
-    hireDate: String!
+    hireDate: DateTime!
     okrSubmitted: Int!
     lateArrivalCount: Int!
-    lateArrivalUpdatedAt: String
-    createdAt: String!
-    updatedAt: String!
+    lateArrivalUpdatedAt: DateTime
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    benefits: [BenefitEligibility!]!
   }
 
   # input
