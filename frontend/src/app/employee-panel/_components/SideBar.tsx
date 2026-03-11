@@ -27,7 +27,7 @@ export default function Sidebar() {
           <Link
             href="/employee-panel/Dashboard"
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
-              pathname === "/employee-panel"
+              pathname === "/employee-panel/Dashboard"
                 ? "bg-gray-200 text-gray-900"
                 : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
             }`}
@@ -37,9 +37,9 @@ export default function Sidebar() {
           </Link>
 
           <Link
-            href="/employee-panel/my-benefits"
+            href="/employee-panel/Mybenefits"
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
-              pathname === "/employee-panel/my-benefits"
+              pathname === "/employee-panel/Mybenefits"
                 ? "bg-gray-200 text-gray-900"
                 : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
             }`}
@@ -49,9 +49,9 @@ export default function Sidebar() {
           </Link>
 
           <Link
-            href="/employee-panel/requests"
+            href="/employee-panel/Requests"
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
-              pathname === "/employee-panel/requests"
+              pathname === "/employee-panel/Requests"
                 ? "bg-gray-200 text-gray-900"
                 : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
             }`}
@@ -61,9 +61,9 @@ export default function Sidebar() {
           </Link>
 
           <Link
-            href="/employee-panel/contracts"
+            href="/employee-panel/Contracts"
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
-              pathname === "/employee-panel/contracts"
+              pathname === "/employee-panel/Contracts"
                 ? "bg-gray-200 text-gray-900"
                 : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
             }`}
@@ -78,7 +78,7 @@ export default function Sidebar() {
 
         {/* Settings */}
         <Link
-          href="/employee-panel/settings"
+          href="/employee-panel/Settings"
           className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
             pathname === "/employee-panel/settings"
               ? "bg-gray-200 text-gray-900"
