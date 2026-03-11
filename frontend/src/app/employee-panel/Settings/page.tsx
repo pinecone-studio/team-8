@@ -1,5 +1,5 @@
-import Sidebar from "../employee-panel/_components/SideBar";
-import Header from "./Header";
+import Sidebar from "../_components/SideBar";
+import Header from "../../_features/Header";
 
 export default function SettingsPage() {
   return (
