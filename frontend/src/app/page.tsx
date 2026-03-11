@@ -16,7 +16,7 @@ export default function Home() {
             Good to see you, Username
           </h1>
           <p className="mt-2 text-lg text-gray-500">
-            Here's an overview of your benefits
+            Here&apos;s an overview of your benefits
           </p>
         </main>
       </div>
