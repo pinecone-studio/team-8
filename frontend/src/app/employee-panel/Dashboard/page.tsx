@@ -5,6 +5,9 @@ import BenefitCard from "../_components/benefits/BenefitCard";
 import { benefits, dashboardStats } from "@/lib/  mock-data";
 
 export default function DashboardPage() {
+type PageProps = { params?: Promise<Record<string, string | string[]>> };
+export default async function Dashboard({ params }: PageProps) {
+  if (params) await params;
   return (
     <div className="flex min-h-screen bg-[#f6f7f9]">
       <Sidebar />
