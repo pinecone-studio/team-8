@@ -1,4 +1,4 @@
-import { sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
 
 export const benefitRequests = sqliteTable("benefit_requests", {
@@ -9,6 +9,10 @@ export const benefitRequests = sqliteTable("benefit_requests", {
   contractVersionAccepted: text("contract_version_accepted"),
   contractAcceptedAt: text("contract_accepted_at"),
   reviewedBy: text("reviewed_by"),
+  requestedAmount: integer("requested_amount"),
+  repaymentMonths: integer("repayment_months"),
+  employeeApprovedAt: text("employee_approved_at"),
+  declineReason: text("decline_reason"),
   createdAt: text("created_at")
     .notNull()
     .$defaultFn(() => new Date().toISOString()),
