@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useClerk } from "@clerk/nextjs";
 import { LayoutGrid, FileText, Settings, LogOut, User } from "lucide-react";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 
@@ -19,6 +20,7 @@ function formatLabel(value: string | null | undefined) {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { signOut } = useClerk();
   const { employee, loading } = useCurrentEmployee();
   const profileName = loading ? "Loading..." : employee?.name ?? "Employee";
   const profileRole = loading
@@ -121,7 +123,11 @@ export default function Sidebar() {
       </div>
 
       {/* Bottom sign out */}
-      <button className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900">
+      <button
+        type="button"
+        onClick={() => signOut({ redirectUrl: "/sign-in" })}
+        className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
+      >
         <LogOut className="h-5 w-5" />
         <span>Sign out</span>
       </button>

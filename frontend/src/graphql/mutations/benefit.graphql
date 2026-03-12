@@ -1,0 +1,17 @@
+mutation RequestBenefit($input: RequestBenefitInput!) {
+  requestBenefit(input: $input) {
+    id
+    employeeId
+    benefitId
+    status
+    contractVersionAccepted
+    contractAcceptedAt
+    employeeApprovedAt
+    requestedAmount
+    repaymentMonths
+    declineReason
+    createdAt
+    updatedAt
+    viewContractUrl
+  }
+}

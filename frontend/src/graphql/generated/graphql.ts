@@ -245,6 +245,13 @@ export type UpdateEmployeeInput = {
   role?: InputMaybe<EmployeeRole>;
 };
 
+export type RequestBenefitMutationVariables = Exact<{
+  input: RequestBenefitInput;
+}>;
+
+
+export type RequestBenefitMutation = { __typename?: 'Mutation', requestBenefit: { __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, employeeApprovedAt?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, declineReason?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null } };
+
 export type CreateEmployeeMutationVariables = Exact<{
   input: CreateEmployeeInput;
 }>;
@@ -301,6 +308,51 @@ export type GetEmployeeByEmailQueryVariables = Exact<{
 export type GetEmployeeByEmailQuery = { __typename?: 'Query', getEmployeeByEmail?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
 
 
+export const RequestBenefitDocument = gql`
+    mutation RequestBenefit($input: RequestBenefitInput!) {
+  requestBenefit(input: $input) {
+    id
+    employeeId
+    benefitId
+    status
+    contractVersionAccepted
+    contractAcceptedAt
+    employeeApprovedAt
+    requestedAmount
+    repaymentMonths
+    declineReason
+    createdAt
+    updatedAt
+    viewContractUrl
+  }
+}
+    `;
+export type RequestBenefitMutationFn = Apollo.MutationFunction<RequestBenefitMutation, RequestBenefitMutationVariables>;
+
+/**
+ * __useRequestBenefitMutation__
+ *
+ * To run a mutation, you first call `useRequestBenefitMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRequestBenefitMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [requestBenefitMutation, { data, loading, error }] = useRequestBenefitMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useRequestBenefitMutation(baseOptions?: Apollo.MutationHookOptions<RequestBenefitMutation, RequestBenefitMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RequestBenefitMutation, RequestBenefitMutationVariables>(RequestBenefitDocument, options);
+      }
+export type RequestBenefitMutationHookResult = ReturnType<typeof useRequestBenefitMutation>;
+export type RequestBenefitMutationResult = Apollo.MutationResult<RequestBenefitMutation>;
+export type RequestBenefitMutationOptions = Apollo.BaseMutationOptions<RequestBenefitMutation, RequestBenefitMutationVariables>;
 export const CreateEmployeeDocument = gql`
     mutation CreateEmployee($input: CreateEmployeeInput!) {
   createEmployee(input: $input) {
