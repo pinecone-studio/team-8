@@ -1,35 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
-import { useGetEmployeeByEmailQuery } from "@/graphql/generated/graphql";
+import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import Header from "./_features/Header";
 import Sidebar from "./employee-panel/_components/SideBar";
 
 export default function Home() {
-  const { user, isLoaded } = useUser();
-  const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
-  const { data, loading, error } = useGetEmployeeByEmailQuery({
-    variables: { email: email ?? "" },
-    skip: !email,
-  });
-
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    console.log("[Clerk] current user email:", email ?? null);
-  }, [email, isLoaded]);
-
-  useEffect(() => {
-    if (!email || loading) return;
-
-    if (error) {
-      console.error("[D1] employee lookup failed:", error);
-      return;
-    }
-
-    console.log("[D1] employee by Clerk email:", data?.getEmployeeByEmail ?? null);
-  }, [data, email, error, loading]);
+  const { employee, error, loading } = useCurrentEmployee();
+  const displayName = employee?.name ?? "there";
+  const subtitle = error
+    ? "We couldn't load your employee profile."
+    : loading
+      ? "Loading your employee profile..."
+      : "Here's an overview of your benefits";
 
   return (
     <div className="flex min-h-screen bg-[#f8f8f9]">
@@ -40,10 +22,10 @@ export default function Home() {
 
         <main className="p-8">
           <h1 className="text-4xl font-semibold text-gray-900">
-            Good to see you, Username
+            Good to see you, {displayName}
           </h1>
           <p className="mt-2 text-lg text-gray-500">
-            Here&apos;s an overview of your benefits
+            {subtitle}
           </p>
         </main>
       </div>

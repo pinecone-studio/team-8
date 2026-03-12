@@ -1,20 +1,24 @@
 import Link from "next/link";
+import type { BenefitEligibility } from "@/graphql/generated/graphql";
 import StatusBadge from "./StatusBadge";
-import type {
-  BenefitEligibility,
-  BenefitEligibilityStatus,
-} from "@/graphql/generated/graphql";
 
 type Props = {
   benefit: BenefitEligibility;
 };
 
+function buildDescription(benefit: BenefitEligibility) {
+  if (benefit.failedRule?.errorMessage) return benefit.failedRule.errorMessage;
+  if (benefit.benefit.optionsDescription) return benefit.benefit.optionsDescription;
+  if (benefit.benefit.requiresContract) {
+    return `Requires contract acceptance. Employee share ${benefit.benefit.employeePercent}%.`;
+  }
+
+  return `Company covers ${benefit.benefit.subsidyPercent}%. Employee share ${benefit.benefit.employeePercent}%.`;
+}
+
 export default function BenefitCard({ benefit }: Props) {
-  const status = benefit.status as BenefitEligibilityStatus;
   const subsidyLabel = `${benefit.benefit.subsidyPercent}%`;
-  const vendor = benefit.benefit.vendorName ?? "Vendor";
-  const description =
-    benefit.benefit.optionsDescription ?? "Benefit details are not available.";
+  const vendor = benefit.benefit.vendorName ?? "Internal Benefit";
 
   return (
     <Link
@@ -31,14 +35,14 @@ export default function BenefitCard({ benefit }: Props) {
       </div>
 
       <div className="mt-5 flex items-center gap-3">
-        <StatusBadge status={status} />
+        <StatusBadge status={benefit.status} />
         <span className="text-sm uppercase tracking-wide text-gray-400">
           {benefit.benefit.category}
         </span>
       </div>
 
       <p className="mt-5 text-base leading-7 text-gray-600">
-        {description}
+        {buildDescription(benefit)}
       </p>
 
       <p className="mt-5 text-lg font-semibold text-gray-900">

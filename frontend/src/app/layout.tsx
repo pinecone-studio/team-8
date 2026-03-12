@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ApolloWrapper } from "@/lib/apollo-provider";
+import { CurrentEmployeeProvider } from "@/lib/current-employee-provider";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
@@ -22,7 +23,9 @@ export default async function RootLayout({ children, params }: LayoutProps) {
     <html lang="en" className={cn("font-sans", geist.variable)}>
       <body>
         <ClerkProvider>
-          <ApolloWrapper>{children}</ApolloWrapper>
+          <ApolloWrapper>
+            <CurrentEmployeeProvider>{children}</CurrentEmployeeProvider>
+          </ApolloWrapper>
         </ClerkProvider>
       </body>
     </html>

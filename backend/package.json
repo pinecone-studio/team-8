@@ -4,13 +4,14 @@
   "scripts": {
     "dev": "npm run codegen && wrangler dev",
     "build": "wrangler deploy --dry-run --outdir=dist",
-    "deploy": "dotenv -e .env -- wrangler deploy",
+    "deploy": "sh -c 'if [ -f .env.local ]; then dotenv -e .env.local -- wrangler deploy; else dotenv -e .env -- wrangler deploy; fi'",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "codegen": "graphql-codegen --config codegen.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply team8 --local",
     "db:seed": "wrangler d1 execute team8 --local --file=./scripts/seed-demo.sql",
     "db:migrate:remote": "dotenv -e .env -- wrangler d1 migrations apply team8 --remote",
+    "db:seed:local": "wrangler d1 execute team8 --local --file ./scripts/seed-mock-data.sql",
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
     "test:watch": "vitest"

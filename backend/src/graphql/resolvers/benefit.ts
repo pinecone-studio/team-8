@@ -9,7 +9,25 @@ export const Benefit = {
 
 /** Resolve BenefitEligibility.benefit from benefitId */
 export const BenefitEligibility = {
-  benefit(parent: { benefitId: string }) {
+  benefit(parent: {
+    benefit?: {
+      category: string;
+      employeePercent?: number;
+      id: string;
+      name: string;
+      nameEng?: string | null;
+      optionsDescription?: string | null;
+      requiresContract: boolean;
+      subsidyPercent: number;
+      unitPrice?: number | null;
+      vendorName?: string | null;
+    };
+    benefitId: string;
+  }) {
+    if (parent.benefit) {
+      return parent.benefit;
+    }
+
     const config = getBenefitConfig(parent.benefitId);
     if (!config) {
       return {

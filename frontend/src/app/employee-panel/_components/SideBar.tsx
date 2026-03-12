@@ -2,10 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useClerk } from "@clerk/nextjs";
 import { LayoutGrid, FileText, Settings, LogOut, User } from "lucide-react";
+import { useCurrentEmployee } from "@/lib/current-employee-provider";
+
+function formatLabel(value: string | null | undefined) {
+  if (!value) return "Employee";
+
+  return value
+    .split("_")
+    .join(" ")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { signOut } = useClerk();
+  const { employee, loading } = useCurrentEmployee();
+  const profileName = loading ? "Loading..." : employee?.name ?? "Employee";
+  const profileRole = loading
+    ? "Profile"
+    : `${formatLabel(employee?.role)}${employee?.department ? ` · ${formatLabel(employee.department)}` : ""}`;
 
   return (
     <aside className="flex h-screen w-[260px] flex-col justify-between border-r border-gray-200 bg-[#f8f8f9] px-4 py-4">
@@ -17,8 +37,8 @@ export default function Sidebar() {
           </div>
 
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Username</h2>
-            <p className="text-sm text-gray-500">Senior Engineer</p>
+            <h2 className="text-base font-semibold text-gray-900">{profileName}</h2>
+            <p className="text-sm text-gray-500">{profileRole}</p>
           </div>
         </div>
 
@@ -103,7 +123,11 @@ export default function Sidebar() {
       </div>
 
       {/* Bottom sign out */}
-      <button className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900">
+      <button
+        type="button"
+        onClick={() => signOut({ redirectUrl: "/sign-in" })}
+        className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
+      >
         <LogOut className="h-5 w-5" />
         <span>Sign out</span>
       </button>
