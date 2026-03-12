@@ -11,11 +11,16 @@ export const getContracts = async (
   { benefitId }: ContractsArgs,
   { db, env, baseUrl }: GraphQLContext
 ) => {
-  let query = db.select().from(schema.contracts).orderBy(desc(schema.contracts.effectiveDate));
-  if (benefitId) {
-    query = query.where(eq(schema.contracts.benefitId, benefitId));
-  }
-  const rows = await query;
+  const rows = benefitId
+    ? await db
+        .select()
+        .from(schema.contracts)
+        .where(eq(schema.contracts.benefitId, benefitId))
+        .orderBy(desc(schema.contracts.effectiveDate))
+    : await db
+        .select()
+        .from(schema.contracts)
+        .orderBy(desc(schema.contracts.effectiveDate));
 
   return Promise.all(
     rows.map(async (row) => {

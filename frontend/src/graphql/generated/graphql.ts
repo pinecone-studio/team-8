@@ -74,6 +74,19 @@ export type BenefitRequest = {
   viewContractUrl?: Maybe<Scalars['String']['output']>;
 };
 
+export type Contract = {
+  __typename?: 'Contract';
+  benefitId: Scalars['String']['output'];
+  benefitName?: Maybe<Scalars['String']['output']>;
+  effectiveDate: Scalars['String']['output'];
+  expiryDate: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  isActive: Scalars['Boolean']['output'];
+  vendorName: Scalars['String']['output'];
+  version: Scalars['String']['output'];
+  viewUrl?: Maybe<Scalars['String']['output']>;
+};
+
 export type CreateEmployeeInput = {
   department: Scalars['String']['input'];
   email: Scalars['String']['input'];
@@ -179,6 +192,7 @@ export type Query = {
   __typename?: 'Query';
   benefitRequests: Array<BenefitRequest>;
   benefits: Array<Benefit>;
+  contracts: Array<Contract>;
   getEmployee?: Maybe<Employee>;
   getEmployeeBenefits: Array<BenefitEligibility>;
   getEmployeeByEmail?: Maybe<Employee>;
@@ -195,6 +209,11 @@ export type QueryBenefitRequestsArgs = {
 
 export type QueryBenefitsArgs = {
   category?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryContractsArgs = {
+  benefitId?: InputMaybe<Scalars['String']['input']>;
 };
 
 
