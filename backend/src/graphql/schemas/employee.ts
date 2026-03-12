@@ -17,15 +17,16 @@ export const employeeTypeDefs = gql`
   }
 
   # type (hireDate, createdAt, updatedAt = ISO 8601 via DateTime)
+  # role болон employmentStatus-ийг String болгосон: өгөгдлийн сан дахь бүх утга (Designer, Analyst, on_leave, resigned г.м) front руу гарна
   type Employee {
     id: String!
     email: String!
     name: String!
     nameEng: String
-    role: EmployeeRole!
+    role: String!
     department: String!
     responsibilityLevel: Int!
-    employmentStatus: EmploymentStatus!
+    employmentStatus: String!
     hireDate: DateTime!
     okrSubmitted: Int!
     lateArrivalCount: Int!

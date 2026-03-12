@@ -90,7 +90,7 @@ export type Employee = {
   createdAt: Scalars['DateTime']['output'];
   department: Scalars['String']['output'];
   email: Scalars['String']['output'];
-  employmentStatus: EmploymentStatus;
+  employmentStatus: Scalars['String']['output'];
   hireDate: Scalars['DateTime']['output'];
   id: Scalars['String']['output'];
   lateArrivalCount: Scalars['Int']['output'];
@@ -99,7 +99,7 @@ export type Employee = {
   nameEng?: Maybe<Scalars['String']['output']>;
   okrSubmitted: Scalars['Int']['output'];
   responsibilityLevel: Scalars['Int']['output'];
-  role: EmployeeRole;
+  role: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
 };
 
@@ -399,7 +399,7 @@ export type EmployeeResolvers<ContextType = GraphQLContext, ParentType extends R
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   department?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   email?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  employmentStatus?: Resolver<ResolversTypes['EmploymentStatus'], ParentType, ContextType>;
+  employmentStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   hireDate?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   lateArrivalCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
@@ -408,7 +408,7 @@ export type EmployeeResolvers<ContextType = GraphQLContext, ParentType extends R
   nameEng?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   okrSubmitted?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   responsibilityLevel?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  role?: Resolver<ResolversTypes['EmployeeRole'], ParentType, ContextType>;
+  role?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
