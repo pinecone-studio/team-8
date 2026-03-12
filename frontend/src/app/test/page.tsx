@@ -7,6 +7,7 @@ import {
 } from "@/graphql/generated/graphql";
 import Header from "@/app/_features/Header";
 import Sidebar from "@/app/employee-panel/_components/SideBar";
+import PageLoading from "@/app/_components/PageLoading";
 import { graphqlUri } from "@/lib/apollo-client";
 import { use, useState } from "react";
 
@@ -56,7 +57,7 @@ export default function TestPage({ params }: PageProps) {
               {!employeesLoading && !employeesError && employees.length > 0 && (
                 <p className="mb-3 text-sm text-gray-500">Өгөгдлийн сан: бүгд {employees.length} ажилчин</p>
               )}
-              {employeesLoading && <p className="text-gray-500">Уншиж байна...</p>}
+              {employeesLoading && <PageLoading inline message="Уншиж байна..." />}
               {employeesError && (
                 <div className="rounded-lg bg-red-50 p-4 text-red-700">
                   <p className="font-medium">Алдаа: {employeesError.message}</p>
@@ -83,7 +84,7 @@ export default function TestPage({ params }: PageProps) {
                           className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition ${
                             selectedEmployeeId === emp.id
                               ? "border-indigo-500 bg-indigo-50 text-indigo-900"
-                              : "border-gray-200 hover:bg-gray-50"
+                              : "border-gray-200 hover:bg-gray-50 active:scale-[0.99] active:bg-gray-100"
                           }`}
                         >
                           <span className="font-medium">{emp.name}</span>
@@ -105,7 +106,7 @@ export default function TestPage({ params }: PageProps) {
             {/* All benefits */}
             <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-lg font-semibold text-gray-800">Бүх benefit-ууд</h2>
-              {benefitsLoading && <p className="text-gray-500">Уншиж байна...</p>}
+              {benefitsLoading && <PageLoading inline message="Уншиж байна..." />}
               {benefitsError && (
                 <div className="rounded-lg bg-red-50 p-4 text-red-700">
                   <p className="font-medium">Алдаа: {(benefitsError as Error).message}</p>
@@ -148,7 +149,7 @@ export default function TestPage({ params }: PageProps) {
               <h2 className="mb-4 text-lg font-semibold text-gray-800">
                 Сонгосон ажилтны benefit eligibility (My Benefits)
               </h2>
-              {myBenefitsLoading && <p className="text-gray-500">Уншиж байна...</p>}
+              {myBenefitsLoading && <PageLoading inline message="Уншиж байна..." />}
               {!myBenefitsLoading && (
                 <ul className="space-y-3">
                   {myBenefits.length === 0 ? (

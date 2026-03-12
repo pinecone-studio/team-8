@@ -207,6 +207,7 @@ export type MutationUpdateEmployeeArgs = {
 export type Query = {
   __typename?: 'Query';
   adminDashboardSummary: AdminDashboardSummary;
+  allBenefitRequests: Array<BenefitRequest>;
   benefitRequests: Array<BenefitRequest>;
   benefits: Array<Benefit>;
   contracts: Array<Contract>;
@@ -216,6 +217,11 @@ export type Query = {
   getEmployees: Array<Employee>;
   myBenefits: Array<BenefitEligibility>;
   session?: Maybe<Employee>;
+};
+
+
+export type QueryAllBenefitRequestsArgs = {
+  status?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -294,6 +300,14 @@ export type RequestBenefitMutationVariables = Exact<{
 
 export type RequestBenefitMutation = { __typename?: 'Mutation', requestBenefit: { __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, employeeApprovedAt?: string | null, declineReason?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null } };
 
+export type ApproveBenefitRequestMutationVariables = Exact<{
+  requestId: Scalars['String']['input'];
+  reviewedBy: Scalars['String']['input'];
+}>;
+
+
+export type ApproveBenefitRequestMutation = { __typename?: 'Mutation', approveBenefitRequest: { __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, reviewedBy?: string | null, createdAt: string, updatedAt: string } };
+
 export type CreateEmployeeMutationVariables = Exact<{
   input: CreateEmployeeInput;
 }>;
@@ -341,6 +355,13 @@ export type GetBenefitRequestsQueryVariables = Exact<{
 
 
 export type GetBenefitRequestsQuery = { __typename?: 'Query', benefitRequests: Array<{ __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, employeeApprovedAt?: string | null, declineReason?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null }> };
+
+export type GetAllBenefitRequestsQueryVariables = Exact<{
+  status?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type GetAllBenefitRequestsQuery = { __typename?: 'Query', allBenefitRequests: Array<{ __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, employeeApprovedAt?: string | null, declineReason?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null }> };
 
 export type GetEmployeesQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -408,6 +429,46 @@ export function useRequestBenefitMutation(baseOptions?: Apollo.MutationHookOptio
 export type RequestBenefitMutationHookResult = ReturnType<typeof useRequestBenefitMutation>;
 export type RequestBenefitMutationResult = Apollo.MutationResult<RequestBenefitMutation>;
 export type RequestBenefitMutationOptions = Apollo.BaseMutationOptions<RequestBenefitMutation, RequestBenefitMutationVariables>;
+export const ApproveBenefitRequestDocument = gql`
+    mutation ApproveBenefitRequest($requestId: String!, $reviewedBy: String!) {
+  approveBenefitRequest(requestId: $requestId, reviewedBy: $reviewedBy) {
+    id
+    employeeId
+    benefitId
+    status
+    reviewedBy
+    createdAt
+    updatedAt
+  }
+}
+    `;
+export type ApproveBenefitRequestMutationFn = Apollo.MutationFunction<ApproveBenefitRequestMutation, ApproveBenefitRequestMutationVariables>;
+
+/**
+ * __useApproveBenefitRequestMutation__
+ *
+ * To run a mutation, you first call `useApproveBenefitRequestMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useApproveBenefitRequestMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [approveBenefitRequestMutation, { data, loading, error }] = useApproveBenefitRequestMutation({
+ *   variables: {
+ *      requestId: // value for 'requestId'
+ *      reviewedBy: // value for 'reviewedBy'
+ *   },
+ * });
+ */
+export function useApproveBenefitRequestMutation(baseOptions?: Apollo.MutationHookOptions<ApproveBenefitRequestMutation, ApproveBenefitRequestMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ApproveBenefitRequestMutation, ApproveBenefitRequestMutationVariables>(ApproveBenefitRequestDocument, options);
+      }
+export type ApproveBenefitRequestMutationHookResult = ReturnType<typeof useApproveBenefitRequestMutation>;
+export type ApproveBenefitRequestMutationResult = Apollo.MutationResult<ApproveBenefitRequestMutation>;
+export type ApproveBenefitRequestMutationOptions = Apollo.BaseMutationOptions<ApproveBenefitRequestMutation, ApproveBenefitRequestMutationVariables>;
 export const CreateEmployeeDocument = gql`
     mutation CreateEmployee($input: CreateEmployeeInput!) {
   createEmployee(input: $input) {
@@ -751,6 +812,62 @@ export type GetBenefitRequestsQueryHookResult = ReturnType<typeof useGetBenefitR
 export type GetBenefitRequestsLazyQueryHookResult = ReturnType<typeof useGetBenefitRequestsLazyQuery>;
 export type GetBenefitRequestsSuspenseQueryHookResult = ReturnType<typeof useGetBenefitRequestsSuspenseQuery>;
 export type GetBenefitRequestsQueryResult = Apollo.QueryResult<GetBenefitRequestsQuery, GetBenefitRequestsQueryVariables>;
+export const GetAllBenefitRequestsDocument = gql`
+    query GetAllBenefitRequests($status: String) {
+  allBenefitRequests(status: $status) {
+    id
+    employeeId
+    benefitId
+    status
+    contractVersionAccepted
+    contractAcceptedAt
+    reviewedBy
+    requestedAmount
+    repaymentMonths
+    employeeApprovedAt
+    declineReason
+    createdAt
+    updatedAt
+    viewContractUrl
+  }
+}
+    `;
+
+/**
+ * __useGetAllBenefitRequestsQuery__
+ *
+ * To run a query within a React component, call `useGetAllBenefitRequestsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetAllBenefitRequestsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetAllBenefitRequestsQuery({
+ *   variables: {
+ *      status: // value for 'status'
+ *   },
+ * });
+ */
+export function useGetAllBenefitRequestsQuery(baseOptions?: Apollo.QueryHookOptions<GetAllBenefitRequestsQuery, GetAllBenefitRequestsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetAllBenefitRequestsQuery, GetAllBenefitRequestsQueryVariables>(GetAllBenefitRequestsDocument, options);
+      }
+export function useGetAllBenefitRequestsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetAllBenefitRequestsQuery, GetAllBenefitRequestsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetAllBenefitRequestsQuery, GetAllBenefitRequestsQueryVariables>(GetAllBenefitRequestsDocument, options);
+        }
+// @ts-ignore
+export function useGetAllBenefitRequestsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetAllBenefitRequestsQuery, GetAllBenefitRequestsQueryVariables>): Apollo.UseSuspenseQueryResult<GetAllBenefitRequestsQuery, GetAllBenefitRequestsQueryVariables>;
+export function useGetAllBenefitRequestsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetAllBenefitRequestsQuery, GetAllBenefitRequestsQueryVariables>): Apollo.UseSuspenseQueryResult<GetAllBenefitRequestsQuery | undefined, GetAllBenefitRequestsQueryVariables>;
+export function useGetAllBenefitRequestsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetAllBenefitRequestsQuery, GetAllBenefitRequestsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetAllBenefitRequestsQuery, GetAllBenefitRequestsQueryVariables>(GetAllBenefitRequestsDocument, options);
+        }
+export type GetAllBenefitRequestsQueryHookResult = ReturnType<typeof useGetAllBenefitRequestsQuery>;
+export type GetAllBenefitRequestsLazyQueryHookResult = ReturnType<typeof useGetAllBenefitRequestsLazyQuery>;
+export type GetAllBenefitRequestsSuspenseQueryHookResult = ReturnType<typeof useGetAllBenefitRequestsSuspenseQuery>;
+export type GetAllBenefitRequestsQueryResult = Apollo.QueryResult<GetAllBenefitRequestsQuery, GetAllBenefitRequestsQueryVariables>;
 export const GetEmployeesDocument = gql`
     query GetEmployees {
   getEmployees {
