@@ -1,9 +1,12 @@
 "use client";
 
+import { use } from "react";
 import Header from "./_features/Header";
 import Sidebar from "./employee-panel/_components/SideBar";
 
-export default function Home() {
+type PageProps = { params?: Promise<Record<string, string | string[]>> };
+export default function Home({ params }: PageProps) {
+  if (params) use(params);
   return (
     <div className="flex min-h-screen bg-[#f8f8f9]">
       <Sidebar />

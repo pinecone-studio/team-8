@@ -19,14 +19,25 @@ export const benefitTypeDefs = gql`
     errorMessage: String!
   }
 
+  enum BenefitFlowType {
+    contract
+    normal
+    down_payment
+    self_service
+  }
+
   type Benefit {
     id: String!
     name: String!
     nameEng: String
     category: String!
     subsidyPercent: Int!
+    employeePercent: Int!
+    unitPrice: Int
     vendorName: String
     requiresContract: Boolean!
+    flowType: BenefitFlowType!
+    optionsDescription: String
   }
 
   type BenefitEligibility {
@@ -45,6 +56,10 @@ export const benefitTypeDefs = gql`
     contractVersionAccepted: String
     contractAcceptedAt: String
     reviewedBy: String
+    requestedAmount: Int
+    repaymentMonths: Int
+    employeeApprovedAt: String
+    declineReason: String
     createdAt: String!
     updatedAt: String!
     viewContractUrl: String
@@ -61,10 +76,14 @@ export const benefitTypeDefs = gql`
     benefitId: String!
     contractVersionAccepted: String
     contractAcceptedAt: String
+    requestedAmount: Int
+    repaymentMonths: Int
   }
 
   extend type Mutation {
     requestBenefit(input: RequestBenefitInput!): BenefitRequest!
     confirmBenefitRequest(requestId: String!, contractAccepted: Boolean!): BenefitRequest!
+    approveBenefitRequest(requestId: String!, reviewedBy: String!): BenefitRequest!
+    declineBenefitRequest(requestId: String!, reviewedBy: String!, reason: String): BenefitRequest!
   }
 `;

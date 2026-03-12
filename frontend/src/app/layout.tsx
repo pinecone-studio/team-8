@@ -11,11 +11,12 @@ export const metadata: Metadata = {
   description: "Team 8 Application",
 };
 
-export default function RootLayout({
-  children,
-}: {
+type LayoutProps = {
   children: React.ReactNode;
-}) {
+  params?: Promise<Record<string, string | string[]>>;
+};
+export default async function RootLayout({ children, params }: LayoutProps) {
+  if (params) await params;
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>
       <body>

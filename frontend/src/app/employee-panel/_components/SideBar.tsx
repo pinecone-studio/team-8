@@ -71,6 +71,18 @@ export default function Sidebar() {
             <FileText className="h-5 w-5" />
             <span>Contracts</span>
           </Link>
+
+          <Link
+            href="/test"
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
+              pathname === "/test"
+                ? "bg-gray-200 text-gray-900"
+                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            }`}
+          >
+            <FileText className="h-5 w-5" />
+            <span>Test (Employee & Benefits)</span>
+          </Link>
         </nav>
 
         {/* Divider */}

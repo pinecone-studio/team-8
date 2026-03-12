@@ -113,12 +113,43 @@ async function handleContractUpload(request: Request, env: Env): Promise<Respons
   });
 }
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Max-Age": "86400",
+} as const;
+
+/** CORS: OPTIONS preflight — body null, 204. */
+function handleCorsPreflight(request: Request): Response | null {
+  if (request.method !== "OPTIONS") return null;
+  const origin = request.headers.get("Origin") ?? "*";
+  return new Response(null, {
+    status: 204,
+    headers: { ...CORS_HEADERS, "Access-Control-Allow-Origin": origin },
+  });
+}
+
+/** Add CORS headers to a response so browser allows cross-origin use. */
+function withCors(response: Response): Response {
+  const headers = new Headers(response.headers);
+  for (const [k, v] of Object.entries(CORS_HEADERS)) headers.set(k, v);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const preflight = handleCorsPreflight(request);
+    if (preflight !== null) return preflight;
     const contractView = await handleContractView(request, env);
-    if (contractView !== null) return contractView;
+    if (contractView !== null) return withCors(contractView);
     const upload = await handleContractUpload(request, env);
-    if (upload !== null) return upload;
-    return handler(request, env, ctx);
+    if (upload !== null) return withCors(upload);
+    const response = await handler(request, env, ctx);
+    return withCors(response);
   },
 };
