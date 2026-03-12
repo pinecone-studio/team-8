@@ -1,3 +1,5 @@
+"use client";
+
 import Topbar from "../_components/layout/Topbar";
 import Sidebar from "../_components/SideBar";
 
@@ -19,17 +21,10 @@ const mockRequests = [
 ];
 
 export default function RequestsPage() {
-"use client";
-import { use } from "react";
-import Header from "@/app/_features/Header";
-import Sidebar from "../_components/SideBar";
-
-type PageProps = { params?: Promise<Record<string, string | string[]>> };
-export default function Requests({ params }: PageProps) {
-  if (params) use(params);
   return (
     <div className="flex min-h-screen bg-[#f6f7f9]">
       <Sidebar />
+
       <div className="flex-1">
         <Topbar />
 
@@ -51,6 +46,7 @@ export default function Requests({ params }: PageProps) {
                     <th className="pb-4 font-medium">Date</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {mockRequests.map((request) => (
                     <tr
@@ -58,15 +54,19 @@ export default function Requests({ params }: PageProps) {
                       className="border-b border-gray-100 text-base"
                     >
                       <td className="py-4 text-gray-700">{request.id}</td>
+
                       <td className="py-4 font-medium text-gray-900">
                         {request.benefit}
                       </td>
+
                       <td className="py-4 text-gray-700">{request.vendor}</td>
+
                       <td className="py-4">
                         <span className="rounded-full bg-orange-50 px-3 py-1 text-sm font-medium text-orange-600">
                           {request.status}
                         </span>
                       </td>
+
                       <td className="py-4 text-gray-700">{request.date}</td>
                     </tr>
                   ))}
