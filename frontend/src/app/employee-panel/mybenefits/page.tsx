@@ -7,6 +7,9 @@ import PageLoading from "@/app/_components/PageLoading";
 import { useGetMyBenefitsQuery } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 
+const STATUS_ORDER: Record<string, number> = { ACTIVE: 0, ELIGIBLE: 1, PENDING: 2, LOCKED: 3 };
+const CATEGORY_ORDER = ["Wellness", "Equipment", "Financial"];
+
 type PageProps = { params?: Promise<Record<string, string | string[]>> };
 export default function Mybenefits({ params }: PageProps) {
   if (params) use(params);
@@ -21,9 +24,7 @@ export default function Mybenefits({ params }: PageProps) {
     skip: !employeeId,
   });
 
-  const myBenefits = data?.myBenefits ?? [];
-  const STATUS_ORDER: Record<string, number> = { ACTIVE: 0, ELIGIBLE: 1, PENDING: 2, LOCKED: 3 };
-  const CATEGORY_ORDER = ["Wellness", "Equipment", "Financial"];
+  const myBenefits = useMemo(() => data?.myBenefits ?? [], [data?.myBenefits]);
   const byCategory = useMemo(() => {
     const map = new Map<string, typeof myBenefits>();
     for (const b of myBenefits) {

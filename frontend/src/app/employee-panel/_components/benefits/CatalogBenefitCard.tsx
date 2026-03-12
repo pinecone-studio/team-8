@@ -1,21 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { Heart, Laptop, Lock, TrendingUp, Users, type LucideIcon } from "lucide-react";
+import { Heart, Laptop, Lock, TrendingUp, Users } from "lucide-react";
 import type { BenefitEligibility } from "@/graphql/generated/graphql";
 import { BenefitEligibilityStatus } from "@/graphql/generated/graphql";
 import StatusBadge from "./StatusBadge";
 
-const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  wellness: Heart,
-  equipment: Laptop,
-  financial: TrendingUp,
-  default: Users,
-};
-
-function getCategoryIcon(category: string): LucideIcon {
+function CategoryIcon({
+  category,
+  className,
+}: {
+  category: string;
+  className?: string;
+}) {
   const key = category?.toLowerCase().replace(/\s+/g, "") ?? "default";
-  return CATEGORY_ICONS[key] ?? CATEGORY_ICONS.default;
+  if (key === "wellness") return <Heart className={className} />;
+  if (key === "equipment") return <Laptop className={className} />;
+  if (key === "financial") return <TrendingUp className={className} />;
+  return <Users className={className} />;
 }
 
 function buildDescription(benefit: BenefitEligibility) {
@@ -32,7 +34,6 @@ type Props = {
 };
 
 export default function CatalogBenefitCard({ benefit }: Props) {
-  const Icon = getCategoryIcon(benefit.benefit.category);
   const provider = benefit.benefit.vendorName ?? "Company";
   const isLocked = benefit.status === BenefitEligibilityStatus.Locked;
 
@@ -43,7 +44,7 @@ export default function CatalogBenefitCard({ benefit }: Props) {
     >
       <div className="flex items-start gap-4">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-600">
-          <Icon className="h-6 w-6" />
+          <CategoryIcon category={benefit.benefit.category ?? ""} className="h-6 w-6" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
