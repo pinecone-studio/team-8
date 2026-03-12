@@ -1,9 +1,18 @@
 import Link from "next/link";
 import StatusBadge from "./StatusBadge";
-import { Benefit } from "@/lib/  mock-data";
+
+export type DashboardBenefitCard = {
+  category: string;
+  description: string;
+  id: string;
+  name: string;
+  status: "ACTIVE" | "ELIGIBLE" | "LOCKED" | "PENDING";
+  subsidy: string;
+  vendor: string;
+};
 
 type Props = {
-  benefit: Benefit;
+  benefit: DashboardBenefitCard;
 };
 
 export default function BenefitCard({ benefit }: Props) {

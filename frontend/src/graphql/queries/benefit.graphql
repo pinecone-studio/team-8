@@ -26,6 +26,8 @@ query GetMyBenefits($employeeId: String!) {
       subsidyPercent
       employeePercent
       unitPrice
+      vendorName
+      requiresContract
       flowType
       optionsDescription
     }
