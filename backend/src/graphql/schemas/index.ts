@@ -1,6 +1,7 @@
 import gql from "graphql-tag";
 import { employeeTypeDefs } from "./employee";
 import { benefitTypeDefs } from "./benefit";
+import { adminTypeDefs } from "./admin";
 
 const baseSchema = gql`
   scalar DateTime
@@ -9,4 +10,4 @@ const baseSchema = gql`
   type Mutation
 `;
 
-export const typeDefs = [baseSchema, employeeTypeDefs, benefitTypeDefs];
+export const typeDefs = [baseSchema, employeeTypeDefs, benefitTypeDefs, adminTypeDefs];

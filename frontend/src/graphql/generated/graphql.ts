@@ -18,6 +18,22 @@ export type Scalars = {
   DateTime: { input: any; output: any; }
 };
 
+export type AdminDashboardBucket = {
+  __typename?: 'AdminDashboardBucket';
+  label: Scalars['String']['output'];
+  value: Scalars['Int']['output'];
+};
+
+export type AdminDashboardSummary = {
+  __typename?: 'AdminDashboardSummary';
+  activeBenefits: Scalars['Int']['output'];
+  lockReasons: Array<AdminDashboardBucket>;
+  lockedBenefits: Scalars['Int']['output'];
+  pendingRequests: Scalars['Int']['output'];
+  totalEmployees: Scalars['Int']['output'];
+  usageByCategory: Array<AdminDashboardBucket>;
+};
+
 export type Benefit = {
   __typename?: 'Benefit';
   category: Scalars['String']['output'];
@@ -190,6 +206,7 @@ export type MutationUpdateEmployeeArgs = {
 
 export type Query = {
   __typename?: 'Query';
+  adminDashboardSummary: AdminDashboardSummary;
   allBenefitRequests: Array<BenefitRequest>;
   benefitRequests: Array<BenefitRequest>;
   benefits: Array<Benefit>;
@@ -312,6 +329,11 @@ export type DeleteEmployeeMutationVariables = Exact<{
 
 
 export type DeleteEmployeeMutation = { __typename?: 'Mutation', deleteEmployee: boolean };
+
+export type GetAdminDashboardSummaryQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetAdminDashboardSummaryQuery = { __typename?: 'Query', adminDashboardSummary: { __typename?: 'AdminDashboardSummary', totalEmployees: number, activeBenefits: number, pendingRequests: number, lockedBenefits: number, usageByCategory: Array<{ __typename?: 'AdminDashboardBucket', label: string, value: number }>, lockReasons: Array<{ __typename?: 'AdminDashboardBucket', label: string, value: number }> } };
 
 export type GetBenefitsQueryVariables = Exact<{
   category?: InputMaybe<Scalars['String']['input']>;
@@ -562,6 +584,59 @@ export function useDeleteEmployeeMutation(baseOptions?: Apollo.MutationHookOptio
 export type DeleteEmployeeMutationHookResult = ReturnType<typeof useDeleteEmployeeMutation>;
 export type DeleteEmployeeMutationResult = Apollo.MutationResult<DeleteEmployeeMutation>;
 export type DeleteEmployeeMutationOptions = Apollo.BaseMutationOptions<DeleteEmployeeMutation, DeleteEmployeeMutationVariables>;
+export const GetAdminDashboardSummaryDocument = gql`
+    query GetAdminDashboardSummary {
+  adminDashboardSummary {
+    totalEmployees
+    activeBenefits
+    pendingRequests
+    lockedBenefits
+    usageByCategory {
+      label
+      value
+    }
+    lockReasons {
+      label
+      value
+    }
+  }
+}
+    `;
+
+/**
+ * __useGetAdminDashboardSummaryQuery__
+ *
+ * To run a query within a React component, call `useGetAdminDashboardSummaryQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetAdminDashboardSummaryQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetAdminDashboardSummaryQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetAdminDashboardSummaryQuery(baseOptions?: Apollo.QueryHookOptions<GetAdminDashboardSummaryQuery, GetAdminDashboardSummaryQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetAdminDashboardSummaryQuery, GetAdminDashboardSummaryQueryVariables>(GetAdminDashboardSummaryDocument, options);
+      }
+export function useGetAdminDashboardSummaryLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetAdminDashboardSummaryQuery, GetAdminDashboardSummaryQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetAdminDashboardSummaryQuery, GetAdminDashboardSummaryQueryVariables>(GetAdminDashboardSummaryDocument, options);
+        }
+// @ts-ignore
+export function useGetAdminDashboardSummarySuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetAdminDashboardSummaryQuery, GetAdminDashboardSummaryQueryVariables>): Apollo.UseSuspenseQueryResult<GetAdminDashboardSummaryQuery, GetAdminDashboardSummaryQueryVariables>;
+export function useGetAdminDashboardSummarySuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetAdminDashboardSummaryQuery, GetAdminDashboardSummaryQueryVariables>): Apollo.UseSuspenseQueryResult<GetAdminDashboardSummaryQuery | undefined, GetAdminDashboardSummaryQueryVariables>;
+export function useGetAdminDashboardSummarySuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetAdminDashboardSummaryQuery, GetAdminDashboardSummaryQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetAdminDashboardSummaryQuery, GetAdminDashboardSummaryQueryVariables>(GetAdminDashboardSummaryDocument, options);
+        }
+export type GetAdminDashboardSummaryQueryHookResult = ReturnType<typeof useGetAdminDashboardSummaryQuery>;
+export type GetAdminDashboardSummaryLazyQueryHookResult = ReturnType<typeof useGetAdminDashboardSummaryLazyQuery>;
+export type GetAdminDashboardSummarySuspenseQueryHookResult = ReturnType<typeof useGetAdminDashboardSummarySuspenseQuery>;
+export type GetAdminDashboardSummaryQueryResult = Apollo.QueryResult<GetAdminDashboardSummaryQuery, GetAdminDashboardSummaryQueryVariables>;
 export const GetBenefitsDocument = gql`
     query GetBenefits($category: String) {
   benefits(category: $category) {
