@@ -7,8 +7,10 @@ import { getContracts } from "./getContracts";
 import { getMyBenefits } from "./getMyBenefits";
 import { getEmployeeBenefits } from "./getEmployeeBenefits";
 import { getSession } from "./getSession";
+import { getAdminDashboardSummary } from "./getAdminDashboardSummary";
 
 export const queries = {
+  adminDashboardSummary: getAdminDashboardSummary,
   getEmployees,
   getEmployee,
   getEmployeeByEmail,

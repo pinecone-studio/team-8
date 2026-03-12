@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useClerk } from "@clerk/nextjs";
 import {
   ClipboardList,
   FileBadge,
@@ -12,6 +13,8 @@ import {
   ShieldCheck,
   User,
 } from "lucide-react";
+import { useCurrentEmployee } from "@/lib/current-employee-provider";
+import { getAdminRoleLabel, isAdminEmployee } from "../_lib/access";
 
 const navItems = [
   {
@@ -43,6 +46,15 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { signOut } = useClerk();
+  const { employee, loading } = useCurrentEmployee();
+  const hasAdminAccess = isAdminEmployee(employee);
+  const profileName = loading ? "Loading..." : employee?.name ?? "Employee";
+  const profileRole = loading
+    ? "Profile"
+    : hasAdminAccess
+      ? getAdminRoleLabel(employee)
+      : "No admin access";
 
   const isActive = (href: string) => {
     if (href === "/admin-panel") {
@@ -61,8 +73,8 @@ export default function Sidebar() {
           </div>
 
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Username</h2>
-            <p className="text-sm text-gray-500">Admin</p>
+            <h2 className="text-base font-semibold text-gray-900">{profileName}</h2>
+            <p className="text-sm text-gray-500">{profileRole}</p>
           </div>
         </div>
 
@@ -98,7 +110,11 @@ export default function Sidebar() {
         </Link>
       </div>
 
-      <button className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900">
+      <button
+        type="button"
+        onClick={() => signOut({ redirectUrl: "/sign-in" })}
+        className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
+      >
         <LogOut className="h-5 w-5" />
         <span>Sign out</span>
       </button>

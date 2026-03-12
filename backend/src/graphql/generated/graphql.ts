@@ -19,6 +19,22 @@ export type Scalars = {
   DateTime: { input: any; output: any; }
 };
 
+export type AdminDashboardBucket = {
+  __typename?: 'AdminDashboardBucket';
+  label: Scalars['String']['output'];
+  value: Scalars['Int']['output'];
+};
+
+export type AdminDashboardSummary = {
+  __typename?: 'AdminDashboardSummary';
+  activeBenefits: Scalars['Int']['output'];
+  lockReasons: Array<AdminDashboardBucket>;
+  lockedBenefits: Scalars['Int']['output'];
+  pendingRequests: Scalars['Int']['output'];
+  totalEmployees: Scalars['Int']['output'];
+  usageByCategory: Array<AdminDashboardBucket>;
+};
+
 export type Benefit = {
   __typename?: 'Benefit';
   category: Scalars['String']['output'];
@@ -187,6 +203,7 @@ export type MutationUpdateEmployeeArgs = {
 
 export type Query = {
   __typename?: 'Query';
+  adminDashboardSummary: AdminDashboardSummary;
   benefitRequests: Array<BenefitRequest>;
   benefits: Array<Benefit>;
   contracts: Array<Contract>;
@@ -339,6 +356,8 @@ export type DirectiveResolverFn<TResult = {}, TParent = {}, TContext = {}, TArgs
 
 /** Mapping between all available schema types and the resolvers types */
 export type ResolversTypes = ResolversObject<{
+  AdminDashboardBucket: ResolverTypeWrapper<AdminDashboardBucket>;
+  AdminDashboardSummary: ResolverTypeWrapper<AdminDashboardSummary>;
   Benefit: ResolverTypeWrapper<Benefit>;
   BenefitEligibility: ResolverTypeWrapper<BenefitEligibility>;
   BenefitEligibilityStatus: BenefitEligibilityStatus;
@@ -363,6 +382,8 @@ export type ResolversTypes = ResolversObject<{
 
 /** Mapping between all available schema types and the resolvers parents */
 export type ResolversParentTypes = ResolversObject<{
+  AdminDashboardBucket: AdminDashboardBucket;
+  AdminDashboardSummary: AdminDashboardSummary;
   Benefit: Benefit;
   BenefitEligibility: BenefitEligibility;
   BenefitRequest: BenefitRequest;
@@ -379,6 +400,22 @@ export type ResolversParentTypes = ResolversObject<{
   RuleEvaluation: RuleEvaluation;
   String: Scalars['String']['output'];
   UpdateEmployeeInput: UpdateEmployeeInput;
+}>;
+
+export type AdminDashboardBucketResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AdminDashboardBucket'] = ResolversParentTypes['AdminDashboardBucket']> = ResolversObject<{
+  label?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  value?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type AdminDashboardSummaryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AdminDashboardSummary'] = ResolversParentTypes['AdminDashboardSummary']> = ResolversObject<{
+  activeBenefits?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  lockReasons?: Resolver<Array<ResolversTypes['AdminDashboardBucket']>, ParentType, ContextType>;
+  lockedBenefits?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  pendingRequests?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  totalEmployees?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  usageByCategory?: Resolver<Array<ResolversTypes['AdminDashboardBucket']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type BenefitResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Benefit'] = ResolversParentTypes['Benefit']> = ResolversObject<{
@@ -476,6 +513,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
 }>;
 
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = ResolversObject<{
+  adminDashboardSummary?: Resolver<ResolversTypes['AdminDashboardSummary'], ParentType, ContextType>;
   benefitRequests?: Resolver<Array<ResolversTypes['BenefitRequest']>, ParentType, ContextType, RequireFields<QueryBenefitRequestsArgs, 'employeeId'>>;
   benefits?: Resolver<Array<ResolversTypes['Benefit']>, ParentType, ContextType, Partial<QueryBenefitsArgs>>;
   contracts?: Resolver<Array<ResolversTypes['Contract']>, ParentType, ContextType, Partial<QueryContractsArgs>>;
@@ -495,6 +533,8 @@ export type RuleEvaluationResolvers<ContextType = GraphQLContext, ParentType ext
 }>;
 
 export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
+  AdminDashboardBucket?: AdminDashboardBucketResolvers<ContextType>;
+  AdminDashboardSummary?: AdminDashboardSummaryResolvers<ContextType>;
   Benefit?: BenefitResolvers<ContextType>;
   BenefitEligibility?: BenefitEligibilityResolvers<ContextType>;
   BenefitRequest?: BenefitRequestResolvers<ContextType>;
