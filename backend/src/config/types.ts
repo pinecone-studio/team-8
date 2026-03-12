@@ -12,15 +12,27 @@ export type RuleConfig = {
   errorMessage: string;
 };
 
+/** Benefit request flow: contract (sign contract → HR approve), normal (request → HR approve), down_payment (amount → employee approve → contract → HR), self_service (no request, show active/options) */
+export type BenefitFlowType = "contract" | "normal" | "down_payment" | "self_service";
+
 /** Benefit config from eligibility-rules.json */
 export type BenefitConfig = {
   id: string;
   name: string;
   nameEng?: string | null;
   category: string;
+  /** Company share (companias heden huvi) */
   subsidyPercent: number;
+  /** Employee share (hunees heden huviin) — if omitted, 100 - subsidyPercent */
+  employeePercent?: number;
+  /** Unit price in MNT (ene benefit une) — optional */
+  unitPrice?: number | null;
   vendorName: string | null;
   requiresContract: boolean;
+  /** How this benefit is requested and approved */
+  flowType: BenefitFlowType;
+  /** For self_service: short description of options (e.g. "3 days per year", "Remote up to 2 days/week") */
+  optionsDescription?: string | null;
   rules: RuleConfig[];
 };
 

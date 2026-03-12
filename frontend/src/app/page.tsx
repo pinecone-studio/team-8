@@ -1,9 +1,36 @@
 "use client";
 
+import { useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
+import { useGetEmployeeByEmailQuery } from "@/graphql/generated/graphql";
 import Header from "./_features/Header";
 import Sidebar from "./employee-panel/_components/SideBar";
 
 export default function Home() {
+  const { user, isLoaded } = useUser();
+  const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
+  const { data, loading, error } = useGetEmployeeByEmailQuery({
+    variables: { email: email ?? "" },
+    skip: !email,
+  });
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    console.log("[Clerk] current user email:", email ?? null);
+  }, [email, isLoaded]);
+
+  useEffect(() => {
+    if (!email || loading) return;
+
+    if (error) {
+      console.error("[D1] employee lookup failed:", error);
+      return;
+    }
+
+    console.log("[D1] employee by Clerk email:", data?.getEmployeeByEmail ?? null);
+  }, [data, email, error, loading]);
+
   return (
     <div className="flex min-h-screen bg-[#f8f8f9]">
       <Sidebar />

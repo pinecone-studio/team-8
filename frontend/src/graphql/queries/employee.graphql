@@ -34,3 +34,22 @@ query GetEmployee($id: String!) {
     updatedAt
   }
 }
+
+query GetEmployeeByEmail($email: String!) {
+  getEmployeeByEmail(email: $email) {
+    id
+    name
+    nameEng
+    email
+    role
+    department
+    responsibilityLevel
+    employmentStatus
+    hireDate
+    okrSubmitted
+    lateArrivalCount
+    lateArrivalUpdatedAt
+    createdAt
+    updatedAt
+  }
+}
