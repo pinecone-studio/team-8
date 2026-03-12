@@ -18,6 +18,32 @@ export interface Env {
   ENVIRONMENT: string;
 }
 
+function getCorsHeaders(request: Request): HeadersInit {
+  const origin = request.headers.get("Origin");
+
+  return {
+    "Access-Control-Allow-Origin": origin ?? "*",
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, Apollo-Require-Preflight",
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
+  };
+}
+
+function withCors(request: Request, response: Response): Response {
+  const headers = new Headers(response.headers);
+
+  for (const [key, value] of Object.entries(getCorsHeaders(request))) {
+    headers.set(key, value);
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 const server = new ApolloServer<GraphQLContext>({
   typeDefs,
   resolvers,
@@ -36,19 +62,25 @@ async function handleContractView(request: Request, env: Env): Promise<Response 
   const url = new URL(request.url);
   if (url.pathname !== "/contracts/view" || request.method !== "GET") return null;
   const token = url.searchParams.get("token");
-  if (!token) return new Response("Missing token", { status: 400 });
+  if (!token) {
+    return withCors(request, new Response("Missing token", { status: 400 }));
+  }
 
   const resolved = await resolveContractViewToken(env.CONTRACT_VIEW_TOKENS, token);
-  if (!resolved) return new Response("Invalid or expired token", { status: 404 });
+  if (!resolved) {
+    return withCors(request, new Response("Invalid or expired token", { status: 404 }));
+  }
 
   const object = await getContract(env.CONTRACTS_BUCKET, resolved.r2Key);
-  if (!object) return new Response("Contract not found", { status: 404 });
+  if (!object) {
+    return withCors(request, new Response("Contract not found", { status: 404 }));
+  }
 
   const body = object.body;
   const contentType = object.httpMetadata?.contentType ?? "application/pdf";
-  return new Response(body, {
+  return withCors(request, new Response(body, {
     headers: { "Content-Type": contentType },
-  });
+  }));
 }
 
 /** HR upload: multipart form (benefitId, version, effectiveDate, expiryDate, vendorName, file). */
@@ -60,7 +92,7 @@ async function handleContractUpload(request: Request, env: Env): Promise<Respons
   try {
     formData = await request.formData();
   } catch {
-    return new Response("Invalid form", { status: 400 });
+    return withCors(request, new Response("Invalid form", { status: 400 }));
   }
 
   const benefitId = formData.get("benefitId")?.toString();
@@ -71,12 +103,12 @@ async function handleContractUpload(request: Request, env: Env): Promise<Respons
   const file = formData.get("file") as File | null;
 
   if (!benefitId || !version || !effectiveDate || !expiryDate || !file?.size) {
-    return new Response(
+    return withCors(request, new Response(
       JSON.stringify({
         error: "Missing required fields: benefitId, version, effectiveDate, expiryDate, file",
       }),
       { status: 400, headers: { "Content-Type": "application/json" } }
-    );
+    ));
   }
 
   const filename = file.name || "contract.pdf";
@@ -107,49 +139,25 @@ async function handleContractUpload(request: Request, env: Env): Promise<Respons
     })
     .returning();
 
-  return new Response(JSON.stringify({ id: inserted?.id, r2Key }), {
+  return withCors(request, new Response(JSON.stringify({ id: inserted?.id, r2Key }), {
     status: 201,
     headers: { "Content-Type": "application/json" },
-  });
-}
-
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Max-Age": "86400",
-} as const;
-
-/** CORS: OPTIONS preflight — body null, 204. */
-function handleCorsPreflight(request: Request): Response | null {
-  if (request.method !== "OPTIONS") return null;
-  const origin = request.headers.get("Origin") ?? "*";
-  return new Response(null, {
-    status: 204,
-    headers: { ...CORS_HEADERS, "Access-Control-Allow-Origin": origin },
-  });
-}
-
-/** Add CORS headers to a response so browser allows cross-origin use. */
-function withCors(response: Response): Response {
-  const headers = new Headers(response.headers);
-  for (const [k, v] of Object.entries(CORS_HEADERS)) headers.set(k, v);
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
+  }));
 }
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const preflight = handleCorsPreflight(request);
-    if (preflight !== null) return preflight;
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: getCorsHeaders(request),
+      });
+    }
+
     const contractView = await handleContractView(request, env);
-    if (contractView !== null) return withCors(contractView);
+    if (contractView !== null) return contractView;
     const upload = await handleContractUpload(request, env);
-    if (upload !== null) return withCors(upload);
-    const response = await handler(request, env, ctx);
-    return withCors(response);
+    if (upload !== null) return upload;
+    return withCors(request, await handler(request, env, ctx));
   },
 };
