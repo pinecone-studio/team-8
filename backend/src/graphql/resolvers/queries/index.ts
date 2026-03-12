@@ -4,6 +4,9 @@ import { getEmployeeByEmail } from "./getEmployeeByEmail";
 import { getBenefits } from "./getBenefits";
 import { getMyBenefits } from "./getMyBenefits";
 import { getEmployeeBenefits } from "./getEmployeeBenefits";
+import { getPendingBenefitRequests } from "./getPendingBenefitRequests";
+import { getBenefitRequest } from "./getBenefitRequest";
+import { getEmployeeRequests } from "./getEmployeeRequests";
 import { getSession } from "./getSession";
 
 export const queries = {
@@ -13,5 +16,8 @@ export const queries = {
   benefits: getBenefits,
   myBenefits: getMyBenefits,
   getEmployeeBenefits,
+  pendingBenefitRequests: getPendingBenefitRequests,
+  getBenefitRequest,
+  getEmployeeRequests,
   session: getSession,
 };

@@ -36,12 +36,14 @@ export const confirmBenefitRequest = async (
     contractVersionAccepted = active ? `${active.version}:${active.sha256Hash}` : null;
   }
 
+  // Employee signed the contract — keep status "pending" for HR review.
+  // HR approves via approveBenefitRequest.
   const [updated] = await db
     .update(schema.benefitRequests)
     .set({
       contractVersionAccepted,
       contractAcceptedAt,
-      employeeApprovedAt: contractAccepted ? contractAcceptedAt : null,
+      employeeApprovedAt: contractAcceptedAt,
       updatedAt: contractAcceptedAt,
     })
     .where(eq(schema.benefitRequests.id, requestId))

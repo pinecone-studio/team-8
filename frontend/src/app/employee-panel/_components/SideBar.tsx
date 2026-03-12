@@ -49,6 +49,7 @@ export default function Sidebar() {
           </Link>
 
           <Link
+<<<<<<< Updated upstream
             href="/employee-panel/requests"
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
               pathname === "/employee-panel/requests"
@@ -62,6 +63,9 @@ export default function Sidebar() {
 
           <Link
             href="/employee-panel/contracts"
+=======
+            href="/employee-panel/Contracts"
+>>>>>>> Stashed changes
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
               pathname === "/employee-panel/contracts"
                 ? "bg-gray-200 text-gray-900"

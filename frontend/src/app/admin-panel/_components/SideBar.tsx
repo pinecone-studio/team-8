@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+<<<<<<< Updated upstream
 import {
   ClipboardList,
   FileBadge,
@@ -102,6 +103,65 @@ export default function Sidebar() {
         <LogOut className="h-5 w-5" />
         <span>Sign out</span>
       </button>
+=======
+import { LayoutGrid, Users, FileText, Package } from "lucide-react";
+
+export default function AdminSidebar() {
+  const pathname = usePathname();
+
+  return (
+    <aside className="flex h-screen w-[260px] flex-col border-r border-gray-200 bg-[#f8f8f9] px-4 py-4">
+      <div className="mb-6">
+        <h2 className="text-lg font-semibold text-gray-900">HR Admin</h2>
+        <p className="text-sm text-gray-500">Benefits Management</p>
+      </div>
+      <nav className="space-y-1">
+        <Link
+          href="/admin-panel"
+          className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
+            pathname === "/admin-panel"
+              ? "bg-gray-200 text-gray-900"
+              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          }`}
+        >
+          <LayoutGrid className="h-5 w-5" />
+          <span>Dashboard</span>
+        </Link>
+        <Link
+          href="/admin-panel/eligibility"
+          className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
+            pathname === "/admin-panel/eligibility"
+              ? "bg-gray-200 text-gray-900"
+              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          }`}
+        >
+          <Users className="h-5 w-5" />
+          <span>Eligibility Inspector</span>
+        </Link>
+        <Link
+          href="/admin-panel/requests"
+          className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
+            pathname === "/admin-panel/requests"
+              ? "bg-gray-200 text-gray-900"
+              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          }`}
+        >
+          <FileText className="h-5 w-5" />
+          <span>Request Review</span>
+        </Link>
+        <Link
+          href="/admin-panel/benefits"
+          className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
+            pathname === "/admin-panel/benefits"
+              ? "bg-gray-200 text-gray-900"
+              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          }`}
+        >
+          <Package className="h-5 w-5" />
+          <span>Benefits</span>
+        </Link>
+      </nav>
+>>>>>>> Stashed changes
     </aside>
   );
 }

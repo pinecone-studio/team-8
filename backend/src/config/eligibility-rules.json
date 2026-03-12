@@ -11,6 +11,7 @@
       "vendorName": "PineFit",
       "requiresContract": true,
       "flowType": "contract",
+      "duration": "12 months",
       "rules": [
         { "type": "employment_status", "operator": "eq", "value": "active", "errorMessage": "Not available during probation or leave." },
         { "type": "okr_submitted", "operator": "eq", "value": true, "errorMessage": "Submit your Q[current] OKR to unlock this benefit." },
@@ -27,6 +28,7 @@
       "vendorName": "Insurance Partner",
       "requiresContract": true,
       "flowType": "contract",
+      "duration": "12 months",
       "rules": [
         { "type": "employment_status", "operator": "eq", "value": "active", "errorMessage": "Not available during probation or leave." },
         { "type": "okr_submitted", "operator": "eq", "value": true, "errorMessage": "Submit your Q[current] OKR to unlock this benefit." },
@@ -43,6 +45,7 @@
       "requiresContract": false,
       "flowType": "self_service",
       "optionsDescription": "Mental health support, ergonomics, screen time tools",
+      "duration": "Ongoing",
       "rules": [
         { "type": "employment_status", "operator": "neq", "value": "terminated", "errorMessage": "Not available after termination." }
       ]
@@ -57,6 +60,7 @@
       "vendorName": "Apple",
       "requiresContract": true,
       "flowType": "contract",
+      "duration": "36 months",
       "rules": [
         { "type": "tenure_days", "operator": "gte", "value": 180, "errorMessage": "Available after 6 months of employment." },
         { "type": "employment_status", "operator": "eq", "value": "active", "errorMessage": "Not available during probation or leave." },
@@ -73,6 +77,7 @@
       "vendorName": null,
       "requiresContract": false,
       "flowType": "normal",
+      "duration": "Ongoing",
       "rules": [
         { "type": "employment_status", "operator": "eq", "value": "active", "errorMessage": "Not available during probation." },
         { "type": "okr_submitted", "operator": "eq", "value": true, "errorMessage": "Submit your Q[current] OKR to unlock this benefit." },
@@ -89,6 +94,7 @@
       "vendorName": null,
       "requiresContract": false,
       "flowType": "normal",
+      "duration": "12 months",
       "rules": [
         { "type": "role", "operator": "eq", "value": "ux_engineer", "errorMessage": "Available to UX/Design role only." },
         { "type": "employment_status", "operator": "eq", "value": "active", "errorMessage": "Active employment required." },
@@ -104,6 +110,7 @@
       "vendorName": null,
       "requiresContract": false,
       "flowType": "down_payment",
+      "duration": "One-time",
       "rules": [
         { "type": "tenure_days", "operator": "gte", "value": 730, "errorMessage": "Available after 2 years of employment." },
         { "type": "employment_status", "operator": "eq", "value": "active", "errorMessage": "Active employment required." },
@@ -121,6 +128,7 @@
       "requiresContract": false,
       "flowType": "self_service",
       "optionsDescription": "3 days per year, no questions asked",
+      "duration": "Per year",
       "rules": [
         { "type": "employment_status", "operator": "neq", "value": "terminated", "errorMessage": "Not available after termination." },
         { "type": "okr_submitted", "operator": "eq", "value": true, "errorMessage": "Submit OKR for full allocation." }
@@ -136,6 +144,7 @@
       "requiresContract": false,
       "flowType": "self_service",
       "optionsDescription": "Up to 2 days per week remote",
+      "duration": "Ongoing",
       "rules": [
         { "type": "employment_status", "operator": "eq", "value": "active", "errorMessage": "Not available during probation." },
         { "type": "okr_submitted", "operator": "eq", "value": true, "errorMessage": "OKR submission required." },
@@ -152,6 +161,7 @@
       "vendorName": null,
       "requiresContract": true,
       "flowType": "contract",
+      "duration": "Per trip",
       "rules": [
         { "type": "tenure_days", "operator": "gte", "value": 365, "errorMessage": "Available after 12 months of employment." },
         { "type": "employment_status", "operator": "eq", "value": "active", "errorMessage": "Not available during probation or leave." },
@@ -169,6 +179,7 @@
       "requiresContract": false,
       "flowType": "self_service",
       "optionsDescription": "Quarterly bonus based on OKR score",
+      "duration": "Quarterly",
       "rules": [
         { "type": "employment_status", "operator": "eq", "value": "active", "errorMessage": "Active employment required." },
         { "type": "okr_submitted", "operator": "eq", "value": true, "errorMessage": "OKR not submitted or score below threshold." },

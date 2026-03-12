@@ -38,6 +38,7 @@ export const benefitTypeDefs = gql`
     requiresContract: Boolean!
     flowType: BenefitFlowType!
     optionsDescription: String
+    duration: String
   }
 
   type BenefitEligibility {
@@ -52,6 +53,8 @@ export const benefitTypeDefs = gql`
     id: String!
     employeeId: String!
     benefitId: String!
+    employee: Employee
+    benefit: Benefit
     status: String!
     contractVersionAccepted: String
     contractAcceptedAt: String
@@ -69,6 +72,9 @@ export const benefitTypeDefs = gql`
     benefits(category: String): [Benefit!]!
     myBenefits(employeeId: String!): [BenefitEligibility!]!
     getEmployeeBenefits(employeeId: String!): [BenefitEligibility!]!
+    pendingBenefitRequests: [BenefitRequest!]!
+    getBenefitRequest(id: String!): BenefitRequest
+    getEmployeeRequests(employeeId: String!): [BenefitRequest!]!
   }
 
   input RequestBenefitInput {

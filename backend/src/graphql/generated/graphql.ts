@@ -8,6 +8,7 @@ export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: 
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
 export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
+export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 export type RequireFields<T, K extends keyof T> = Omit<T, K> & { [P in K]-?: NonNullable<T[P]> };
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
@@ -22,6 +23,7 @@ export type Scalars = {
 export type Benefit = {
   __typename?: 'Benefit';
   category: Scalars['String']['output'];
+  duration?: Maybe<Scalars['String']['output']>;
   employeePercent: Scalars['Int']['output'];
   flowType: BenefitFlowType;
   id: Scalars['String']['output'];
@@ -57,11 +59,13 @@ export type BenefitFlowType =
 
 export type BenefitRequest = {
   __typename?: 'BenefitRequest';
+  benefit?: Maybe<Benefit>;
   benefitId: Scalars['String']['output'];
   contractAcceptedAt?: Maybe<Scalars['String']['output']>;
   contractVersionAccepted?: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['String']['output'];
   declineReason?: Maybe<Scalars['String']['output']>;
+  employee?: Maybe<Employee>;
   employeeApprovedAt?: Maybe<Scalars['String']['output']>;
   employeeId: Scalars['String']['output'];
   id: Scalars['String']['output'];
@@ -175,17 +179,28 @@ export type MutationUpdateEmployeeArgs = {
 export type Query = {
   __typename?: 'Query';
   benefits: Array<Benefit>;
+  getBenefitRequest?: Maybe<BenefitRequest>;
   getEmployee?: Maybe<Employee>;
   getEmployeeBenefits: Array<BenefitEligibility>;
+<<<<<<< Updated upstream
   getEmployeeByEmail?: Maybe<Employee>;
+=======
+  getEmployeeRequests: Array<BenefitRequest>;
+>>>>>>> Stashed changes
   getEmployees: Array<Employee>;
   myBenefits: Array<BenefitEligibility>;
+  pendingBenefitRequests: Array<BenefitRequest>;
   session?: Maybe<Employee>;
 };
 
 
 export type QueryBenefitsArgs = {
   category?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryGetBenefitRequestArgs = {
+  id: Scalars['String']['input'];
 };
 
 
@@ -199,8 +214,13 @@ export type QueryGetEmployeeBenefitsArgs = {
 };
 
 
+<<<<<<< Updated upstream
 export type QueryGetEmployeeByEmailArgs = {
   email: Scalars['String']['input'];
+=======
+export type QueryGetEmployeeRequestsArgs = {
+  employeeId: Scalars['String']['input'];
+>>>>>>> Stashed changes
 };
 
 
@@ -318,7 +338,7 @@ export type ResolversTypes = ResolversObject<{
   BenefitEligibility: ResolverTypeWrapper<BenefitEligibility>;
   BenefitEligibilityStatus: BenefitEligibilityStatus;
   BenefitFlowType: BenefitFlowType;
-  BenefitRequest: ResolverTypeWrapper<BenefitRequest>;
+  BenefitRequest: ResolverTypeWrapper<Omit<BenefitRequest, 'employee'> & { employee?: Maybe<ResolversTypes['Employee']> }>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
   CreateEmployeeInput: CreateEmployeeInput;
   DateTime: ResolverTypeWrapper<Scalars['DateTime']['output']>;
@@ -339,7 +359,7 @@ export type ResolversTypes = ResolversObject<{
 export type ResolversParentTypes = ResolversObject<{
   Benefit: Benefit;
   BenefitEligibility: BenefitEligibility;
-  BenefitRequest: BenefitRequest;
+  BenefitRequest: Omit<BenefitRequest, 'employee'> & { employee?: Maybe<ResolversParentTypes['Employee']> };
   Boolean: Scalars['Boolean']['output'];
   CreateEmployeeInput: CreateEmployeeInput;
   DateTime: Scalars['DateTime']['output'];
@@ -356,6 +376,7 @@ export type ResolversParentTypes = ResolversObject<{
 
 export type BenefitResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Benefit'] = ResolversParentTypes['Benefit']> = ResolversObject<{
   category?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  duration?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   employeePercent?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   flowType?: Resolver<ResolversTypes['BenefitFlowType'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -379,11 +400,13 @@ export type BenefitEligibilityResolvers<ContextType = GraphQLContext, ParentType
 }>;
 
 export type BenefitRequestResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['BenefitRequest'] = ResolversParentTypes['BenefitRequest']> = ResolversObject<{
+  benefit?: Resolver<Maybe<ResolversTypes['Benefit']>, ParentType, ContextType>;
   benefitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   contractAcceptedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   contractVersionAccepted?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   declineReason?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  employee?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType>;
   employeeApprovedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   employeeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -437,11 +460,17 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
 
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = ResolversObject<{
   benefits?: Resolver<Array<ResolversTypes['Benefit']>, ParentType, ContextType, Partial<QueryBenefitsArgs>>;
+  getBenefitRequest?: Resolver<Maybe<ResolversTypes['BenefitRequest']>, ParentType, ContextType, RequireFields<QueryGetBenefitRequestArgs, 'id'>>;
   getEmployee?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<QueryGetEmployeeArgs, 'id'>>;
   getEmployeeBenefits?: Resolver<Array<ResolversTypes['BenefitEligibility']>, ParentType, ContextType, RequireFields<QueryGetEmployeeBenefitsArgs, 'employeeId'>>;
+<<<<<<< Updated upstream
   getEmployeeByEmail?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<QueryGetEmployeeByEmailArgs, 'email'>>;
+=======
+  getEmployeeRequests?: Resolver<Array<ResolversTypes['BenefitRequest']>, ParentType, ContextType, RequireFields<QueryGetEmployeeRequestsArgs, 'employeeId'>>;
+>>>>>>> Stashed changes
   getEmployees?: Resolver<Array<ResolversTypes['Employee']>, ParentType, ContextType>;
   myBenefits?: Resolver<Array<ResolversTypes['BenefitEligibility']>, ParentType, ContextType, RequireFields<QueryMyBenefitsArgs, 'employeeId'>>;
+  pendingBenefitRequests?: Resolver<Array<ResolversTypes['BenefitRequest']>, ParentType, ContextType>;
   session?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, Partial<QuerySessionArgs>>;
 }>;
 

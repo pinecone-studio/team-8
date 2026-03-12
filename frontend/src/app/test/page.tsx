@@ -2,12 +2,16 @@
 
 import {
   useGetEmployeesQuery,
-  useGetBenefitsQuery,
-  useGetMyBenefitsQuery,
+  useBenefitsQuery,
+  useMyBenefitsQuery,
 } from "@/graphql/generated/graphql";
 import Header from "@/app/_features/Header";
+<<<<<<< Updated upstream
 import Sidebar from "@/app/employee-panel/_components/SideBar";
 import { graphqlUri } from "@/lib/apollo-client";
+=======
+import AppSidebar from "@/app/_components/AppSidebar";
+>>>>>>> Stashed changes
 import { use, useState } from "react";
 
 type PageProps = { params?: Promise<Record<string, string | string[]>> };
@@ -23,11 +27,17 @@ export default function TestPage({ params }: PageProps) {
   if (params) use(params);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
 
+<<<<<<< Updated upstream
   const { data: employeesData, loading: employeesLoading, error: employeesError } = useGetEmployeesQuery({
     fetchPolicy: "network-only", // Өгөгдлийн сангаас бүх ажилчдыг шинээр татна
   });
   const { data: benefitsData, loading: benefitsLoading, error: benefitsError } = useGetBenefitsQuery();
   const { data: myBenefitsData, loading: myBenefitsLoading } = useGetMyBenefitsQuery({
+=======
+  const { data: employeesData, loading: employeesLoading, error: employeesError } = useGetEmployeesQuery();
+  const { data: benefitsData, loading: benefitsLoading, error: benefitsError } = useBenefitsQuery();
+  const { data: myBenefitsData, loading: myBenefitsLoading } = useMyBenefitsQuery({
+>>>>>>> Stashed changes
     variables: { employeeId: selectedEmployeeId ?? "" },
     skip: !selectedEmployeeId,
   });
@@ -38,7 +48,7 @@ export default function TestPage({ params }: PageProps) {
 
   return (
     <div className="flex min-h-screen bg-[#f8f8f9]">
-      <Sidebar />
+      <AppSidebar />
       <div className="flex flex-1 flex-col">
         <Header />
         <main className="p-8">

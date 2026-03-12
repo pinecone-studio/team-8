@@ -33,6 +33,8 @@ export type BenefitConfig = {
   flowType: BenefitFlowType;
   /** For self_service: short description of options (e.g. "3 days per year", "Remote up to 2 days/week") */
   optionsDescription?: string | null;
+  /** Benefit duration (e.g. "12 months", "1 year", "Per year") */
+  duration?: string | null;
   rules: RuleConfig[];
 };
 

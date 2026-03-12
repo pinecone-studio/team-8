@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useGetEmployeeByEmailQuery } from "@/graphql/generated/graphql";
 import Header from "./_features/Header";
-import Sidebar from "./employee-panel/_components/SideBar";
+import AppSidebar from "./_components/AppSidebar";
 
 export default function Home() {
   const { user, isLoaded } = useUser();
@@ -33,18 +33,37 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen bg-[#f8f8f9]">
-      <Sidebar />
+      <AppSidebar />
 
       <div className="flex flex-1 flex-col">
-        <Header />
-
         <main className="p-8">
           <h1 className="text-4xl font-semibold text-gray-900">
-            Good to see you, Username
+            Good to see you
           </h1>
           <p className="mt-2 text-lg text-gray-500">
-            Here&apos;s an overview of your benefits
+            Use the sidebar to navigate. You have access to both your benefits
+            and HR admin tools.
           </p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <a
+              href="/employee-panel/Mybenefits"
+              className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:border-indigo-300 hover:shadow"
+            >
+              <h2 className="font-semibold text-gray-900">My Benefits</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                View eligibility, request benefits, and track your requests
+              </p>
+            </a>
+            <a
+              href="/admin-panel"
+              className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:border-indigo-300 hover:shadow"
+            >
+              <h2 className="font-semibold text-gray-900">HR Admin</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Review requests, upload contracts
+              </p>
+            </a>
+          </div>
         </main>
       </div>
     </div>

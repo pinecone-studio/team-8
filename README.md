@@ -38,6 +38,9 @@ npm run db:generate --workspace=backend
 
 # Apply migration to the local D1 database
 npm run db:migrate:local --workspace=backend
+
+# (Optional) Seed demo employees for POC
+npm run db:seed --workspace=backend
 ```
 
 ### 3. Start development servers
