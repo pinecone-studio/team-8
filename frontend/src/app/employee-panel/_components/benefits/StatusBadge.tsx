@@ -1,5 +1,7 @@
+import type { BenefitEligibilityStatus } from "@/graphql/generated/graphql";
+
 type Props = {
-  status: "ACTIVE" | "ELIGIBLE" | "PENDING" | "LOCKED";
+  status: BenefitEligibilityStatus;
 };
 
 const styles = {

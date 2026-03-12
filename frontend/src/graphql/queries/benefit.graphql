@@ -26,6 +26,8 @@ query GetMyBenefits($employeeId: String!) {
       subsidyPercent
       employeePercent
       unitPrice
+      vendorName
+      requiresContract
       flowType
       optionsDescription
     }
@@ -38,5 +40,24 @@ query GetMyBenefits($employeeId: String!) {
       ruleType
       errorMessage
     }
+  }
+}
+
+query GetBenefitRequests($employeeId: String!) {
+  benefitRequests(employeeId: $employeeId) {
+    id
+    employeeId
+    benefitId
+    status
+    contractVersionAccepted
+    contractAcceptedAt
+    reviewedBy
+    requestedAmount
+    repaymentMonths
+    employeeApprovedAt
+    declineReason
+    createdAt
+    updatedAt
+    viewContractUrl
   }
 }
