@@ -73,6 +73,19 @@ export type BenefitRequest = {
   viewContractUrl?: Maybe<Scalars['String']['output']>;
 };
 
+export type Contract = {
+  __typename?: 'Contract';
+  benefitId: Scalars['String']['output'];
+  benefitName?: Maybe<Scalars['String']['output']>;
+  effectiveDate: Scalars['String']['output'];
+  expiryDate: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  isActive: Scalars['Boolean']['output'];
+  vendorName: Scalars['String']['output'];
+  version: Scalars['String']['output'];
+  viewUrl?: Maybe<Scalars['String']['output']>;
+};
+
 export type CreateEmployeeInput = {
   department: Scalars['String']['input'];
   email: Scalars['String']['input'];
@@ -176,6 +189,7 @@ export type Query = {
   __typename?: 'Query';
   benefitRequests: Array<BenefitRequest>;
   benefits: Array<Benefit>;
+  contracts: Array<Contract>;
   getEmployee?: Maybe<Employee>;
   getEmployeeBenefits: Array<BenefitEligibility>;
   getEmployeeByEmail?: Maybe<Employee>;
@@ -192,6 +206,11 @@ export type QueryBenefitRequestsArgs = {
 
 export type QueryBenefitsArgs = {
   category?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryContractsArgs = {
+  benefitId?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -326,6 +345,7 @@ export type ResolversTypes = ResolversObject<{
   BenefitFlowType: BenefitFlowType;
   BenefitRequest: ResolverTypeWrapper<BenefitRequest>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
+  Contract: ResolverTypeWrapper<Contract>;
   CreateEmployeeInput: CreateEmployeeInput;
   DateTime: ResolverTypeWrapper<Scalars['DateTime']['output']>;
   Employee: ResolverTypeWrapper<EmployeeModel>;
@@ -347,6 +367,7 @@ export type ResolversParentTypes = ResolversObject<{
   BenefitEligibility: BenefitEligibility;
   BenefitRequest: BenefitRequest;
   Boolean: Scalars['Boolean']['output'];
+  Contract: Contract;
   CreateEmployeeInput: CreateEmployeeInput;
   DateTime: Scalars['DateTime']['output'];
   Employee: EmployeeModel;
@@ -402,6 +423,19 @@ export type BenefitRequestResolvers<ContextType = GraphQLContext, ParentType ext
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
+export type ContractResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Contract'] = ResolversParentTypes['Contract']> = ResolversObject<{
+  benefitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  benefitName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  effectiveDate?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  expiryDate?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  isActive?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  vendorName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  version?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  viewUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export interface DateTimeScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['DateTime'], any> {
   name: 'DateTime';
 }
@@ -444,6 +478,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = ResolversObject<{
   benefitRequests?: Resolver<Array<ResolversTypes['BenefitRequest']>, ParentType, ContextType, RequireFields<QueryBenefitRequestsArgs, 'employeeId'>>;
   benefits?: Resolver<Array<ResolversTypes['Benefit']>, ParentType, ContextType, Partial<QueryBenefitsArgs>>;
+  contracts?: Resolver<Array<ResolversTypes['Contract']>, ParentType, ContextType, Partial<QueryContractsArgs>>;
   getEmployee?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<QueryGetEmployeeArgs, 'id'>>;
   getEmployeeBenefits?: Resolver<Array<ResolversTypes['BenefitEligibility']>, ParentType, ContextType, RequireFields<QueryGetEmployeeBenefitsArgs, 'employeeId'>>;
   getEmployeeByEmail?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<QueryGetEmployeeByEmailArgs, 'email'>>;
@@ -463,6 +498,7 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   Benefit?: BenefitResolvers<ContextType>;
   BenefitEligibility?: BenefitEligibilityResolvers<ContextType>;
   BenefitRequest?: BenefitRequestResolvers<ContextType>;
+  Contract?: ContractResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
   Employee?: EmployeeResolvers<ContextType>;
   FailedRule?: FailedRuleResolvers<ContextType>;
