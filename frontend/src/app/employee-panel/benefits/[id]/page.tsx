@@ -1,20 +1,63 @@
+"use client";
+
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { useParams } from "next/navigation";
 import Topbar from "../../_components/layout/Topbar";
 
 import StatusBadge from "../../_components/benefits/StatusBadge";
 import Sidebar from "../../_components/SideBar";
-import { benefits } from "@/lib/  mock-data";
+import { useGetMyBenefitsQuery } from "@/graphql/generated/graphql";
+import { useCurrentEmployee } from "@/lib/use-current-employee";
 
-export default async function BenefitDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const benefit = benefits.find((b) => b.id === id);
+export default function BenefitDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
+  const { employeeId, loading: employeeLoading } = useCurrentEmployee();
+  const { data, loading } = useGetMyBenefitsQuery({
+    variables: { employeeId: employeeId ?? "" },
+    skip: !employeeId,
+  });
 
-  if (!benefit) return notFound();
+  const benefitEligibility = data?.myBenefits.find((b) => b.benefitId === id);
+
+  if (employeeLoading || loading) {
+    return (
+      <div className="flex min-h-screen bg-[#f6f7f9]">
+        <Sidebar />
+        <div className="flex-1">
+          <Topbar />
+          <main className="p-8">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 text-gray-500">
+              Loading benefit...
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (!benefitEligibility) {
+    return (
+      <div className="flex min-h-screen bg-[#f6f7f9]">
+        <Sidebar />
+        <div className="flex-1">
+          <Topbar />
+          <main className="p-8">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 text-gray-500">
+              Benefit not found.
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  const benefit = benefitEligibility.benefit;
+  const description =
+    benefit.optionsDescription ?? "Benefit details are not available.";
+  const vendor = benefit.vendorName ?? "Vendor";
+  const subsidyLabel = `${benefit.subsidyPercent}%`;
+  const failedMessage = benefitEligibility.failedRule?.errorMessage ?? null;
 
   return (
     <div className="flex min-h-screen bg-[#f6f7f9]">
@@ -25,7 +68,7 @@ export default async function BenefitDetailPage({
 
         <main className="p-8">
           <Link
-            href="/employee-panel/Dashboard"
+            href="/employee-panel/dashboard"
             className="text-sm text-gray-500 hover:text-gray-700"
           >
             ← Back to Benefits
@@ -38,16 +81,14 @@ export default async function BenefitDetailPage({
                   <h1 className="text-4xl font-bold text-gray-900">
                     {benefit.name}
                   </h1>
-                  <p className="mt-2 text-2xl text-gray-500">
-                    {benefit.vendor}
-                  </p>
+                  <p className="mt-2 text-2xl text-gray-500">{vendor}</p>
                 </div>
 
-                <StatusBadge status={benefit.status} />
+                <StatusBadge status={benefitEligibility.status} />
               </div>
 
               <p className="mt-6 text-xl leading-8 text-gray-600">
-                {benefit.description}
+                {description}
               </p>
 
               <div className="my-8 h-px bg-gray-200" />
@@ -56,14 +97,14 @@ export default async function BenefitDetailPage({
                 <div>
                   <p className="text-sm text-gray-500">Subsidy Percentage</p>
                   <p className="mt-2 text-2xl font-bold text-gray-900">
-                    {benefit.subsidy}
+                    {subsidyLabel}
                   </p>
                 </div>
 
                 <div>
                   <p className="text-sm text-gray-500">Contract Required</p>
                   <p className="mt-2 text-2xl font-bold text-gray-900">
-                    {benefit.contractRequired ? "Yes" : "No"}
+                    {benefit.requiresContract ? "Yes" : "No"}
                   </p>
                 </div>
               </div>
@@ -71,7 +112,7 @@ export default async function BenefitDetailPage({
               <div className="my-8 h-px bg-gray-200" />
 
               <p className="text-base text-gray-500">
-                {benefit.contractRequired
+                {benefit.requiresContract
                   ? "This benefit requires contract acceptance before approval"
                   : "This benefit does not require contract acceptance before approval"}
               </p>
@@ -83,26 +124,34 @@ export default async function BenefitDetailPage({
               </h2>
 
               <div className="mt-6 space-y-5">
-                {benefit.eligibility.map((item) => (
-                  <div key={item.label} className="flex gap-3">
-                    <span
-                      className={`mt-1 text-lg ${
-                        item.met ? "text-green-600" : "text-red-500"
-                      }`}
-                    >
-                      {item.met ? "✓" : "✕"}
-                    </span>
-
-                    <div>
-                      <p className="font-medium text-gray-900">{item.label}</p>
-                      <p className="text-sm text-gray-600">{item.detail}</p>
-                    </div>
+                {benefitEligibility.ruleEvaluation.length === 0 ? (
+                  <div className="text-sm text-gray-500">
+                    Eligibility rules are not available.
                   </div>
-                ))}
+                ) : (
+                  benefitEligibility.ruleEvaluation.map((item) => (
+                    <div key={item.ruleType} className="flex gap-3">
+                      <span
+                        className={`mt-1 text-lg ${
+                          item.passed ? "text-green-600" : "text-red-500"
+                        }`}
+                      >
+                        {item.passed ? "✓" : "✕"}
+                      </span>
+
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {item.ruleType}
+                        </p>
+                        <p className="text-sm text-gray-600">{item.reason}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
               <div className="mt-8">
-                {benefit.status === "ELIGIBLE" && (
+                {benefitEligibility.status === "ELIGIBLE" && (
                   <Link
                     href={`/employee-panel/benefits/${benefit.id}/request`}
                     className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-blue-600 text-base font-medium text-white hover:bg-blue-700"
@@ -111,28 +160,28 @@ export default async function BenefitDetailPage({
                   </Link>
                 )}
 
-                {benefit.status === "LOCKED" && (
+                {benefitEligibility.status === "LOCKED" && (
                   <div className="space-y-4">
                     <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
                       You don&apos;t meet all eligibility requirements for this
                       benefit.
                     </div>
 
-                    {benefit.lockMessage && (
+                    {failedMessage && (
                       <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
-                        {benefit.lockMessage}
+                        {failedMessage}
                       </div>
                     )}
                   </div>
                 )}
 
-                {benefit.status === "ACTIVE" && (
+                {benefitEligibility.status === "ACTIVE" && (
                   <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
                     This benefit is already active for you.
                   </div>
                 )}
 
-                {benefit.status === "PENDING" && (
+                {benefitEligibility.status === "PENDING" && (
                   <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-700">
                     Your request for this benefit is currently pending approval.
                   </div>

@@ -3,3 +3,4 @@ INSERT INTO employees (id, email, name, name_eng, role, department, responsibili
 ('emp1', 'bataa@company.mn', 'Батбаяр', 'Batbayar', 'developer', 'Engineering', 2, 'active', '2023-01-15', 1, 0, datetime('now'), datetime('now')),
 ('emp2', 'saruul@company.mn', 'Сартуул', 'Saruul', 'hr_manager', 'HR', 3, 'active', '2022-06-01', 1, 0, datetime('now'), datetime('now')),
 ('emp3', 'odgerel@company.mn', 'Өдгэрэл', 'Odgerel', 'designer', 'Product', 1, 'active', '2024-03-01', 0, 1, datetime('now'), datetime('now'));
+('emp3', 'odgerel@company.mn', 'Өдгэрэл', 'Odgerel', 'designer', 'Product', 1, 'active', '2024-03-01', 0, 1, datetime('now'), datetime('now'));
