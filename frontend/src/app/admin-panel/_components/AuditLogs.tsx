@@ -1,6 +1,17 @@
 import { Download, Filter } from "lucide-react";
 
-const logs = [
+type LogTone = "neutral" | "success" | "warning";
+
+type AuditLog = {
+  timestamp: string;
+  employee: string;
+  benefit: string;
+  action: string;
+  triggered: string;
+  tone: LogTone;
+};
+
+const logs: AuditLog[] = [
   {
     timestamp: "2026-03-11 09:15:23",
     employee: "Alex Johnson",
@@ -51,11 +62,11 @@ const logs = [
   },
 ];
 
-const toneStyles = {
+const toneStyles: Record<LogTone, string> = {
   neutral: "bg-slate-100 text-slate-600",
   success: "bg-emerald-100 text-emerald-700",
   warning: "bg-orange-100 text-orange-700",
-} as const;
+};
 
 export default function AuditLogs() {
   return (
