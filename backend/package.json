@@ -9,6 +9,7 @@
     "codegen": "graphql-codegen --config codegen.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply team8 --local",
+    "db:seed": "wrangler d1 execute team8 --local --file=./scripts/seed-demo.sql",
     "db:migrate:remote": "dotenv -e .env -- wrangler d1 migrations apply team8 --remote",
     "db:seed:local": "wrangler d1 execute team8 --local --file ./scripts/seed-mock-data.sql",
     "db:studio": "drizzle-kit studio",

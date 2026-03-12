@@ -228,6 +228,38 @@ npx wrangler d1 migrations apply team8 --remote
 npx wrangler deploy
 ```
 
+### Frontend (Cloudflare Workers via OpenNext)
+
+The frontend is deployed to **Cloudflare Workers** using [@opennextjs/cloudflare](https://opennext.js.org/cloudflare).
+
+**Prerequisites:** Wrangler 3.99+ and a Cloudflare account.
+
+**Deploy:**
+
+```bash
+cd frontend
+npx wrangler login          # One-time: login with Cloudflare account
+npm run deploy              # Runs codegen, OpenNext build, then deploys
+```
+
+**Preview locally (Workers runtime):**
+
+```bash
+cd frontend
+cp .dev.vars.example .dev.vars   # optional: set NEXTJS_ENV=development
+npm run preview
+```
+
+**Scripts:**
+
+| Command | Description |
+|---------|-------------|
+| `npm run deploy` | Codegen + build + deploy to Cloudflare Workers |
+| `npm run preview` | Codegen + build + run locally in Workers runtime |
+| `npm run cf-typegen` | Generate `cloudflare-env.d.ts` for bindings |
+
+Configure the worker name and compatibility in `frontend/wrangler.jsonc`. Ensure `NEXT_PUBLIC_GRAPHQL_URL` is set for production (e.g. via Cloudflare dashboard env vars or build-time env).
+
 ### CI/CD Secrets
 
 Add these in GitHub repo settings (`Settings > Secrets and variables > Actions`):
