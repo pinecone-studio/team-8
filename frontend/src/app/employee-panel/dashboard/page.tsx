@@ -1,10 +1,21 @@
+"use client";
+
 import Topbar from "../_components/layout/Topbar";
 import Sidebar from "../_components/SideBar";
 import SummaryCard from "../_components/benefits/SummaryCard";
 import BenefitCard from "../_components/benefits/BenefitCard";
 import { benefits, dashboardStats } from "@/lib/  mock-data";
+import { useCurrentEmployee } from "@/lib/current-employee-provider";
 
 export default function DashboardPage() {
+  const { employee, error, loading } = useCurrentEmployee();
+  const displayName = employee?.name ?? "there";
+  const subtitle = error
+    ? "We couldn't load your employee profile."
+    : loading
+      ? "Loading your employee profile..."
+      : "Here's an overview of your benefits";
+
   return (
     <div className="flex min-h-screen bg-[#f6f7f9]">
       <Sidebar />
@@ -15,10 +26,10 @@ export default function DashboardPage() {
         <main className="p-8">
           <div>
             <h1 className="text-4xl font-bold text-gray-900">
-              Good to see you, Username
+              Good to see you, {displayName}
             </h1>
             <p className="mt-2 text-lg text-gray-500">
-              Here&apos;s an overview of your benefits
+              {subtitle}
             </p>
           </div>
 

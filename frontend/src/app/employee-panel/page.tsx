@@ -1,3 +1,1 @@
-export default function EmployeePanelPage() {
-  return null;
-}
+export { default } from "./dashboard/page";
