@@ -61,3 +61,22 @@ query GetBenefitRequests($employeeId: String!) {
     viewContractUrl
   }
 }
+
+query GetAllBenefitRequests($status: String) {
+  allBenefitRequests(status: $status) {
+    id
+    employeeId
+    benefitId
+    status
+    contractVersionAccepted
+    contractAcceptedAt
+    reviewedBy
+    requestedAmount
+    repaymentMonths
+    employeeApprovedAt
+    declineReason
+    createdAt
+    updatedAt
+    viewContractUrl
+  }
+}

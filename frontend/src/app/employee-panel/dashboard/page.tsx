@@ -4,6 +4,7 @@ import Topbar from "../_components/layout/Topbar";
 import Sidebar from "../_components/SideBar";
 import SummaryCard from "../_components/benefits/SummaryCard";
 import BenefitCard from "../_components/benefits/BenefitCard";
+import PageLoading from "@/app/_components/PageLoading";
 import {
   BenefitEligibilityStatus,
   useGetMyBenefitsQuery,
@@ -49,7 +50,7 @@ export default function DashboardPage() {
 
         <main className="p-8">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-gray-900">
               Good to see you, {employee?.name ?? "Employee"}
             </h1>
             <p className="mt-2 text-lg text-gray-500">{subtitle}</p>
@@ -76,9 +77,7 @@ export default function DashboardPage() {
 
             <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
               {isDashboardLoading ? (
-                <div className="rounded-2xl border border-gray-200 bg-white p-6 text-gray-500">
-                  Loading benefits...
-                </div>
+                <PageLoading message="Loading benefits..." />
               ) : dashboardError ? (
                 <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
                   Failed to load benefit data.

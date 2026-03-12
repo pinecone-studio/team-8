@@ -53,7 +53,7 @@ export default function RuleConfiguration() {
 
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 active:scale-[0.98] active:bg-blue-800"
             >
               <Plus className="h-4 w-4" />
               Add Rule

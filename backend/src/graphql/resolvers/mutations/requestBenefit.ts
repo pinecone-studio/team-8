@@ -36,14 +36,24 @@ export const requestBenefit = async (
   const employee = employees[0];
   if (!employee) throw new Error("Employee not found");
 
-  const evaluated = evaluateBenefit(employee, benefitId);
-  if (evaluated.status === "locked") {
-    throw new Error(evaluated.failedRule?.errorMessage ?? "Not eligible for this benefit.");
-  }
-
   const benefitConfig = getBenefitConfig(benefitId);
-  if (benefitConfig?.flowType === "self_service") {
-    throw new Error("This benefit does not require a request; it is self-service.");
+  const benefitRows = await db
+    .select()
+    .from(schema.benefits)
+    .where(eq(schema.benefits.id, benefitId));
+  const benefitFromDb = benefitRows[0];
+
+  if (benefitConfig) {
+    const evaluated = evaluateBenefit(employee, benefitId);
+    if (evaluated.status === "locked") {
+      throw new Error(evaluated.failedRule?.errorMessage ?? "Not eligible for this benefit.");
+    }
+    if (benefitConfig.flowType === "self_service") {
+      throw new Error("This benefit does not require a request; it is self-service.");
+    }
+  } else {
+    if (!benefitFromDb) throw new Error("Benefit not found.");
+    if (!benefitFromDb.isActive) throw new Error("This benefit is no longer available.");
   }
 
   const [inserted] = await db
@@ -61,8 +71,10 @@ export const requestBenefit = async (
 
   if (!inserted) throw new Error("Failed to create benefit request");
 
+  const requiresContract =
+    benefitConfig?.requiresContract ?? benefitFromDb?.requiresContract ?? false;
   let viewContractUrl: string | null = null;
-  if (benefitConfig?.requiresContract && env.CONTRACT_VIEW_TOKENS) {
+  if (requiresContract && env.CONTRACT_VIEW_TOKENS) {
     const contracts = await db
       .select()
       .from(schema.contracts)

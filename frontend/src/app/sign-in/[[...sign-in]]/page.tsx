@@ -7,7 +7,7 @@ export default function SignInPage() {
         path="/sign-in"
         routing="path"
         withSignUp={false}
-        fallbackRedirectUrl="/"
+        fallbackRedirectUrl="/employee-panel"
       />
     </main>
   );

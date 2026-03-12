@@ -110,7 +110,7 @@ export default function EligibilityInspector() {
                     <td className="px-5 py-5">
                       <button
                         type="button"
-                        className="text-sm font-medium text-blue-600 transition hover:text-blue-700"
+                        className="text-sm font-medium text-blue-600 transition hover:text-blue-700 active:opacity-80"
                       >
                         Override
                       </button>

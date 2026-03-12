@@ -3,6 +3,7 @@
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import Header from "./_features/Header";
 import Sidebar from "./employee-panel/_components/SideBar";
+import PageLoading from "./_components/PageLoading";
 
 export default function Home() {
   const { employee, error, loading } = useCurrentEmployee();
@@ -21,12 +22,16 @@ export default function Home() {
         <Header />
 
         <main className="p-8">
-          <h1 className="text-4xl font-semibold text-gray-900">
-            Good to see you, {displayName}
-          </h1>
-          <p className="mt-2 text-lg text-gray-500">
-            {subtitle}
-          </p>
+          {loading ? (
+            <PageLoading message="Loading your profile..." />
+          ) : (
+            <>
+              <h1 className="text-4xl font-semibold text-gray-900">
+                Good to see you, {displayName}
+              </h1>
+              <p className="mt-2 text-lg text-gray-500">{subtitle}</p>
+            </>
+          )}
         </main>
       </div>
     </div>

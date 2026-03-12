@@ -187,6 +187,7 @@ export type MutationUpdateEmployeeArgs = {
 
 export type Query = {
   __typename?: 'Query';
+  allBenefitRequests: Array<BenefitRequest>;
   benefitRequests: Array<BenefitRequest>;
   benefits: Array<Benefit>;
   contracts: Array<Contract>;
@@ -196,6 +197,11 @@ export type Query = {
   getEmployees: Array<Employee>;
   myBenefits: Array<BenefitEligibility>;
   session?: Maybe<Employee>;
+};
+
+
+export type QueryAllBenefitRequestsArgs = {
+  status?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -476,6 +482,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
 }>;
 
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = ResolversObject<{
+  allBenefitRequests?: Resolver<Array<ResolversTypes['BenefitRequest']>, ParentType, ContextType, Partial<QueryAllBenefitRequestsArgs>>;
   benefitRequests?: Resolver<Array<ResolversTypes['BenefitRequest']>, ParentType, ContextType, RequireFields<QueryBenefitRequestsArgs, 'employeeId'>>;
   benefits?: Resolver<Array<ResolversTypes['Benefit']>, ParentType, ContextType, Partial<QueryBenefitsArgs>>;
   contracts?: Resolver<Array<ResolversTypes['Contract']>, ParentType, ContextType, Partial<QueryContractsArgs>>;

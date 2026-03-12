@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Topbar from "../../_components/layout/Topbar";
 import StatusBadge from "../../_components/benefits/StatusBadge";
 import Sidebar from "../../_components/SideBar";
+import PageLoading from "@/app/_components/PageLoading";
 import { useGetMyBenefitsQuery } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 
@@ -48,7 +49,9 @@ export default function BenefitDetailPage() {
         <Sidebar />
         <div className="flex-1">
           <Topbar />
-          <main className="p-8 text-gray-500">Loading benefit details...</main>
+          <main className="flex items-center justify-center p-8">
+            <PageLoading message="Loading benefit details..." />
+          </main>
         </div>
       </div>
     );
@@ -62,8 +65,8 @@ export default function BenefitDetailPage() {
           <Topbar />
           <main className="p-8">
             <Link
-              href="/employee-panel/dashboard"
-              className="text-sm text-gray-500 hover:text-gray-700"
+              href="/employee-panel/mybenefits"
+              className="inline-flex items-center gap-1 text-sm text-gray-500 transition hover:text-gray-900 active:opacity-80"
             >
               ← Back to Benefits
             </Link>
@@ -88,8 +91,8 @@ export default function BenefitDetailPage() {
 
         <main className="p-8">
           <Link
-            href="/employee-panel/dashboard"
-            className="text-sm text-gray-500 hover:text-gray-700"
+            href="/employee-panel/mybenefits"
+            className="inline-flex items-center gap-1 text-sm text-gray-500 transition hover:text-gray-900 active:opacity-80"
           >
             ← Back to Benefits
           </Link>
@@ -180,7 +183,7 @@ export default function BenefitDetailPage() {
                 {benefitEligibility.status === "ELIGIBLE" && (
                   <Link
                     href={`/employee-panel/benefits/${benefitEligibility.benefitId}/request`}
-                    className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-blue-600 text-base font-medium text-white hover:bg-blue-700"
+                    className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-blue-600 text-base font-medium text-white transition hover:bg-blue-700 active:scale-[0.98] active:bg-blue-800"
                   >
                     Request Benefit
                   </Link>
