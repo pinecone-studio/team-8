@@ -6,9 +6,10 @@ mutation RequestBenefit($input: RequestBenefitInput!) {
     status
     contractVersionAccepted
     contractAcceptedAt
-    employeeApprovedAt
+    reviewedBy
     requestedAmount
     repaymentMonths
+    employeeApprovedAt
     declineReason
     createdAt
     updatedAt

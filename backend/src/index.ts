@@ -1,4 +1,5 @@
 import { ApolloServer } from "@apollo/server";
+import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
 import { startServerAndCreateCloudflareWorkersHandler } from "@as-integrations/cloudflare-workers";
 import { createDb } from "./db";
 import { typeDefs, resolvers, GraphQLContext } from "./graphql";
@@ -13,7 +14,7 @@ import { schema } from "./db";
 
 export interface Env {
   DB: D1Database;
-  CONTRACTS_BUCKET: R2Bucket;
+  CONTRACTS_BUCKET?: R2Bucket;
   CONTRACT_VIEW_TOKENS: KVNamespace;
   ENVIRONMENT: string;
 }
@@ -24,7 +25,8 @@ function getCorsHeaders(request: Request): HeadersInit {
   return {
     "Access-Control-Allow-Origin": origin ?? "*",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, Apollo-Require-Preflight",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, Apollo-Require-Preflight",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };
@@ -47,9 +49,19 @@ function withCors(request: Request, response: Response): Response {
 const server = new ApolloServer<GraphQLContext>({
   typeDefs,
   resolvers,
+  introspection: true,
+  plugins: [
+    ApolloServerPluginLandingPageLocalDefault({
+      embed: true,
+      footer: false,
+    }),
+  ],
 });
 
-const handler = startServerAndCreateCloudflareWorkersHandler<Env, GraphQLContext>(server, {
+const handler = startServerAndCreateCloudflareWorkersHandler<
+  Env,
+  GraphQLContext
+>(server, {
   context: async ({ request, env }) => {
     const db = createDb(env.DB);
     const baseUrl = new URL(request.url).origin;
@@ -58,35 +70,62 @@ const handler = startServerAndCreateCloudflareWorkersHandler<Env, GraphQLContext
 });
 
 /** Serve contract PDF by token (TTL 7 days). */
-async function handleContractView(request: Request, env: Env): Promise<Response | null> {
+async function handleContractView(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
   const url = new URL(request.url);
-  if (url.pathname !== "/contracts/view" || request.method !== "GET") return null;
+  if (url.pathname !== "/contracts/view" || request.method !== "GET")
+    return null;
   const token = url.searchParams.get("token");
   if (!token) {
     return withCors(request, new Response("Missing token", { status: 400 }));
   }
 
-  const resolved = await resolveContractViewToken(env.CONTRACT_VIEW_TOKENS, token);
+  const resolved = await resolveContractViewToken(
+    env.CONTRACT_VIEW_TOKENS,
+    token,
+  );
   if (!resolved) {
-    return withCors(request, new Response("Invalid or expired token", { status: 404 }));
+    return withCors(
+      request,
+      new Response("Invalid or expired token", { status: 404 }),
+    );
+  }
+
+  if (!env.CONTRACTS_BUCKET) {
+    return withCors(
+      request,
+      new Response("R2 not configured", { status: 503 }),
+    );
   }
 
   const object = await getContract(env.CONTRACTS_BUCKET, resolved.r2Key);
   if (!object) {
-    return withCors(request, new Response("Contract not found", { status: 404 }));
+    return withCors(
+      request,
+      new Response("Contract not found", { status: 404 }),
+    );
   }
 
   const body = object.body;
   const contentType = object.httpMetadata?.contentType ?? "application/pdf";
-  return withCors(request, new Response(body, {
-    headers: { "Content-Type": contentType },
-  }));
+  return withCors(
+    request,
+    new Response(body, {
+      headers: { "Content-Type": contentType },
+    }),
+  );
 }
 
 /** HR upload: multipart form (benefitId, version, effectiveDate, expiryDate, vendorName, file). */
-async function handleContractUpload(request: Request, env: Env): Promise<Response | null> {
+async function handleContractUpload(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
   const url = new URL(request.url);
-  if (url.pathname !== "/api/contracts/upload" || request.method !== "POST") return null;
+  if (url.pathname !== "/api/contracts/upload" || request.method !== "POST")
+    return null;
 
   let formData: FormData;
   try {
@@ -103,12 +142,29 @@ async function handleContractUpload(request: Request, env: Env): Promise<Respons
   const file = formData.get("file") as File | null;
 
   if (!benefitId || !version || !effectiveDate || !expiryDate || !file?.size) {
-    return withCors(request, new Response(
-      JSON.stringify({
-        error: "Missing required fields: benefitId, version, effectiveDate, expiryDate, file",
-      }),
-      { status: 400, headers: { "Content-Type": "application/json" } }
-    ));
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({
+          error:
+            "Missing required fields: benefitId, version, effectiveDate, expiryDate, file",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+  }
+
+  if (!env.CONTRACTS_BUCKET) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({
+          error:
+            "R2 not configured. Enable R2 and add CONTRACTS_BUCKET in wrangler.toml.",
+        }),
+        { status: 503, headers: { "Content-Type": "application/json" } },
+      ),
+    );
   }
 
   const filename = file.name || "contract.pdf";
@@ -139,14 +195,21 @@ async function handleContractUpload(request: Request, env: Env): Promise<Respons
     })
     .returning();
 
-  return withCors(request, new Response(JSON.stringify({ id: inserted?.id, r2Key }), {
-    status: 201,
-    headers: { "Content-Type": "application/json" },
-  }));
+  return withCors(
+    request,
+    new Response(JSON.stringify({ id: inserted?.id, r2Key }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
 }
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<Response> {
     if (request.method === "OPTIONS") {
       return new Response(null, {
         status: 204,

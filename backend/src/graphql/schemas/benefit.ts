@@ -65,10 +65,24 @@ export const benefitTypeDefs = gql`
     viewContractUrl: String
   }
 
+  type Contract {
+    id: String!
+    benefitId: String!
+    benefitName: String
+    vendorName: String!
+    version: String!
+    effectiveDate: String!
+    expiryDate: String!
+    isActive: Boolean!
+    viewUrl: String
+  }
+
   extend type Query {
     benefits(category: String): [Benefit!]!
     myBenefits(employeeId: String!): [BenefitEligibility!]!
     getEmployeeBenefits(employeeId: String!): [BenefitEligibility!]!
+    benefitRequests(employeeId: String!): [BenefitRequest!]!
+    contracts(benefitId: String): [Contract!]!
   }
 
   input RequestBenefitInput {

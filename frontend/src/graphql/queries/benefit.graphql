@@ -42,3 +42,22 @@ query GetMyBenefits($employeeId: String!) {
     }
   }
 }
+
+query GetBenefitRequests($employeeId: String!) {
+  benefitRequests(employeeId: $employeeId) {
+    id
+    employeeId
+    benefitId
+    status
+    contractVersionAccepted
+    contractAcceptedAt
+    reviewedBy
+    requestedAmount
+    repaymentMonths
+    employeeApprovedAt
+    declineReason
+    createdAt
+    updatedAt
+    viewContractUrl
+  }
+}

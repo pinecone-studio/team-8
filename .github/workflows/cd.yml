@@ -37,7 +37,8 @@ jobs:
 
       - name: Apply D1 migrations
         working-directory: backend
-        run: npx wrangler d1 migrations apply team8 --remote
+        # --batch нь CI/CD дээр асуулт асуухгүйгээр шууд ажиллуулахад хэрэгтэй
+        run: npx wrangler d1 migrations apply team8 --remote --batch
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -75,8 +76,4 @@ jobs:
         env:
           NEXT_PUBLIC_GRAPHQL_URL: ${{ vars.NEXT_PUBLIC_GRAPHQL_URL }}
 
-      # Add your frontend deployment step here (Vercel, Cloudflare Pages, etc.)
-      # Example with Vercel:
-      # - name: Deploy to Vercel
-      #   run: npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
-      #   working-directory: frontend
+      # Vercel рүү deploy хийх хэсгээ энд нэмж болно

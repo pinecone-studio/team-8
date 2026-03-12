@@ -1,37 +1,40 @@
+"use client";
+
+import { gql, useQuery } from "@apollo/client";
 import { Eye, Upload } from "lucide-react";
 
-const contracts = [
-  {
-    benefit: "Gym Membership",
-    vendor: "PineFit",
-    version: "v2.1",
-    effectiveDate: "2026-01-01",
-    expiryDate: "2026-12-31",
-  },
-  {
-    benefit: "Private Health Insurance",
-    vendor: "HealthPlus",
-    version: "v1.5",
-    effectiveDate: "2026-01-01",
-    expiryDate: "2027-12-31",
-  },
-  {
-    benefit: "MacBook Subsidy",
-    vendor: "Apple",
-    version: "v1.0",
-    effectiveDate: "2026-01-01",
-    expiryDate: "2026-12-31",
-  },
-  {
-    benefit: "Travel Insurance",
-    vendor: "TravelGuard",
-    version: "v3.2",
-    effectiveDate: "2026-01-01",
-    expiryDate: "2026-12-31",
-  },
-];
+const GET_CONTRACTS = gql`
+  query Contracts {
+    contracts {
+      id
+      benefitId
+      benefitName
+      vendorName
+      version
+      effectiveDate
+      expiryDate
+      isActive
+      viewUrl
+    }
+  }
+`;
+
+type ContractRow = {
+  id: string;
+  benefitId: string;
+  benefitName?: string | null;
+  vendorName: string;
+  version: string;
+  effectiveDate: string;
+  expiryDate: string;
+  isActive: boolean;
+  viewUrl?: string | null;
+};
 
 export default function VendorContracts() {
+  const { data, loading, error } = useQuery<{ contracts: ContractRow[] }>(GET_CONTRACTS);
+  const contracts = data?.contracts ?? [];
+
   return (
     <main className="flex-1 px-8 py-9">
       <section className="mx-auto max-w-6xl">
@@ -69,33 +72,77 @@ export default function VendorContracts() {
                 </tr>
               </thead>
               <tbody>
-                {contracts.map((row) => (
-                  <tr key={row.benefit} className="border-b border-slate-200 last:border-b-0">
-                    <td className="px-5 py-5 text-sm font-medium text-slate-900">
-                      {row.benefit}
-                    </td>
-                    <td className="px-5 py-5 text-sm text-slate-500">{row.vendor}</td>
-                    <td className="px-5 py-5">
-                      <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                        {row.version}
-                      </span>
-                    </td>
-                    <td className="px-5 py-5 text-sm text-slate-500">{row.effectiveDate}</td>
-                    <td className="px-5 py-5 text-sm text-slate-500">{row.expiryDate}</td>
-                    <td className="px-5 py-5">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 transition hover:text-blue-700"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View
-                      </button>
-                    </td>
-                    <td className="px-5 py-5 text-sm font-medium text-slate-600">
-                      Update
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-5 py-6 text-sm text-slate-500"
+                    >
+                      Loading contracts...
                     </td>
                   </tr>
-                ))}
+                ) : error ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-5 py-6 text-sm text-rose-600"
+                    >
+                      Failed to load contracts. Please try again.
+                    </td>
+                  </tr>
+                ) : contracts.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-5 py-6 text-sm text-slate-500"
+                    >
+                      No contracts found.
+                    </td>
+                  </tr>
+                ) : (
+                  contracts.map((row) => (
+                    <tr key={row.id} className="border-b border-slate-200 last:border-b-0">
+                      <td className="px-5 py-5 text-sm font-medium text-slate-900">
+                        {row.benefitName ?? row.benefitId}
+                      </td>
+                      <td className="px-5 py-5 text-sm text-slate-500">
+                        {row.vendorName}
+                      </td>
+                      <td className="px-5 py-5">
+                        <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                          {row.version}
+                        </span>
+                      </td>
+                      <td className="px-5 py-5 text-sm text-slate-500">
+                        {row.effectiveDate}
+                      </td>
+                      <td className="px-5 py-5 text-sm text-slate-500">
+                        {row.expiryDate}
+                      </td>
+                      <td className="px-5 py-5">
+                        {row.viewUrl ? (
+                          <a
+                            href={row.viewUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 transition hover:text-blue-700"
+                          >
+                            <Eye className="h-4 w-4" />
+                            View
+                          </a>
+                        ) : (
+                          <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-400">
+                            <Eye className="h-4 w-4" />
+                            View
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-5 text-sm font-medium text-slate-600">
+                        {row.isActive ? "Active" : "Inactive"}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

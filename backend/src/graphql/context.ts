@@ -2,7 +2,7 @@ import type { Database } from "../db";
 
 export interface Env {
   DB: D1Database;
-  CONTRACTS_BUCKET: R2Bucket;
+  CONTRACTS_BUCKET?: R2Bucket;
   CONTRACT_VIEW_TOKENS: KVNamespace;
   ENVIRONMENT: string;
 }
