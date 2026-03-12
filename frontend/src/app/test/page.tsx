@@ -7,6 +7,7 @@ import {
 } from "@/graphql/generated/graphql";
 import Header from "@/app/_features/Header";
 import Sidebar from "@/app/employee-panel/_components/SideBar";
+import { graphqlUri } from "@/lib/apollo-client";
 import { use, useState } from "react";
 
 type PageProps = { params?: Promise<Record<string, string | string[]>> };
@@ -22,7 +23,9 @@ export default function TestPage({ params }: PageProps) {
   if (params) use(params);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
 
-  const { data: employeesData, loading: employeesLoading, error: employeesError } = useGetEmployeesQuery();
+  const { data: employeesData, loading: employeesLoading, error: employeesError } = useGetEmployeesQuery({
+    fetchPolicy: "network-only", // Өгөгдлийн сангаас бүх ажилчдыг шинээр татна
+  });
   const { data: benefitsData, loading: benefitsLoading, error: benefitsError } = useGetBenefitsQuery();
   const { data: myBenefitsData, loading: myBenefitsLoading } = useGetMyBenefitsQuery({
     variables: { employeeId: selectedEmployeeId ?? "" },
@@ -50,6 +53,9 @@ export default function TestPage({ params }: PageProps) {
             {/* Employees */}
             <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-lg font-semibold text-gray-800">Ажилчид (Employees)</h2>
+              {!employeesLoading && !employeesError && employees.length > 0 && (
+                <p className="mb-3 text-sm text-gray-500">Өгөгдлийн сан: бүгд {employees.length} ажилчин</p>
+              )}
               {employeesLoading && <p className="text-gray-500">Уншиж байна...</p>}
               {employeesError && (
                 <div className="rounded-lg bg-red-50 p-4 text-red-700">
@@ -101,7 +107,12 @@ export default function TestPage({ params }: PageProps) {
               <h2 className="mb-4 text-lg font-semibold text-gray-800">Бүх benefit-ууд</h2>
               {benefitsLoading && <p className="text-gray-500">Уншиж байна...</p>}
               {benefitsError && (
-                <p className="text-red-600">Алдаа: {(benefitsError as Error).message}</p>
+                <div className="rounded-lg bg-red-50 p-4 text-red-700">
+                  <p className="font-medium">Алдаа: {(benefitsError as Error).message}</p>
+                  <p className="mt-2 text-sm">
+                    Backend ({graphqlUri}) ажиллаж байгаа эсэх, CORS зөв эсэхийг шалгана уу.
+                  </p>
+                </div>
               )}
               {!benefitsLoading && !benefitsError && (
                 <ul className="max-h-[400px] space-y-2 overflow-y-auto">
