@@ -82,6 +82,7 @@ export const benefitTypeDefs = gql`
     myBenefits(employeeId: String!): [BenefitEligibility!]!
     getEmployeeBenefits(employeeId: String!): [BenefitEligibility!]!
     benefitRequests(employeeId: String!): [BenefitRequest!]!
+    allBenefitRequests(status: String): [BenefitRequest!]!
     contracts(benefitId: String): [Contract!]!
   }
 

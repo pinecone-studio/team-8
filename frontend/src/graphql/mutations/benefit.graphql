@@ -16,3 +16,15 @@ mutation RequestBenefit($input: RequestBenefitInput!) {
     viewContractUrl
   }
 }
+
+mutation ApproveBenefitRequest($requestId: String!, $reviewedBy: String!) {
+  approveBenefitRequest(requestId: $requestId, reviewedBy: $reviewedBy) {
+    id
+    employeeId
+    benefitId
+    status
+    reviewedBy
+    createdAt
+    updatedAt
+  }
+}

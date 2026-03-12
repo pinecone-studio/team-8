@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Topbar from "../../../_components/layout/Topbar";
 import Stepper from "../../../_components/benefits/Stepper";
 import Sidebar from "@/app/employee-panel/_components/SideBar";
+import PageLoading from "@/app/_components/PageLoading";
 import {
   BenefitEligibilityStatus,
   BenefitFlowType,
@@ -32,6 +33,7 @@ export default function BenefitRequestPage() {
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [accepted, setAccepted] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
 
   const benefitEligibility = data?.myBenefits.find((item) => item.benefitId === id);
   const benefit = benefitEligibility?.benefit;
@@ -40,19 +42,32 @@ export default function BenefitRequestPage() {
 
   const submitRequest = async () => {
     if (!employeeId || !benefitEligibility || !benefit) return;
+    setSubmitMessage(null);
 
-    await requestBenefit({
-      variables: {
-        input: {
-          employeeId,
-          benefitId: benefit.id,
-          contractAcceptedAt: requiresContract ? new Date().toISOString() : null,
-          contractVersionAccepted: requiresContract ? "accepted-from-ui" : null,
+    try {
+      const result = await requestBenefit({
+        variables: {
+          input: {
+            employeeId,
+            benefitId: benefit.id,
+            contractAcceptedAt: requiresContract ? new Date().toISOString() : null,
+            contractVersionAccepted: requiresContract ? "accepted-from-ui" : null,
+          },
         },
-      },
-    });
+      });
 
-    router.push("/employee-panel/requests?submitted=true");
+      const errs = result.errors;
+      if (errs?.length) {
+        setSubmitMessage(errs[0].message ?? "Failed to submit request.");
+        return;
+      }
+      if (result.data?.requestBenefit) {
+        router.push("/employee-panel/requests?submitted=true");
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to submit request.";
+      setSubmitMessage(msg);
+    }
   };
 
   if (employeeLoading || loading) {
@@ -61,7 +76,9 @@ export default function BenefitRequestPage() {
         <Sidebar />
         <div className="flex-1">
           <Topbar />
-          <main className="p-8 text-gray-500">Loading request flow...</main>
+          <main className="flex items-center justify-center p-8">
+            <PageLoading message="Loading request flow..." />
+          </main>
         </div>
       </div>
     );
@@ -76,7 +93,7 @@ export default function BenefitRequestPage() {
           <main className="p-8">
             <Link
               href={`/employee-panel/benefits/${id}`}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              className="inline-flex items-center gap-1 text-sm text-gray-500 transition hover:text-gray-900 active:opacity-80"
             >
               ← Back to Benefit
             </Link>
@@ -98,7 +115,7 @@ export default function BenefitRequestPage() {
           <main className="p-8">
             <Link
               href={`/employee-panel/benefits/${id}`}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              className="inline-flex items-center gap-1 text-sm text-gray-500 transition hover:text-gray-900 active:opacity-80"
             >
               ← Back to Benefit
             </Link>
@@ -120,7 +137,7 @@ export default function BenefitRequestPage() {
           <main className="p-8">
             <Link
               href={`/employee-panel/benefits/${id}`}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              className="inline-flex items-center gap-1 text-sm text-gray-500 transition hover:text-gray-900 active:opacity-80"
             >
               ← Back to Benefit
             </Link>
@@ -142,7 +159,7 @@ export default function BenefitRequestPage() {
         <main className="p-8">
           <Link
             href={`/employee-panel/benefits/${benefit.id}`}
-            className="text-sm text-gray-500 hover:text-gray-700"
+            className="inline-flex items-center gap-1 text-sm text-gray-500 transition hover:text-gray-900 active:opacity-80"
           >
             ← Back to Benefit
           </Link>
@@ -194,7 +211,7 @@ export default function BenefitRequestPage() {
 
                 <button
                   onClick={() => setStep(requiresContract ? 2 : 3)}
-                  className="mt-8 h-12 w-full rounded-xl bg-blue-600 text-base font-medium text-white hover:bg-blue-700"
+                  className="mt-8 h-12 w-full rounded-xl bg-blue-600 text-base font-medium text-white transition hover:bg-blue-700 active:scale-[0.99] active:bg-blue-800"
                 >
                   Continue
                 </button>
@@ -259,7 +276,7 @@ export default function BenefitRequestPage() {
                     <button
                       disabled={!accepted}
                       onClick={() => setStep(3)}
-                      className="mt-6 h-12 w-full rounded-xl bg-blue-600 text-base font-medium text-white hover:bg-blue-700 disabled:bg-gray-300"
+                      className="mt-6 h-12 w-full rounded-xl bg-blue-600 text-base font-medium text-white transition hover:bg-blue-700 active:scale-[0.99] active:bg-blue-800 disabled:bg-gray-300 disabled:active:scale-100"
                     >
                       Accept & Continue
                     </button>
@@ -310,16 +327,16 @@ export default function BenefitRequestPage() {
                   </div>
                 </div>
 
-                {submitError && (
+                {(submitMessage || submitError) && (
                   <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                    Failed to submit request.
+                    {submitMessage ?? "Failed to submit request."}
                   </div>
                 )}
 
                 <button
                   onClick={submitRequest}
                   disabled={submitting}
-                  className="mt-6 h-12 w-full rounded-xl bg-blue-600 text-base font-medium text-white hover:bg-blue-700 disabled:bg-gray-300"
+                  className="mt-6 h-12 w-full rounded-xl bg-blue-600 text-base font-medium text-white transition hover:bg-blue-700 active:scale-[0.99] active:bg-blue-800 disabled:bg-gray-300 disabled:active:scale-100"
                 >
                   {submitting ? "Submitting..." : "Submit Request"}
                 </button>

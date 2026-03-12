@@ -1,15 +1,62 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from "react";
 import SideBar from "../_components/SideBar";
 import Header from "../../_features/Header";
 
+const NOTIFICATIONS_KEY = "settings-notifications";
+const PREFERENCES_KEY = "settings-preferences";
+
+function loadNotifications() {
+  if (typeof window === "undefined") return { email: true, eligibility: true, renewals: false };
+  try {
+    const s = localStorage.getItem(NOTIFICATIONS_KEY);
+    if (s) return JSON.parse(s);
+  } catch {}
+  return { email: true, eligibility: true, renewals: false };
+}
+
+function loadPreferences() {
+  if (typeof window === "undefined") return { language: "English", timezone: "UTC" };
+  try {
+    const s = localStorage.getItem(PREFERENCES_KEY);
+    if (s) return JSON.parse(s);
+  } catch {}
+  return { language: "English", timezone: "UTC" };
+}
+
 export default function SettingsPage() {
-  const [notifications, setNotifications] = useState({
-    email: true,
-    eligibility: true,
-    renewals: false,
-  });
+  const [notifications, setNotifications] = useState(loadNotifications);
+  const [preferences, setPreferences] = useState(loadPreferences);
+  const [saved, setSaved] = useState(false);
+
+  const handleNotificationChange = useCallback((key: keyof typeof notifications, checked: boolean) => {
+    setNotifications((prev) => ({ ...prev, [key]: checked }));
+  }, []);
+
+  const handleSave = useCallback(() => {
+    try {
+      localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications));
+      localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch {
+      alert("Failed to save settings.");
+    }
+  }, [notifications, preferences]);
+
+  const handleCancel = useCallback(() => {
+    setNotifications(loadNotifications());
+    setPreferences(loadPreferences());
+  }, []);
+
+  const handleChangePassword = useCallback(() => {
+    window.open("https://accounts.clerk.dev", "_blank");
+  }, []);
+
+  const handleEnable2FA = useCallback(() => {
+    alert("Two-factor authentication can be enabled in your account security settings (Clerk).");
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-[#f8f8f9]">
@@ -57,24 +104,43 @@ export default function SettingsPage() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           <h2 className="text-[18px] font-semibold text-[#101828]">Notifications</h2>
         </div>
-        <div className="space-y-6">
-          {[
-            { title: 'Email notifications', desc: 'Receive email updates about benefit requests', checked: true },
-            { title: 'Eligibility alerts', desc: 'Get notified when you become eligible for new benefits', checked: true },
-            { title: 'Contract renewals', desc: 'Receive alerts when contracts are expiring', checked: false },
-          ].map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between">
-              <div>
-                <p className="text-[15px] font-medium text-[#101828]">{item.title}</p>
-                <p className="text-[14px] text-[#475467] mt-0.5">{item.desc}</p>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[15px] font-medium text-[#101828]">Email notifications</p>
+                  <p className="text-[14px] text-[#475467] mt-0.5">Receive email updates about benefit requests</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={notifications.email}
+                  onChange={(e) => handleNotificationChange("email", e.target.checked)}
+                  className="w-5 h-5 rounded border-[#D0D5DD] text-[#2970FF] focus:ring-[#2970FF] cursor-pointer"
+                />
               </div>
-              <input 
-                type="checkbox" 
-                defaultChecked={item.checked} 
-                className="w-5 h-5 rounded border-[#D0D5DD] text-[#2970FF] focus:ring-[#2970FF] cursor-pointer" 
-              />
-            </div>
-          ))}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[15px] font-medium text-[#101828]">Eligibility alerts</p>
+                  <p className="text-[14px] text-[#475467] mt-0.5">Get notified when you become eligible for new benefits</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={notifications.eligibility}
+                  onChange={(e) => handleNotificationChange("eligibility", e.target.checked)}
+                  className="w-5 h-5 rounded border-[#D0D5DD] text-[#2970FF] focus:ring-[#2970FF] cursor-pointer"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[15px] font-medium text-[#101828]">Contract renewals</p>
+                  <p className="text-[14px] text-[#475467] mt-0.5">Receive alerts when contracts are expiring</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={notifications.renewals}
+                  onChange={(e) => handleNotificationChange("renewals", e.target.checked)}
+                  className="w-5 h-5 rounded border-[#D0D5DD] text-[#2970FF] focus:ring-[#2970FF] cursor-pointer"
+                />
+              </div>
         </div>
       </section>
 
@@ -85,9 +151,9 @@ export default function SettingsPage() {
           <h2 className="text-[18px] font-semibold text-[#101828]">Security</h2>
         </div>
         <div className="flex flex-col">
-          <button className="py-3 text-left text-[14px] font-medium text-[#2970FF] hover:underline">Change password</button>
+          <button type="button" onClick={handleChangePassword} className="py-3 text-left text-[14px] font-medium text-[#2970FF] transition hover:underline active:opacity-80">Change password</button>
           <div className="border-t border-[#EAECF0]"></div>
-          <button className="py-3 text-left text-[14px] font-medium text-[#2970FF] hover:underline">Enable two-factor authentication</button>
+          <button type="button" onClick={handleEnable2FA} className="py-3 text-left text-[14px] font-medium text-[#2970FF] transition hover:underline active:opacity-80">Enable two-factor authentication</button>
         </div>
       </section>
 
@@ -103,7 +169,11 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <label className="text-[15px] font-medium text-[#101828]">Language</label>
             <div className="relative">
-              <select className="w-full px-4 py-3 bg-white border border-[#EAECF0] rounded-xl text-[15px] text-[#101828] outline-none appearance-none cursor-pointer focus:border-[#2970FF] focus:ring-1 focus:ring-[#2970FF]">
+              <select
+                value={preferences.language}
+                onChange={(e) => setPreferences((p) => ({ ...p, language: e.target.value }))}
+                className="w-full px-4 py-3 bg-white border border-[#EAECF0] rounded-xl text-[15px] text-[#101828] outline-none appearance-none cursor-pointer focus:border-[#2970FF] focus:ring-1 focus:ring-[#2970FF]"
+              >
                 <option>English</option>
                 <option>Spanish</option>
                 <option>French</option>
@@ -119,7 +189,11 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <label className="text-[15px] font-medium text-[#101828]">Timezone</label>
             <div className="relative">
-              <select className="w-full px-4 py-3 bg-white border border-[#EAECF0] rounded-xl text-[15px] text-[#101828] outline-none appearance-none cursor-pointer focus:border-[#2970FF] focus:ring-1 focus:ring-[#2970FF]">
+              <select
+                value={preferences.timezone}
+                onChange={(e) => setPreferences((p) => ({ ...p, timezone: e.target.value }))}
+                className="w-full px-4 py-3 bg-white border border-[#EAECF0] rounded-xl text-[15px] text-[#101828] outline-none appearance-none cursor-pointer focus:border-[#2970FF] focus:ring-1 focus:ring-[#2970FF]"
+              >
                 <option>UTC</option>
                 <option>EST (UTC-5)</option>
                 <option>PST (UTC-8)</option>
@@ -134,9 +208,10 @@ export default function SettingsPage() {
       </section>
 
       {/* Action Buttons */}
-      <div className="flex justify-end gap-3 pt-4 pb-12">
-        <button type="button" className="px-5 py-2.5 text-[14px] font-medium text-[#344054] bg-white border border-[#D0D5DD] rounded-xl hover:bg-gray-50 transition-all shadow-sm">Cancel</button>
-        <button type="button" className="px-6 py-2.5 text-[14px] font-medium text-white bg-[#2970FF] rounded-xl hover:bg-[#175CD3] transition-all shadow-sm">Save Changes</button>
+      <div className="flex justify-end items-center gap-3 pt-4 pb-12">
+        {saved && <span className="text-sm text-green-600">Settings saved.</span>}
+        <button type="button" onClick={handleCancel} className="px-5 py-2.5 text-[14px] font-medium text-[#344054] bg-white border border-[#D0D5DD] rounded-xl transition-all shadow-sm hover:bg-gray-50 active:scale-[0.98] active:bg-gray-100">Cancel</button>
+        <button type="button" onClick={handleSave} className="px-6 py-2.5 text-[14px] font-medium text-white bg-[#2970FF] rounded-xl transition-all shadow-sm hover:bg-[#175CD3] active:scale-[0.98] active:bg-[#1557b8]">Save Changes</button>
       </div>
       
     </div>

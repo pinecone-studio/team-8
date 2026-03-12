@@ -60,7 +60,7 @@ export default function Sidebar() {
       </div>
 
       <div className="border-t border-gray-200 p-3">
-        <button className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm text-gray-600 hover:bg-gray-50">
+        <button type="button" className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm text-gray-600 transition hover:bg-gray-50 active:scale-[0.98] active:bg-gray-100">
           <LogOut className="h-5 w-5" />
           Sign out
         </button>
