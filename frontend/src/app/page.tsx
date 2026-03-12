@@ -31,6 +31,13 @@ export default function Home() {
     console.log("[D1] employee by Clerk email:", data?.getEmployeeByEmail ?? null);
   }, [data, email, error, loading]);
 
+import { use } from "react";
+import Header from "./_features/Header";
+import Sidebar from "./employee-panel/_components/SideBar";
+
+type PageProps = { params?: Promise<Record<string, string | string[]>> };
+export default function Home({ params }: PageProps) {
+  if (params) use(params);
   return (
     <div className="flex min-h-screen bg-[#f8f8f9]">
       <Sidebar />

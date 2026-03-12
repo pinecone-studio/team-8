@@ -4,6 +4,7 @@ import { getEmployeeByEmail } from "./getEmployeeByEmail";
 import { getBenefits } from "./getBenefits";
 import { getMyBenefits } from "./getMyBenefits";
 import { getEmployeeBenefits } from "./getEmployeeBenefits";
+import { getSession } from "./getSession";
 
 export const queries = {
   getEmployees,
@@ -12,4 +13,5 @@ export const queries = {
   benefits: getBenefits,
   myBenefits: getMyBenefits,
   getEmployeeBenefits,
+  session: getSession,
 };

@@ -1,0 +1,22 @@
+"use client";
+import { use } from "react";
+import Header from "@/app/_features/Header";
+import Sidebar from "../_components/SideBar";
+
+type PageProps = { params?: Promise<Record<string, string | string[]>> };
+export default function Requests({ params }: PageProps) {
+  if (params) use(params);
+  return (
+    <div className="flex min-h-screen bg-[#f8f8f9]">
+      <Sidebar />
+
+      <div className="flex flex-1 flex-col">
+        <Header />
+        <main className="p-8">
+          <h1 className="text-3xl font-semibold text-gray-900"> Requests</h1>
+          <p className="mt-2 text-gray-500">This is the dashboard page.</p>
+        </main>
+      </div>
+    </div>
+  );
+}

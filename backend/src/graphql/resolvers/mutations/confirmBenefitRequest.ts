@@ -41,6 +41,7 @@ export const confirmBenefitRequest = async (
     .set({
       contractVersionAccepted,
       contractAcceptedAt,
+      employeeApprovedAt: contractAccepted ? contractAcceptedAt : null,
       updatedAt: contractAcceptedAt,
     })
     .where(eq(schema.benefitRequests.id, requestId))

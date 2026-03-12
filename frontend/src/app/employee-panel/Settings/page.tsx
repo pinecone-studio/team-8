@@ -1,7 +1,9 @@
-import Sidebar from "../employee-panel/_components/SideBar";
-import Header from "./Header";
+import Sidebar from "../_components/SideBar";
+import Header from "../../_features/Header";
 
-export default function SettingsPage() {
+type PageProps = { params?: Promise<Record<string, string | string[]>> };
+export default async function SettingsPage({ params }: PageProps) {
+  if (params) await params;
   return (
     <div className="flex min-h-screen bg-[#f8f8f9]">
       <Sidebar />

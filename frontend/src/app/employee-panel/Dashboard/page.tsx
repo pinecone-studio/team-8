@@ -1,7 +1,9 @@
 import Header from "@/app/_features/Header";
-import Sidebar from "./SideBar";
+import Sidebar from "../_components/SideBar";
 
-export default function Dashboard() {
+type PageProps = { params?: Promise<Record<string, string | string[]>> };
+export default async function Dashboard({ params }: PageProps) {
+  if (params) await params;
   return (
     <div className="flex min-h-screen bg-[#f8f8f9]">
       <Sidebar />
