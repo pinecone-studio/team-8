@@ -148,6 +148,7 @@ export type Query = {
   benefits: Array<Benefit>;
   getEmployee?: Maybe<Employee>;
   getEmployeeBenefits: Array<BenefitEligibility>;
+  getEmployeeByEmail?: Maybe<Employee>;
   getEmployees: Array<Employee>;
   myBenefits: Array<BenefitEligibility>;
 };
@@ -165,6 +166,11 @@ export type QueryGetEmployeeArgs = {
 
 export type QueryGetEmployeeBenefitsArgs = {
   employeeId: Scalars['String']['input'];
+};
+
+
+export type QueryGetEmployeeByEmailArgs = {
+  email: Scalars['String']['input'];
 };
 
 
@@ -385,6 +391,7 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   benefits?: Resolver<Array<ResolversTypes['Benefit']>, ParentType, ContextType, Partial<QueryBenefitsArgs>>;
   getEmployee?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<QueryGetEmployeeArgs, 'id'>>;
   getEmployeeBenefits?: Resolver<Array<ResolversTypes['BenefitEligibility']>, ParentType, ContextType, RequireFields<QueryGetEmployeeBenefitsArgs, 'employeeId'>>;
+  getEmployeeByEmail?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<QueryGetEmployeeByEmailArgs, 'email'>>;
   getEmployees?: Resolver<Array<ResolversTypes['Employee']>, ParentType, ContextType>;
   myBenefits?: Resolver<Array<ResolversTypes['BenefitEligibility']>, ParentType, ContextType, RequireFields<QueryMyBenefitsArgs, 'employeeId'>>;
 }>;

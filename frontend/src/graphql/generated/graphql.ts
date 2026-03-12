@@ -15,6 +15,7 @@ export type Scalars = {
   Boolean: { input: boolean; output: boolean; }
   Int: { input: number; output: number; }
   Float: { input: number; output: number; }
+  DateTime: { input: any; output: any; }
 };
 
 export type Benefit = {
@@ -22,6 +23,7 @@ export type Benefit = {
   category: Scalars['String']['output'];
   id: Scalars['String']['output'];
   name: Scalars['String']['output'];
+  nameEng?: Maybe<Scalars['String']['output']>;
   requiresContract: Scalars['Boolean']['output'];
   subsidyPercent: Scalars['Int']['output'];
   vendorName?: Maybe<Scalars['String']['output']>;
@@ -70,20 +72,21 @@ export type CreateEmployeeInput = {
 
 export type Employee = {
   __typename?: 'Employee';
-  createdAt: Scalars['String']['output'];
+  benefits: Array<BenefitEligibility>;
+  createdAt: Scalars['DateTime']['output'];
   department: Scalars['String']['output'];
   email: Scalars['String']['output'];
   employmentStatus: EmploymentStatus;
-  hireDate: Scalars['String']['output'];
+  hireDate: Scalars['DateTime']['output'];
   id: Scalars['String']['output'];
   lateArrivalCount: Scalars['Int']['output'];
-  lateArrivalUpdatedAt?: Maybe<Scalars['String']['output']>;
+  lateArrivalUpdatedAt?: Maybe<Scalars['DateTime']['output']>;
   name: Scalars['String']['output'];
   nameEng?: Maybe<Scalars['String']['output']>;
   okrSubmitted: Scalars['Int']['output'];
   responsibilityLevel: Scalars['Int']['output'];
   role: EmployeeRole;
-  updatedAt: Scalars['String']['output'];
+  updatedAt: Scalars['DateTime']['output'];
 };
 
 export enum EmployeeRole {
@@ -103,6 +106,7 @@ export enum EmploymentStatus {
 export type FailedRule = {
   __typename?: 'FailedRule';
   errorMessage: Scalars['String']['output'];
+  ruleType: Scalars['String']['output'];
 };
 
 export type Mutation = {
@@ -145,6 +149,8 @@ export type Query = {
   __typename?: 'Query';
   benefits: Array<Benefit>;
   getEmployee?: Maybe<Employee>;
+  getEmployeeBenefits: Array<BenefitEligibility>;
+  getEmployeeByEmail?: Maybe<Employee>;
   getEmployees: Array<Employee>;
   myBenefits: Array<BenefitEligibility>;
 };
@@ -157,6 +163,16 @@ export type QueryBenefitsArgs = {
 
 export type QueryGetEmployeeArgs = {
   id: Scalars['String']['input'];
+};
+
+
+export type QueryGetEmployeeBenefitsArgs = {
+  employeeId: Scalars['String']['input'];
+};
+
+
+export type QueryGetEmployeeByEmailArgs = {
+  email: Scalars['String']['input'];
 };
 
 
@@ -196,7 +212,7 @@ export type CreateEmployeeMutationVariables = Exact<{
 }>;
 
 
-export type CreateEmployeeMutation = { __typename?: 'Mutation', createEmployee: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: EmployeeRole, department: string, responsibilityLevel: number, employmentStatus: EmploymentStatus, hireDate: string, createdAt: string } };
+export type CreateEmployeeMutation = { __typename?: 'Mutation', createEmployee: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: EmployeeRole, department: string, responsibilityLevel: number, employmentStatus: EmploymentStatus, hireDate: any, createdAt: any } };
 
 export type UpdateEmployeeMutationVariables = Exact<{
   id: Scalars['String']['input'];
@@ -204,7 +220,7 @@ export type UpdateEmployeeMutationVariables = Exact<{
 }>;
 
 
-export type UpdateEmployeeMutation = { __typename?: 'Mutation', updateEmployee?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: EmployeeRole, department: string, responsibilityLevel: number, employmentStatus: EmploymentStatus, updatedAt: string } | null };
+export type UpdateEmployeeMutation = { __typename?: 'Mutation', updateEmployee?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: EmployeeRole, department: string, responsibilityLevel: number, employmentStatus: EmploymentStatus, updatedAt: any } | null };
 
 export type DeleteEmployeeMutationVariables = Exact<{
   id: Scalars['String']['input'];
@@ -216,14 +232,21 @@ export type DeleteEmployeeMutation = { __typename?: 'Mutation', deleteEmployee: 
 export type GetEmployeesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetEmployeesQuery = { __typename?: 'Query', getEmployees: Array<{ __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: EmployeeRole, department: string, responsibilityLevel: number, employmentStatus: EmploymentStatus, hireDate: string, okrSubmitted: number, lateArrivalCount: number, createdAt: string, updatedAt: string }> };
+export type GetEmployeesQuery = { __typename?: 'Query', getEmployees: Array<{ __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: EmployeeRole, department: string, responsibilityLevel: number, employmentStatus: EmploymentStatus, hireDate: any, okrSubmitted: number, lateArrivalCount: number, createdAt: any, updatedAt: any }> };
 
 export type GetEmployeeQueryVariables = Exact<{
   id: Scalars['String']['input'];
 }>;
 
 
-export type GetEmployeeQuery = { __typename?: 'Query', getEmployee?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: EmployeeRole, department: string, responsibilityLevel: number, employmentStatus: EmploymentStatus, hireDate: string, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: string | null, createdAt: string, updatedAt: string } | null };
+export type GetEmployeeQuery = { __typename?: 'Query', getEmployee?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: EmployeeRole, department: string, responsibilityLevel: number, employmentStatus: EmploymentStatus, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
+
+export type GetEmployeeByEmailQueryVariables = Exact<{
+  email: Scalars['String']['input'];
+}>;
+
+
+export type GetEmployeeByEmailQuery = { __typename?: 'Query', getEmployeeByEmail?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: EmployeeRole, department: string, responsibilityLevel: number, employmentStatus: EmploymentStatus, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
 
 
 export const CreateEmployeeDocument = gql`
@@ -451,3 +474,59 @@ export type GetEmployeeQueryHookResult = ReturnType<typeof useGetEmployeeQuery>;
 export type GetEmployeeLazyQueryHookResult = ReturnType<typeof useGetEmployeeLazyQuery>;
 export type GetEmployeeSuspenseQueryHookResult = ReturnType<typeof useGetEmployeeSuspenseQuery>;
 export type GetEmployeeQueryResult = Apollo.QueryResult<GetEmployeeQuery, GetEmployeeQueryVariables>;
+export const GetEmployeeByEmailDocument = gql`
+    query GetEmployeeByEmail($email: String!) {
+  getEmployeeByEmail(email: $email) {
+    id
+    name
+    nameEng
+    email
+    role
+    department
+    responsibilityLevel
+    employmentStatus
+    hireDate
+    okrSubmitted
+    lateArrivalCount
+    lateArrivalUpdatedAt
+    createdAt
+    updatedAt
+  }
+}
+    `;
+
+/**
+ * __useGetEmployeeByEmailQuery__
+ *
+ * To run a query within a React component, call `useGetEmployeeByEmailQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetEmployeeByEmailQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetEmployeeByEmailQuery({
+ *   variables: {
+ *      email: // value for 'email'
+ *   },
+ * });
+ */
+export function useGetEmployeeByEmailQuery(baseOptions: Apollo.QueryHookOptions<GetEmployeeByEmailQuery, GetEmployeeByEmailQueryVariables> & ({ variables: GetEmployeeByEmailQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetEmployeeByEmailQuery, GetEmployeeByEmailQueryVariables>(GetEmployeeByEmailDocument, options);
+      }
+export function useGetEmployeeByEmailLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetEmployeeByEmailQuery, GetEmployeeByEmailQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetEmployeeByEmailQuery, GetEmployeeByEmailQueryVariables>(GetEmployeeByEmailDocument, options);
+        }
+// @ts-ignore
+export function useGetEmployeeByEmailSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetEmployeeByEmailQuery, GetEmployeeByEmailQueryVariables>): Apollo.UseSuspenseQueryResult<GetEmployeeByEmailQuery, GetEmployeeByEmailQueryVariables>;
+export function useGetEmployeeByEmailSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetEmployeeByEmailQuery, GetEmployeeByEmailQueryVariables>): Apollo.UseSuspenseQueryResult<GetEmployeeByEmailQuery | undefined, GetEmployeeByEmailQueryVariables>;
+export function useGetEmployeeByEmailSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetEmployeeByEmailQuery, GetEmployeeByEmailQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetEmployeeByEmailQuery, GetEmployeeByEmailQueryVariables>(GetEmployeeByEmailDocument, options);
+        }
+export type GetEmployeeByEmailQueryHookResult = ReturnType<typeof useGetEmployeeByEmailQuery>;
+export type GetEmployeeByEmailLazyQueryHookResult = ReturnType<typeof useGetEmployeeByEmailLazyQuery>;
+export type GetEmployeeByEmailSuspenseQueryHookResult = ReturnType<typeof useGetEmployeeByEmailSuspenseQuery>;
+export type GetEmployeeByEmailQueryResult = Apollo.QueryResult<GetEmployeeByEmailQuery, GetEmployeeByEmailQueryVariables>;

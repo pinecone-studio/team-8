@@ -64,6 +64,7 @@ export const employeeTypeDefs = gql`
   extend type Query {
     getEmployees: [Employee!]!
     getEmployee(id: String!): Employee
+    getEmployeeByEmail(email: String!): Employee
   }
 
   # Mutation

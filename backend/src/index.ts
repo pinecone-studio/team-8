@@ -18,6 +18,32 @@ export interface Env {
   ENVIRONMENT: string;
 }
 
+function getCorsHeaders(request: Request): HeadersInit {
+  const origin = request.headers.get("Origin");
+
+  return {
+    "Access-Control-Allow-Origin": origin ?? "*",
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, Apollo-Require-Preflight",
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
+  };
+}
+
+function withCors(request: Request, response: Response): Response {
+  const headers = new Headers(response.headers);
+
+  for (const [key, value] of Object.entries(getCorsHeaders(request))) {
+    headers.set(key, value);
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 const server = new ApolloServer<GraphQLContext>({
   typeDefs,
   resolvers,
@@ -46,9 +72,9 @@ async function handleContractView(request: Request, env: Env): Promise<Response 
 
   const body = object.body;
   const contentType = object.httpMetadata?.contentType ?? "application/pdf";
-  return new Response(body, {
+  return withCors(request, new Response(body, {
     headers: { "Content-Type": contentType },
-  });
+  }));
 }
 
 /** HR upload: multipart form (benefitId, version, effectiveDate, expiryDate, vendorName, file). */
@@ -71,12 +97,12 @@ async function handleContractUpload(request: Request, env: Env): Promise<Respons
   const file = formData.get("file") as File | null;
 
   if (!benefitId || !version || !effectiveDate || !expiryDate || !file?.size) {
-    return new Response(
+    return withCors(request, new Response(
       JSON.stringify({
         error: "Missing required fields: benefitId, version, effectiveDate, expiryDate, file",
       }),
       { status: 400, headers: { "Content-Type": "application/json" } }
-    );
+    ));
   }
 
   const filename = file.name || "contract.pdf";
@@ -107,18 +133,25 @@ async function handleContractUpload(request: Request, env: Env): Promise<Respons
     })
     .returning();
 
-  return new Response(JSON.stringify({ id: inserted?.id, r2Key }), {
+  return withCors(request, new Response(JSON.stringify({ id: inserted?.id, r2Key }), {
     status: 201,
     headers: { "Content-Type": "application/json" },
-  });
+  }));
 }
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: getCorsHeaders(request),
+      });
+    }
+
     const contractView = await handleContractView(request, env);
     if (contractView !== null) return contractView;
     const upload = await handleContractUpload(request, env);
     if (upload !== null) return upload;
-    return handler(request, env, ctx);
+    return withCors(request, await handler(request, env, ctx));
   },
 };

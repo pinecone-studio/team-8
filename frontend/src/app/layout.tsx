@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import { ApolloWrapper } from "@/lib/apollo-provider";
 import "./globals.css";
 import { Geist } from "next/font/google";
@@ -19,7 +20,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>
       <body>
-        <ApolloWrapper>{children}</ApolloWrapper>
+        <ClerkProvider>
+          <ApolloWrapper>{children}</ApolloWrapper>
+        </ClerkProvider>
       </body>
     </html>
   );
