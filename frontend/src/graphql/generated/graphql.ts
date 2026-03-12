@@ -91,7 +91,6 @@ export type Employee = {
   createdAt: Scalars['DateTime']['output'];
   department: Scalars['String']['output'];
   email: Scalars['String']['output'];
-  employmentStatus: EmploymentStatus;
   employmentStatus: Scalars['String']['output'];
   hireDate: Scalars['DateTime']['output'];
   id: Scalars['String']['output'];
@@ -101,7 +100,6 @@ export type Employee = {
   nameEng?: Maybe<Scalars['String']['output']>;
   okrSubmitted: Scalars['Int']['output'];
   responsibilityLevel: Scalars['Int']['output'];
-  role: EmployeeRole;
   role: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
 };
@@ -252,7 +250,6 @@ export type CreateEmployeeMutationVariables = Exact<{
 }>;
 
 
-export type CreateEmployeeMutation = { __typename?: 'Mutation', createEmployee: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: EmployeeRole, department: string, responsibilityLevel: number, employmentStatus: EmploymentStatus, hireDate: any, createdAt: any } };
 export type CreateEmployeeMutation = { __typename?: 'Mutation', createEmployee: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, createdAt: any } };
 
 export type UpdateEmployeeMutationVariables = Exact<{
@@ -261,7 +258,6 @@ export type UpdateEmployeeMutationVariables = Exact<{
 }>;
 
 
-export type UpdateEmployeeMutation = { __typename?: 'Mutation', updateEmployee?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: EmployeeRole, department: string, responsibilityLevel: number, employmentStatus: EmploymentStatus, updatedAt: any } | null };
 export type UpdateEmployeeMutation = { __typename?: 'Mutation', updateEmployee?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, updatedAt: any } | null };
 
 export type DeleteEmployeeMutationVariables = Exact<{
@@ -288,7 +284,6 @@ export type GetMyBenefitsQuery = { __typename?: 'Query', myBenefits: Array<{ __t
 export type GetEmployeesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetEmployeesQuery = { __typename?: 'Query', getEmployees: Array<{ __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: EmployeeRole, department: string, responsibilityLevel: number, employmentStatus: EmploymentStatus, hireDate: any, okrSubmitted: number, lateArrivalCount: number, createdAt: any, updatedAt: any }> };
 export type GetEmployeesQuery = { __typename?: 'Query', getEmployees: Array<{ __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, createdAt: any, updatedAt: any }> };
 
 export type GetEmployeeQueryVariables = Exact<{
@@ -296,15 +291,14 @@ export type GetEmployeeQueryVariables = Exact<{
 }>;
 
 
-export type GetEmployeeQuery = { __typename?: 'Query', getEmployee?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: EmployeeRole, department: string, responsibilityLevel: number, employmentStatus: EmploymentStatus, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
+export type GetEmployeeQuery = { __typename?: 'Query', getEmployee?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
 
 export type GetEmployeeByEmailQueryVariables = Exact<{
   email: Scalars['String']['input'];
 }>;
 
 
-export type GetEmployeeByEmailQuery = { __typename?: 'Query', getEmployeeByEmail?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: EmployeeRole, department: string, responsibilityLevel: number, employmentStatus: EmploymentStatus, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
-export type GetEmployeeQuery = { __typename?: 'Query', getEmployee?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
+export type GetEmployeeByEmailQuery = { __typename?: 'Query', getEmployeeByEmail?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
 
 
 export const CreateEmployeeDocument = gql`
