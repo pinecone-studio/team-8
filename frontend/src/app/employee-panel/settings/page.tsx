@@ -7,7 +7,10 @@ import Header from "../../_features/Header";
 const NOTIFICATIONS_KEY = "settings-notifications";
 const PREFERENCES_KEY = "settings-preferences";
 
-function loadNotifications() {
+type NotificationsState = { email: boolean; eligibility: boolean; renewals: boolean };
+type PreferencesState = { language: string; timezone: string };
+
+function loadNotifications(): NotificationsState {
   if (typeof window === "undefined") return { email: true, eligibility: true, renewals: false };
   try {
     const s = localStorage.getItem(NOTIFICATIONS_KEY);
@@ -16,7 +19,7 @@ function loadNotifications() {
   return { email: true, eligibility: true, renewals: false };
 }
 
-function loadPreferences() {
+function loadPreferences(): PreferencesState {
   if (typeof window === "undefined") return { language: "English", timezone: "UTC" };
   try {
     const s = localStorage.getItem(PREFERENCES_KEY);
@@ -26,12 +29,12 @@ function loadPreferences() {
 }
 
 export default function SettingsPage() {
-  const [notifications, setNotifications] = useState(loadNotifications);
-  const [preferences, setPreferences] = useState(loadPreferences);
+  const [notifications, setNotifications] = useState<NotificationsState>(loadNotifications);
+  const [preferences, setPreferences] = useState<PreferencesState>(loadPreferences);
   const [saved, setSaved] = useState(false);
 
   const handleNotificationChange = useCallback((key: keyof typeof notifications, checked: boolean) => {
-    setNotifications((prev) => ({ ...prev, [key]: checked }));
+    setNotifications((prev: NotificationsState) => ({ ...prev, [key]: checked }));
   }, []);
 
   const handleSave = useCallback(() => {
@@ -171,7 +174,7 @@ export default function SettingsPage() {
             <div className="relative">
               <select
                 value={preferences.language}
-                onChange={(e) => setPreferences((p) => ({ ...p, language: e.target.value }))}
+                onChange={(e) => setPreferences((p: PreferencesState) => ({ ...p, language: e.target.value }))}
                 className="w-full px-4 py-3 bg-white border border-[#EAECF0] rounded-xl text-[15px] text-[#101828] outline-none appearance-none cursor-pointer focus:border-[#2970FF] focus:ring-1 focus:ring-[#2970FF]"
               >
                 <option>English</option>
@@ -191,7 +194,7 @@ export default function SettingsPage() {
             <div className="relative">
               <select
                 value={preferences.timezone}
-                onChange={(e) => setPreferences((p) => ({ ...p, timezone: e.target.value }))}
+                onChange={(e) => setPreferences((p: PreferencesState) => ({ ...p, timezone: e.target.value }))}
                 className="w-full px-4 py-3 bg-white border border-[#EAECF0] rounded-xl text-[15px] text-[#101828] outline-none appearance-none cursor-pointer focus:border-[#2970FF] focus:ring-1 focus:ring-[#2970FF]"
               >
                 <option>UTC</option>
