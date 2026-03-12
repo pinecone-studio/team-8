@@ -6,12 +6,8 @@ import {
   useMyBenefitsQuery,
 } from "@/graphql/generated/graphql";
 import Header from "@/app/_features/Header";
-<<<<<<< Updated upstream
 import Sidebar from "@/app/employee-panel/_components/SideBar";
-import { graphqlUri } from "@/lib/apollo-client";
-=======
 import AppSidebar from "@/app/_components/AppSidebar";
->>>>>>> Stashed changes
 import { use, useState } from "react";
 
 type PageProps = { params?: Promise<Record<string, string | string[]>> };
@@ -25,22 +21,25 @@ const statusColor: Record<string, string> = {
 
 export default function TestPage({ params }: PageProps) {
   if (params) use(params);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(
+    null,
+  );
 
-<<<<<<< Updated upstream
-  const { data: employeesData, loading: employeesLoading, error: employeesError } = useGetEmployeesQuery({
-    fetchPolicy: "network-only", // Өгөгдлийн сангаас бүх ажилчдыг шинээр татна
-  });
-  const { data: benefitsData, loading: benefitsLoading, error: benefitsError } = useGetBenefitsQuery();
-  const { data: myBenefitsData, loading: myBenefitsLoading } = useGetMyBenefitsQuery({
-=======
-  const { data: employeesData, loading: employeesLoading, error: employeesError } = useGetEmployeesQuery();
-  const { data: benefitsData, loading: benefitsLoading, error: benefitsError } = useBenefitsQuery();
-  const { data: myBenefitsData, loading: myBenefitsLoading } = useMyBenefitsQuery({
->>>>>>> Stashed changes
-    variables: { employeeId: selectedEmployeeId ?? "" },
-    skip: !selectedEmployeeId,
-  });
+  const {
+    data: employeesData,
+    loading: employeesLoading,
+    error: employeesError,
+  } = useGetEmployeesQuery();
+  const {
+    data: benefitsData,
+    loading: benefitsLoading,
+    error: benefitsError,
+  } = useBenefitsQuery();
+  const { data: myBenefitsData, loading: myBenefitsLoading } =
+    useMyBenefitsQuery({
+      variables: { employeeId: selectedEmployeeId ?? "" },
+      skip: !selectedEmployeeId,
+    });
 
   const employees = employeesData?.getEmployees ?? [];
   const benefits = benefitsData?.benefits ?? [];
@@ -56,22 +55,31 @@ export default function TestPage({ params }: PageProps) {
             Employee & Benefits Test
           </h1>
           <p className="mb-8 text-gray-500">
-            Ажилтан болон benefit-ийн тест өгөгдөл. Нэг ажилтан сонгоход тухайн ажилтны benefit eligibility харагдана.
+            Ажилтан болон benefit-ийн тест өгөгдөл. Нэг ажилтан сонгоход тухайн
+            ажилтны benefit eligibility харагдана.
           </p>
 
           <div className="grid gap-8 lg:grid-cols-2">
             {/* Employees */}
             <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-lg font-semibold text-gray-800">Ажилчид (Employees)</h2>
+              <h2 className="mb-4 text-lg font-semibold text-gray-800">
+                Ажилчид (Employees)
+              </h2>
               {!employeesLoading && !employeesError && employees.length > 0 && (
-                <p className="mb-3 text-sm text-gray-500">Өгөгдлийн сан: бүгд {employees.length} ажилчин</p>
+                <p className="mb-3 text-sm text-gray-500">
+                  Өгөгдлийн сан: бүгд {employees.length} ажилчин
+                </p>
               )}
-              {employeesLoading && <p className="text-gray-500">Уншиж байна...</p>}
+              {employeesLoading && (
+                <p className="text-gray-500">Уншиж байна...</p>
+              )}
               {employeesError && (
                 <div className="rounded-lg bg-red-50 p-4 text-red-700">
                   <p className="font-medium">Алдаа: {employeesError.message}</p>
                   <p className="mt-2 text-sm">
-                    Backend ({process.env.NEXT_PUBLIC_GRAPHQL_URL ?? "GRAPHQL URL"}) ажиллаж байгаа эсэх, CORS зөв эсэхийг шалгана уу.
+                    Backend (
+                    {process.env.NEXT_PUBLIC_GRAPHQL_URL ?? "GRAPHQL URL"})
+                    ажиллаж байгаа эсэх, CORS зөв эсэхийг шалгана уу.
                   </p>
                 </div>
               )}
@@ -81,7 +89,12 @@ export default function TestPage({ params }: PageProps) {
                     <li className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">
                       <p className="font-medium">Ажилтан олдсонгүй.</p>
                       <p className="mt-1 text-sm">
-                        D1 database хоосон байна. Backend-д <code className="rounded bg-amber-100 px-1">wrangler d1 migrations apply team8 --local</code> ажиллуулсан эсэхээ шалгана уу (seed migration орсон бол ажилчид гарна).
+                        D1 database хоосон байна. Backend-д{" "}
+                        <code className="rounded bg-amber-100 px-1">
+                          wrangler d1 migrations apply team8 --local
+                        </code>{" "}
+                        ажиллуулсан эсэхээ шалгана уу (seed migration орсон бол
+                        ажилчид гарна).
                       </p>
                     </li>
                   ) : (
@@ -98,12 +111,16 @@ export default function TestPage({ params }: PageProps) {
                         >
                           <span className="font-medium">{emp.name}</span>
                           {emp.nameEng && (
-                            <span className="ml-2 text-gray-500">({emp.nameEng})</span>
+                            <span className="ml-2 text-gray-500">
+                              ({emp.nameEng})
+                            </span>
                           )}
                           <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-xs">
                             {emp.role}
                           </span>
-                          <span className="ml-2 text-xs text-gray-400">{emp.department}</span>
+                          <span className="ml-2 text-xs text-gray-400">
+                            {emp.department}
+                          </span>
                         </button>
                       </li>
                     ))
@@ -114,13 +131,16 @@ export default function TestPage({ params }: PageProps) {
 
             {/* All benefits */}
             <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-lg font-semibold text-gray-800">Бүх benefit-ууд</h2>
-              {benefitsLoading && <p className="text-gray-500">Уншиж байна...</p>}
+              <h2 className="mb-4 text-lg font-semibold text-gray-800">
+                Бүх benefit-ууд
+              </h2>
+              {benefitsLoading && (
+                <p className="text-gray-500">Уншиж байна...</p>
+              )}
               {benefitsError && (
                 <div className="rounded-lg bg-red-50 p-4 text-red-700">
-                  <p className="font-medium">Алдаа: {(benefitsError as Error).message}</p>
-                  <p className="mt-2 text-sm">
-                    Backend ({graphqlUri}) ажиллаж байгаа эсэх, CORS зөв эсэхийг шалгана уу.
+                  <p className="font-medium">
+                    Алдаа: {(benefitsError as Error).message}
                   </p>
                 </div>
               )}
@@ -134,10 +154,13 @@ export default function TestPage({ params }: PageProps) {
                         key={b.id}
                         className="rounded-lg border border-gray-100 bg-gray-50/50 px-4 py-2.5 text-sm"
                       >
-                        <span className="font-medium text-gray-900">{b.name}</span>
+                        <span className="font-medium text-gray-900">
+                          {b.name}
+                        </span>
                         <span className="ml-2 text-gray-500">{b.category}</span>
                         <span className="ml-2 text-xs text-gray-400">
-                          Company {b.subsidyPercent}% / Employee {b.employeePercent}%
+                          Company {b.subsidyPercent}% / Employee{" "}
+                          {b.employeePercent}%
                         </span>
                         {b.flowType && (
                           <span className="ml-2 rounded bg-gray-200 px-1.5 py-0.5 text-xs">
@@ -158,30 +181,38 @@ export default function TestPage({ params }: PageProps) {
               <h2 className="mb-4 text-lg font-semibold text-gray-800">
                 Сонгосон ажилтны benefit eligibility (My Benefits)
               </h2>
-              {myBenefitsLoading && <p className="text-gray-500">Уншиж байна...</p>}
+              {myBenefitsLoading && (
+                <p className="text-gray-500">Уншиж байна...</p>
+              )}
               {!myBenefitsLoading && (
                 <ul className="space-y-3">
                   {myBenefits.length === 0 ? (
-                    <li className="text-gray-500">Энэ ажилтанд benefit тооцоогүй эсвэл олдсонгүй.</li>
+                    <li className="text-gray-500">
+                      Энэ ажилтанд benefit тооцоогүй эсвэл олдсонгүй.
+                    </li>
                   ) : (
                     myBenefits.map((item) => (
                       <li
                         key={item.benefitId}
                         className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 p-4"
                       >
-                        <span className="font-medium text-gray-900">{item.benefit.name}</span>
+                        <span className="font-medium text-gray-900">
+                          {item.benefit.name}
+                        </span>
                         <span
                           className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            statusColor[item.status] ?? "bg-gray-100 text-gray-700"
+                            statusColor[item.status] ??
+                            "bg-gray-100 text-gray-700"
                           }`}
                         >
                           {item.status}
                         </span>
-                        {item.benefit.flowType === "self_service" && item.benefit.optionsDescription && (
-                          <span className="text-sm text-gray-600">
-                            — {item.benefit.optionsDescription}
-                          </span>
-                        )}
+                        {item.benefit.flowType === "self_service" &&
+                          item.benefit.optionsDescription && (
+                            <span className="text-sm text-gray-600">
+                              — {item.benefit.optionsDescription}
+                            </span>
+                          )}
                         {item.failedRule && (
                           <span className="w-full text-xs text-amber-700">
                             {item.failedRule.errorMessage}

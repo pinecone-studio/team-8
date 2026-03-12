@@ -1,7 +1,3 @@
-<<<<<<< Updated upstream
-export default function AdminPanelPage() {
-  return null;
-=======
 "use client";
 
 import Link from "next/link";
@@ -84,11 +80,10 @@ export default function AdminPanel() {
                   <Package className="h-6 w-6 text-indigo-600" />
                 </div>
                 <div>
-                  <h2 className="font-semibold text-gray-900">
-                    Benefits
-                  </h2>
+                  <h2 className="font-semibold text-gray-900">Benefits</h2>
                   <p className="text-sm text-gray-500">
-                    Create or update benefits; upload contracts for contract-based benefits
+                    Create or update benefits; upload contracts for
+                    contract-based benefits
                   </p>
                 </div>
               </div>
@@ -117,5 +112,4 @@ export default function AdminPanel() {
       </div>
     </div>
   );
->>>>>>> Stashed changes
 }

@@ -12,11 +12,8 @@
   },
   "dependencies": {
     "@apollo/client": "^3.12.9",
-<<<<<<< Updated upstream
     "@clerk/nextjs": "^7.0.4",
-=======
     "@radix-ui/react-tabs": "^1.1.13",
->>>>>>> Stashed changes
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "graphql": "^16.10.0",

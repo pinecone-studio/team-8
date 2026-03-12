@@ -45,8 +45,8 @@ export default function AppSidebar() {
         </p>
         <nav className="space-y-0.5">
           <Link
-            href="/employee-panel/Mybenefits"
-            className={linkClass("/employee-panel/Mybenefits")}
+            href="/employee-panel/mybenefits"
+            className={linkClass("/employee-panel/mybenefits")}
           >
             <Gift className="h-5 w-5 shrink-0" />
             <span>My Benefits</span>
