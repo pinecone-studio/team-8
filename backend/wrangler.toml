@@ -23,3 +23,18 @@ preview_id = "3bad0be611ac489abc5641ea713e0ea6"
 
 [vars]
 ENVIRONMENT = "development"
+
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1

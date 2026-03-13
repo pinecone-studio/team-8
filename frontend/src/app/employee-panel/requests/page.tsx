@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Eye } from "lucide-react";
 import Topbar from "../_components/layout/Topbar";
@@ -20,7 +21,7 @@ const statusTone: Record<string, string> = {
   cancelled: "bg-gray-100 text-gray-500 border-gray-200",
 };
 
-export default function RequestsPage() {
+function RequestsContent() {
   const searchParams = useSearchParams();
   const submitted = searchParams.get("submitted") === "true";
   const { employeeId, loading: employeeLoading } = useCurrentEmployee();
@@ -32,7 +33,7 @@ export default function RequestsPage() {
   const { data: benefitsData } = useGetBenefitsQuery();
 
   const benefitsById = new Map(
-    (benefitsData?.benefits ?? []).map((benefit) => [benefit.id, benefit])
+    (benefitsData?.benefits ?? []).map((benefit) => [benefit.id, benefit]),
   );
 
   const requests = (requestsData?.benefitRequests ?? []).map((request) => {
@@ -64,7 +65,8 @@ export default function RequestsPage() {
 
           {submitted && (
             <div className="mt-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-              Request submitted successfully. It will appear below with PENDING status until an admin approves it.
+              Request submitted successfully. It will appear below with PENDING
+              status until an admin approves it.
             </div>
           )}
 
@@ -137,5 +139,13 @@ export default function RequestsPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function RequestsPage() {
+  return (
+    <Suspense fallback={<PageLoading message="Loading..." />}>
+      <RequestsContent />
+    </Suspense>
   );
 }
