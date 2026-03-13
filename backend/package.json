@@ -3,13 +3,16 @@
   "private": true,
   "scripts": {
     "dev": "npm run codegen && wrangler dev",
+    "dev:clean": "npm run codegen && node -e \"require('fs').rmSync('.wrangler/tmp', { recursive: true, force: true })\" && wrangler dev",
     "build": "wrangler deploy --dry-run --outdir=dist",
-    "deploy": "dotenv -e .env -- wrangler deploy",
+    "deploy": "node scripts/deploy.js",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "codegen": "graphql-codegen --config codegen.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply team8 --local",
+    "db:seed": "wrangler d1 execute team8 --local --file=./scripts/seed-demo.sql",
     "db:migrate:remote": "dotenv -e .env -- wrangler d1 migrations apply team8 --remote",
+    "db:seed:local": "wrangler d1 execute team8 --local --file ./scripts/seed-mock-data.sql",
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -34,6 +37,6 @@
     "eslint": "^8.57.1",
     "typescript": "^5.7.3",
     "vitest": "^4.0.18",
-    "wrangler": "^4.71.0"
+    "wrangler": "^4.72.0"
   }
 }

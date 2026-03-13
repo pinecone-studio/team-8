@@ -2,14 +2,35 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useClerk } from "@clerk/nextjs";
 import { LayoutGrid, FileText, Settings, LogOut, User } from "lucide-react";
+import { useCurrentEmployee } from "@/lib/current-employee-provider";
+
+function formatLabel(value: string | null | undefined) {
+  if (!value) return "Employee";
+
+  return value
+    .split("_")
+    .join(" ")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { signOut } = useClerk();
+  const { employee, loading } = useCurrentEmployee();
+  const profileName = loading ? "Loading..." : employee?.name ?? "Employee";
+  const profileRole = loading
+    ? "Profile"
+    : `${formatLabel(employee?.role)}${employee?.department ? ` · ${formatLabel(employee.department)}` : ""}`;
 
   return (
-    <aside className="sticky top-0 flex h-screen w-[260px] flex-col justify-between border-r border-gray-200 bg-[#f8f8f9] px-4 py-4">
-      <div>
+    <>
+      <aside className="fixed left-0 top-0 z-10 flex h-screen w-[260px] flex-col justify-between border-r border-gray-200 bg-[#f8f8f9] px-4 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto">
         {/* Top profile */}
         <div className="mb-6 flex items-center gap-3 rounded-2xl p-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
@@ -17,19 +38,19 @@ export default function Sidebar() {
           </div>
 
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Username</h2>
-            <p className="text-sm text-gray-500">Senior Engineer</p>
+            <h2 className="text-base font-semibold text-gray-900">{profileName}</h2>
+            <p className="text-sm text-gray-500">{profileRole}</p>
           </div>
         </div>
 
         {/* Main nav */}
         <nav className="space-y-1">
           <Link
-            href="/employee-panel/Dashboard"
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
-              pathname === "/employee-panel/Dashboard"
-                ? "bg-gray-200 text-gray-900"
-                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            href="/employee-panel/dashboard"
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition active:scale-[0.98] ${
+              pathname === "/employee-panel/dashboard"
+                ? "bg-gray-200 text-gray-900 active:bg-gray-300"
+                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200"
             }`}
           >
             <LayoutGrid className="h-5 w-5" />
@@ -37,11 +58,11 @@ export default function Sidebar() {
           </Link>
 
           <Link
-            href="/employee-panel/Mybenefits"
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
-              pathname === "/employee-panel/Mybenefits"
-                ? "bg-gray-200 text-gray-900"
-                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            href="/employee-panel/mybenefits"
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition active:scale-[0.98] ${
+              pathname === "/employee-panel/mybenefits"
+                ? "bg-gray-200 text-gray-900 active:bg-gray-300"
+                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200"
             }`}
           >
             <FileText className="h-5 w-5" />
@@ -49,11 +70,11 @@ export default function Sidebar() {
           </Link>
 
           <Link
-            href="/employee-panel/Requests"
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
-              pathname === "/employee-panel/Requests"
-                ? "bg-gray-200 text-gray-900"
-                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            href="/employee-panel/requests"
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition active:scale-[0.98] ${
+              pathname === "/employee-panel/requests"
+                ? "bg-gray-200 text-gray-900 active:bg-gray-300"
+                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200"
             }`}
           >
             <FileText className="h-5 w-5" />
@@ -61,15 +82,27 @@ export default function Sidebar() {
           </Link>
 
           <Link
-            href="/employee-panel/Contracts"
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
-              pathname === "/employee-panel/Contracts"
-                ? "bg-gray-200 text-gray-900"
-                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            href="/employee-panel/contracts"
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition active:scale-[0.98] ${
+              pathname === "/employee-panel/contracts"
+                ? "bg-gray-200 text-gray-900 active:bg-gray-300"
+                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200"
             }`}
           >
             <FileText className="h-5 w-5" />
             <span>Contracts</span>
+          </Link>
+
+          <Link
+            href="/test"
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition active:scale-[0.98] ${
+              pathname === "/test"
+                ? "bg-gray-200 text-gray-900 active:bg-gray-300"
+                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200"
+            }`}
+          >
+            <FileText className="h-5 w-5" />
+            <span>Test (Employee & Benefits)</span>
           </Link>
         </nav>
 
@@ -78,23 +111,32 @@ export default function Sidebar() {
 
         {/* Settings */}
         <Link
-          href="/employee-panel/Settings"
-          className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
+          href="/employee-panel/settings"
+          className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition active:scale-[0.98] ${
             pathname === "/employee-panel/settings"
-              ? "bg-gray-200 text-gray-900"
-              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+              ? "bg-gray-200 text-gray-900 active:bg-gray-300"
+              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200"
           }`}
         >
           <Settings className="h-5 w-5" />
           <span>Settings</span>
         </Link>
-      </div>
+        </div>
 
-      {/* Bottom sign out */}
-      <button className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900">
-        <LogOut className="h-5 w-5" />
-        <span>Sign out</span>
-      </button>
-    </aside>
+        {/* Bottom sign out - үл хөдлөх */}
+        <div className="shrink-0 border-t border-gray-200 pt-4">
+          <button
+            type="button"
+            onClick={() => signOut({ redirectUrl: "/sign-in" })}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 active:scale-[0.98] active:bg-gray-200"
+          >
+            <LogOut className="h-5 w-5" />
+            <span>Sign out</span>
+          </button>
+        </div>
+      </aside>
+      {/* Spacer so main content doesn't go under fixed sidebar */}
+      <div className="w-[260px] shrink-0" aria-hidden />
+    </>
   );
 }

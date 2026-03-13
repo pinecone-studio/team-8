@@ -1,0 +1,82 @@
+query GetBenefits($category: String) {
+  benefits(category: $category) {
+    id
+    name
+    nameEng
+    category
+    subsidyPercent
+    employeePercent
+    unitPrice
+    vendorName
+    requiresContract
+    flowType
+    optionsDescription
+  }
+}
+
+query GetMyBenefits($employeeId: String!) {
+  myBenefits(employeeId: $employeeId) {
+    benefitId
+    status
+    benefit {
+      id
+      name
+      nameEng
+      category
+      subsidyPercent
+      employeePercent
+      unitPrice
+      vendorName
+      requiresContract
+      flowType
+      optionsDescription
+    }
+    ruleEvaluation {
+      ruleType
+      passed
+      reason
+    }
+    failedRule {
+      ruleType
+      errorMessage
+    }
+  }
+}
+
+query GetBenefitRequests($employeeId: String!) {
+  benefitRequests(employeeId: $employeeId) {
+    id
+    employeeId
+    benefitId
+    status
+    contractVersionAccepted
+    contractAcceptedAt
+    reviewedBy
+    requestedAmount
+    repaymentMonths
+    employeeApprovedAt
+    declineReason
+    createdAt
+    updatedAt
+    viewContractUrl
+  }
+}
+
+query GetAllBenefitRequests($status: String) {
+  allBenefitRequests(status: $status) {
+    id
+    employeeId
+    benefitId
+    status
+    contractVersionAccepted
+    contractAcceptedAt
+    reviewedBy
+    requestedAmount
+    repaymentMonths
+    employeeApprovedAt
+    declineReason
+    createdAt
+    updatedAt
+    viewContractUrl
+  }
+}
