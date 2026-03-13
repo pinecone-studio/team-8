@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import Header from "@/app/_features/Header";
 import Sidebar from "../_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
 import {
@@ -74,12 +73,11 @@ export default function PendingRequestsPage() {
     <div className="flex min-h-screen bg-[#f3f4f6]">
       <Sidebar />
       <div className="flex flex-1 flex-col">
-        <Header />
         <main className="p-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-xl font-semibold text-gray-900">
             Pending Requests
           </h1>
-          <p className="mt-2 text-lg text-gray-500">
+          <p className="mt-1 text-sm text-gray-500">
             Approve or decline benefit requests from employees
           </p>
 

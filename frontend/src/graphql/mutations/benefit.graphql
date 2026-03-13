@@ -28,3 +28,30 @@ mutation ApproveBenefitRequest($requestId: String!, $reviewedBy: String!) {
     updatedAt
   }
 }
+
+mutation CancelBenefitRequest($requestId: String!, $employeeId: String!) {
+  cancelBenefitRequest(requestId: $requestId, employeeId: $employeeId) {
+    id
+    employeeId
+    benefitId
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateBenefit($input: CreateBenefitInput!) {
+  createBenefit(input: $input) {
+    id
+    name
+    nameEng
+    category
+    subsidyPercent
+    employeePercent
+    unitPrice
+    vendorName
+    requiresContract
+    flowType
+    optionsDescription
+  }
+}

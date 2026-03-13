@@ -187,10 +187,10 @@ export default function Dashboard() {
     <main className="flex-1 px-8 py-9">
       <section className="mx-auto max-w-6xl">
         <div className="mb-8">
-          <h1 className="text-[2.25rem] font-semibold tracking-[-0.02em] text-slate-900">
+          <h1 className="text-xl font-semibold text-gray-900">
             {getAdminDashboardTitle(employee)}
           </h1>
-          <p className="mt-2 text-lg text-slate-500">
+          <p className="mt-1 text-sm text-gray-500">
             {employeeLoading
               ? "Loading admin profile..."
               : !employee
@@ -228,7 +228,7 @@ export default function Dashboard() {
 
             <div className="mt-6 grid gap-4 lg:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                <h2 className="text-xl font-semibold text-slate-900">
+                <h2 className="text-lg font-semibold text-gray-900">
                   Benefit Usage by Category
                 </h2>
                 <div className="mt-4">
@@ -241,7 +241,7 @@ export default function Dashboard() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                <h2 className="text-xl font-semibold text-slate-900">
+                <h2 className="text-lg font-semibold text-gray-900">
                   Eligibility Lock Reasons
                 </h2>
                 <div className="mt-4">
@@ -260,7 +260,7 @@ export default function Dashboard() {
                   key={item.title}
                   className="rounded-2xl border border-slate-200 bg-white p-5"
                 >
-                  <h3 className="text-xl font-semibold text-slate-900">{item.title}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
                   <p className="mt-3 text-sm text-slate-500">{item.description}</p>
                 </div>
               ))}

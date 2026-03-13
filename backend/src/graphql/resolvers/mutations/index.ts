@@ -5,8 +5,11 @@ import { requestBenefit } from "./requestBenefit";
 import { confirmBenefitRequest } from "./confirmBenefitRequest";
 import { approveBenefitRequest } from "./approveBenefitRequest";
 import { declineBenefitRequest } from "./declineBenefitRequest";
+import { cancelBenefitRequest } from "./cancelBenefitRequest";
+import { createBenefit } from "./createBenefit";
 
 export const mutations = {
+  createBenefit,
   createEmployee,
   updateEmployee,
   deleteEmployee,
@@ -14,4 +17,5 @@ export const mutations = {
   confirmBenefitRequest,
   approveBenefitRequest,
   declineBenefitRequest,
+  cancelBenefitRequest,
 };

@@ -1,4 +1,3 @@
-import Header from "@/app/_features/Header";
 import RuleConfiguration from "../_components/RuleConfiguration";
 import Sidebar from "../_components/SideBar";
 
@@ -8,7 +7,6 @@ export default function RuleConfigurationPage() {
       <Sidebar />
 
       <div className="flex flex-1 flex-col">
-        <Header />
         <RuleConfiguration />
       </div>
     </div>

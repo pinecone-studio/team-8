@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import Topbar from "../../_components/layout/Topbar";
 import StatusBadge from "../../_components/benefits/StatusBadge";
 import Sidebar from "../../_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
@@ -48,7 +47,6 @@ export default function BenefitDetailPage() {
       <div className="flex min-h-screen bg-[#f6f7f9]">
         <Sidebar />
         <div className="flex-1">
-          <Topbar />
           <main className="flex items-center justify-center p-8">
             <PageLoading message="Loading benefit details..." />
           </main>
@@ -62,7 +60,6 @@ export default function BenefitDetailPage() {
       <div className="flex min-h-screen bg-[#f6f7f9]">
         <Sidebar />
         <div className="flex-1">
-          <Topbar />
           <main className="p-8">
             <Link
               href="/employee-panel/mybenefits"
@@ -87,8 +84,6 @@ export default function BenefitDetailPage() {
       <Sidebar />
 
       <div className="flex-1">
-        <Topbar />
-
         <main className="p-8">
           <Link
             href="/employee-panel/mybenefits"
@@ -101,16 +96,16 @@ export default function BenefitDetailPage() {
             <div className="rounded-2xl border border-gray-200 bg-white p-8">
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="text-4xl font-bold text-gray-900">
+                  <h1 className="text-xl font-semibold text-gray-900">
                     {benefit.name}
                   </h1>
-                  <p className="mt-2 text-2xl text-gray-500">{vendor}</p>
+                  <p className="mt-1 text-sm text-gray-500">{vendor}</p>
                 </div>
 
                 <StatusBadge status={benefitEligibility.status} />
               </div>
 
-              <p className="mt-6 text-xl leading-8 text-gray-600">
+              <p className="mt-4 text-sm leading-relaxed text-gray-600">
                 {buildBenefitDescription({
                   employeePercent: benefit.employeePercent,
                   failedRuleError: benefitEligibility.failedRule?.errorMessage,
@@ -125,14 +120,14 @@ export default function BenefitDetailPage() {
               <div className="grid grid-cols-2 gap-10">
                 <div>
                   <p className="text-sm text-gray-500">Subsidy Percentage</p>
-                  <p className="mt-2 text-2xl font-bold text-gray-900">
+                  <p className="mt-1 text-lg font-semibold text-gray-900">
                     {benefit.subsidyPercent}%
                   </p>
                 </div>
 
                 <div>
                   <p className="text-sm text-gray-500">Contract Required</p>
-                  <p className="mt-2 text-2xl font-bold text-gray-900">
+                  <p className="mt-1 text-lg font-semibold text-gray-900">
                     {benefit.requiresContract ? "Yes" : "No"}
                   </p>
                 </div>
@@ -148,7 +143,7 @@ export default function BenefitDetailPage() {
             </div>
 
             <div className="rounded-2xl border border-gray-200 bg-white p-6">
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-lg font-semibold text-gray-900">
                 Eligibility Breakdown
               </h2>
 

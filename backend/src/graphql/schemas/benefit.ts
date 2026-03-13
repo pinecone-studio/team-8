@@ -79,11 +79,20 @@ export const benefitTypeDefs = gql`
 
   extend type Query {
     benefits(category: String): [Benefit!]!
+    adminBenefits: [Benefit!]!
     myBenefits(employeeId: String!): [BenefitEligibility!]!
     getEmployeeBenefits(employeeId: String!): [BenefitEligibility!]!
     benefitRequests(employeeId: String!): [BenefitRequest!]!
     allBenefitRequests(status: String): [BenefitRequest!]!
     contracts(benefitId: String): [Contract!]!
+  }
+
+  input CreateBenefitInput {
+    name: String!
+    category: String!
+    subsidyPercent: Int!
+    vendorName: String
+    requiresContract: Boolean
   }
 
   input RequestBenefitInput {
@@ -96,9 +105,11 @@ export const benefitTypeDefs = gql`
   }
 
   extend type Mutation {
+    createBenefit(input: CreateBenefitInput!): Benefit!
     requestBenefit(input: RequestBenefitInput!): BenefitRequest!
     confirmBenefitRequest(requestId: String!, contractAccepted: Boolean!): BenefitRequest!
     approveBenefitRequest(requestId: String!, reviewedBy: String!): BenefitRequest!
     declineBenefitRequest(requestId: String!, reviewedBy: String!, reason: String): BenefitRequest!
+    cancelBenefitRequest(requestId: String!, employeeId: String!): BenefitRequest!
   }
 `;

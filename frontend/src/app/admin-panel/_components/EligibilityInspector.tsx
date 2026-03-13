@@ -47,7 +47,7 @@ export default function EligibilityInspector() {
     <main className="flex-1 px-8 py-9">
       <section className="mx-auto max-w-6xl">
         <div className="mb-8">
-          <h1 className="text-[2.25rem] font-semibold tracking-[-0.02em] text-slate-900">
+          <h1 className="text-xl font-semibold text-gray-900">
             Employee Eligibility Inspector
           </h1>
           <p className="mt-2 text-lg text-slate-500">
@@ -66,7 +66,7 @@ export default function EligibilityInspector() {
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 className="text-xl font-semibold text-slate-900">Employee Profile</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Employee Profile</h2>
           <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             {employeeDetails.map((item) => (
               <div key={item.label}>
@@ -79,7 +79,7 @@ export default function EligibilityInspector() {
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
           <div className="border-b border-slate-200 px-5 py-4">
-            <h2 className="text-xl font-semibold text-slate-900">Benefits Eligibility</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Benefits Eligibility</h2>
           </div>
 
           <div className="overflow-x-auto">

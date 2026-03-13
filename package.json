@@ -14,7 +14,9 @@
     "deploy:backend": "npm run deploy --workspace=backend",
     "deploy": "npm run deploy:backend && npm run deploy:frontend",
     "lint": "npm run lint --workspaces",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "db:migrate:local": "npm run db:migrate:local --workspace=backend",
+    "db:migrate:remote": "npm run db:migrate:remote --workspace=backend"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

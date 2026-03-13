@@ -1,4 +1,3 @@
-import Header from "@/app/_features/Header";
 import EligibilityInspector from "../_components/EligibilityInspector";
 import Sidebar from "../_components/SideBar";
 
@@ -8,7 +7,6 @@ export default function EligibilityInspectorPage() {
       <Sidebar />
 
       <div className="flex flex-1 flex-col">
-        <Header />
         <EligibilityInspector />
       </div>
     </div>

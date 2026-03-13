@@ -48,10 +48,10 @@ export default function CatalogBenefitCard({ benefit }: Props) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="text-xl font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-gray-900">
               {benefit.benefit.name}
             </h3>
-            {isLocked && <Lock className="h-5 w-5 shrink-0 text-gray-400" aria-hidden />}
+            {isLocked && <Lock className="h-5 w-5 shrink-0 text-red-500" aria-hidden />}
           </div>
           <p className="mt-1 text-sm text-gray-500">{provider}</p>
           <div className="mt-4 flex items-center gap-3">

@@ -74,10 +74,10 @@ export default function AuditLogs() {
       <section className="mx-auto max-w-6xl">
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
-            <h1 className="text-[2.25rem] font-semibold tracking-[-0.02em] text-slate-900">
+            <h1 className="text-xl font-semibold text-gray-900">
               Audit Logs
             </h1>
-            <p className="mt-2 text-lg text-slate-500">
+            <p className="mt-1 text-sm text-gray-500">
               Track all system decisions and eligibility evaluations
             </p>
           </div>

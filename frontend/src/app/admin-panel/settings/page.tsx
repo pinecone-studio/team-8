@@ -1,4 +1,3 @@
-import Header from "@/app/_features/Header";
 import Sidebar from "../_components/SideBar";
 
 export default function SettingsPage() {
@@ -7,13 +6,12 @@ export default function SettingsPage() {
       <Sidebar />
 
       <div className="flex flex-1 flex-col">
-        <Header />
         <main className="flex-1 px-8 py-9">
           <section className="mx-auto max-w-6xl">
-            <h1 className="text-[2.25rem] font-semibold tracking-[-0.02em] text-slate-900">
+            <h1 className="text-xl font-semibold text-gray-900">
               Settings
             </h1>
-            <p className="mt-2 text-lg text-slate-500">
+            <p className="mt-1 text-sm text-gray-500">
               Manage admin panel settings
             </p>
           </section>
