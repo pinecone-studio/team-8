@@ -28,7 +28,6 @@ export default function TestPage({ params }: PageProps) {
   });
   const { data: benefitsData, loading: benefitsLoading, error: benefitsError } = useGetBenefitsQuery();
   const { data: myBenefitsData, loading: myBenefitsLoading } = useGetMyBenefitsQuery({
-    variables: { employeeId: selectedEmployeeId ?? "" },
     skip: !selectedEmployeeId,
   });
 

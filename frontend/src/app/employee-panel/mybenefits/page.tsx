@@ -20,19 +20,13 @@ type PageProps = { params?: Promise<Record<string, string | string[]>> };
 export default function Mybenefits({ params }: PageProps) {
   if (params) use(params);
 
-  const { employeeId, loading: employeeLoading } = useCurrentEmployee();
+  const { loading: employeeLoading } = useCurrentEmployee();
   const {
     data,
     error: benefitsError,
     loading: benefitsLoading,
-  } = useGetMyBenefitsQuery({
-    variables: { employeeId: employeeId ?? "" },
-    skip: !employeeId,
-  });
-  const { data: requestsData } = useGetBenefitRequestsQuery({
-    variables: { employeeId: employeeId ?? "" },
-    skip: !employeeId,
-  });
+  } = useGetMyBenefitsQuery();
+  const { data: requestsData } = useGetBenefitRequestsQuery();
   const { data: benefitsData } = useGetBenefitsQuery();
 
   const myBenefitsRaw = useMemo(() => data?.myBenefits ?? [], [data?.myBenefits]);
@@ -139,7 +133,6 @@ export default function Mybenefits({ params }: PageProps) {
                         benefit={benefit}
                         requestStatus={requestStatus}
                         requestId={requestId}
-                        employeeId={employeeId ?? undefined}
                       />
                     ))}
                   </div>

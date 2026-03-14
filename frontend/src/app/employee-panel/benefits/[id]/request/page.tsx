@@ -19,15 +19,12 @@ export default function BenefitRequestPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
-  const { employeeId, loading: employeeLoading } = useCurrentEmployee();
+  const { loading: employeeLoading } = useCurrentEmployee();
   const {
     data,
     error,
     loading,
-  } = useGetMyBenefitsQuery({
-    variables: { employeeId: employeeId ?? "" },
-    skip: !employeeId,
-  });
+  } = useGetMyBenefitsQuery();
   const [requestBenefit, { loading: submitting, error: submitError }] =
     useRequestBenefitMutation();
 
@@ -41,14 +38,13 @@ export default function BenefitRequestPage() {
   const isSelfService = benefit?.flowType === BenefitFlowType.SelfService;
 
   const submitRequest = async () => {
-    if (!employeeId || !benefitEligibility || !benefit) return;
+    if (!benefitEligibility || !benefit) return;
     setSubmitMessage(null);
 
     try {
       const result = await requestBenefit({
         variables: {
           input: {
-            employeeId,
             benefitId: benefit.id,
             contractAcceptedAt: requiresContract ? new Date().toISOString() : null,
             contractVersionAccepted: requiresContract ? "accepted-from-ui" : null,
@@ -57,7 +53,6 @@ export default function BenefitRequestPage() {
         refetchQueries: [
           {
             query: GetBenefitRequestsDocument,
-            variables: { employeeId },
           },
         ],
       });

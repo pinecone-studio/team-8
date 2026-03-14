@@ -34,11 +34,8 @@ function formatRuleLabel(value: string) {
 export default function BenefitDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const { employeeId, loading: employeeLoading } = useCurrentEmployee();
-  const { data, error, loading } = useGetMyBenefitsQuery({
-    variables: { employeeId: employeeId ?? "" },
-    skip: !employeeId,
-  });
+  const { loading: employeeLoading } = useCurrentEmployee();
+  const { data, error, loading } = useGetMyBenefitsQuery();
 
   const benefitEligibility = data?.myBenefits.find((item) => item.benefitId === id);
 

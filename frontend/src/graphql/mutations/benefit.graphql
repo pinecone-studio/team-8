@@ -17,8 +17,8 @@ mutation RequestBenefit($input: RequestBenefitInput!) {
   }
 }
 
-mutation ApproveBenefitRequest($requestId: String!, $reviewedBy: String!) {
-  approveBenefitRequest(requestId: $requestId, reviewedBy: $reviewedBy) {
+mutation ApproveBenefitRequest($requestId: String!) {
+  approveBenefitRequest(requestId: $requestId) {
     id
     employeeId
     benefitId
@@ -29,8 +29,20 @@ mutation ApproveBenefitRequest($requestId: String!, $reviewedBy: String!) {
   }
 }
 
-mutation CancelBenefitRequest($requestId: String!, $employeeId: String!) {
-  cancelBenefitRequest(requestId: $requestId, employeeId: $employeeId) {
+mutation DeclineBenefitRequest($requestId: String!, $reason: String) {
+  declineBenefitRequest(requestId: $requestId, reason: $reason) {
+    id
+    employeeId
+    benefitId
+    status
+    declineReason
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CancelBenefitRequest($requestId: String!) {
+  cancelBenefitRequest(requestId: $requestId) {
     id
     employeeId
     benefitId
@@ -54,4 +66,34 @@ mutation CreateBenefit($input: CreateBenefitInput!) {
     flowType
     optionsDescription
   }
+}
+
+mutation CreateEligibilityRule($input: CreateEligibilityRuleInput!) {
+  createEligibilityRule(input: $input) {
+    id
+    benefitId
+    ruleType
+    operator
+    value
+    errorMessage
+    priority
+    isActive
+  }
+}
+
+mutation UpdateEligibilityRule($id: String!, $input: UpdateEligibilityRuleInput!) {
+  updateEligibilityRule(id: $id, input: $input) {
+    id
+    benefitId
+    ruleType
+    operator
+    value
+    errorMessage
+    priority
+    isActive
+  }
+}
+
+mutation DeleteEligibilityRule($id: String!) {
+  deleteEligibilityRule(id: $id)
 }

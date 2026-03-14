@@ -14,8 +14,8 @@ query GetBenefits($category: String) {
   }
 }
 
-query GetMyBenefits($employeeId: String!) {
-  myBenefits(employeeId: $employeeId) {
+query GetMyBenefits {
+  myBenefits {
     benefitId
     status
     benefit {
@@ -43,8 +43,8 @@ query GetMyBenefits($employeeId: String!) {
   }
 }
 
-query GetBenefitRequests($employeeId: String!) {
-  benefitRequests(employeeId: $employeeId) {
+query GetBenefitRequests {
+  benefitRequests {
     id
     employeeId
     benefitId
@@ -78,5 +78,47 @@ query GetAllBenefitRequests($status: String) {
     createdAt
     updatedAt
     viewContractUrl
+  }
+}
+
+query GetEmployeeBenefits($employeeId: String!) {
+  getEmployeeBenefits(employeeId: $employeeId) {
+    benefitId
+    status
+    benefit {
+      id
+      name
+      nameEng
+      category
+      subsidyPercent
+      employeePercent
+      unitPrice
+      vendorName
+      requiresContract
+      flowType
+      optionsDescription
+    }
+    ruleEvaluation {
+      ruleType
+      passed
+      reason
+    }
+    failedRule {
+      ruleType
+      errorMessage
+    }
+  }
+}
+
+query GetEligibilityRules($benefitId: String!) {
+  eligibilityRules(benefitId: $benefitId) {
+    id
+    benefitId
+    ruleType
+    operator
+    value
+    errorMessage
+    priority
+    isActive
   }
 }

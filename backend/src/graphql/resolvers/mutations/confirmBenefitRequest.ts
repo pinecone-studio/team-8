@@ -1,18 +1,24 @@
 import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
 import { getBenefitConfig } from "../../../eligibility";
+import type { GraphQLContext } from "../../context";
+import { requireAuth } from "../../../auth";
 
 export const confirmBenefitRequest = async (
   _: unknown,
   { requestId, contractAccepted }: { requestId: string; contractAccepted: boolean },
-  { db }: { db: import("../../../db").Database }
+  { db, currentEmployee }: GraphQLContext,
 ) => {
+  const employee = requireAuth(currentEmployee);
   const requests = await db
     .select()
     .from(schema.benefitRequests)
     .where(eq(schema.benefitRequests.id, requestId));
   const req = requests[0];
   if (!req) throw new Error("Benefit request not found");
+  if (req.employeeId !== employee.id) {
+    throw new Error("You can only confirm your own request.");
+  }
 
   if (!contractAccepted) {
     const [updated] = await db
@@ -33,7 +39,9 @@ export const confirmBenefitRequest = async (
       .from(schema.contracts)
       .where(eq(schema.contracts.benefitId, req.benefitId));
     const active = contracts.find((c) => c.isActive);
-    contractVersionAccepted = active ? `${active.version}:${active.sha256Hash}` : null;
+    contractVersionAccepted = active
+      ? `${active.version}:${active.sha256Hash}`
+      : null;
   }
 
   const [updated] = await db
@@ -41,7 +49,7 @@ export const confirmBenefitRequest = async (
     .set({
       contractVersionAccepted,
       contractAcceptedAt,
-      employeeApprovedAt: contractAccepted ? contractAcceptedAt : null,
+      employeeApprovedAt: contractAcceptedAt,
       updatedAt: contractAcceptedAt,
     })
     .where(eq(schema.benefitRequests.id, requestId))
