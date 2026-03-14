@@ -23,8 +23,6 @@ preview_id = "3bad0be611ac489abc5641ea713e0ea6"
 
 [vars]
 ENVIRONMENT = "development"
-CLERK_SECRET_KEY = ""
-CLERK_JWT_KEY = ""
 
 [observability]
 enabled = false
