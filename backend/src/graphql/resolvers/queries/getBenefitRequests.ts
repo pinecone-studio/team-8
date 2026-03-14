@@ -1,16 +1,18 @@
 import { desc, eq } from "drizzle-orm";
 import { schema } from "../../../db";
-import { QueryResolvers } from "../../generated/graphql";
+import type { GraphQLContext } from "../../context";
+import { requireAuth } from "../../../auth";
 
-/** Employee-ийн benefit request жагсаалтыг буцаана. */
-export const getBenefitRequests: QueryResolvers["benefitRequests"] = async (
-  _,
-  { employeeId },
-  { db }
+/** Returns benefit requests for the current authenticated employee. */
+export const getBenefitRequests = async (
+  _: unknown,
+  __: unknown,
+  { db, currentEmployee }: GraphQLContext,
 ) => {
+  const employee = requireAuth(currentEmployee);
   return db
     .select()
     .from(schema.benefitRequests)
-    .where(eq(schema.benefitRequests.employeeId, employeeId))
+    .where(eq(schema.benefitRequests.employeeId, employee.id))
     .orderBy(desc(schema.benefitRequests.createdAt));
 };

@@ -1,8 +1,14 @@
 import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
-import { MutationResolvers } from "../../generated/graphql";
+import type { GraphQLContext } from "../../context";
+import { requireAdmin } from "../../../auth";
 
-export const updateEmployee: MutationResolvers["updateEmployee"] = async (_, { id, input }, { db }) => {
+export const updateEmployee = async (
+  _: unknown,
+  { id, input }: { id: string; input: Record<string, unknown> },
+  { db, currentEmployee }: GraphQLContext,
+) => {
+  requireAdmin(currentEmployee);
   const updates: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined && value !== null) {

@@ -1,4 +1,5 @@
 import type { Database } from "../db";
+import type { Employee } from "../db";
 
 export interface Env {
   DB: D1Database;
@@ -10,6 +11,8 @@ export interface Env {
 export interface GraphQLContext {
   db: Database;
   env: Env;
-  /** Origin/base URL for building contract view URLs (e.g. request.url) */
+  /** Origin/base URL for building contract view URLs (e.g. request.url origin). */
   baseUrl: string;
+  /** Currently authenticated employee, or null if unauthenticated. */
+  currentEmployee: Employee | null;
 }

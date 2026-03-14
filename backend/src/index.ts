@@ -11,6 +11,7 @@ import {
 } from "./contracts";
 import { eq } from "drizzle-orm";
 import { schema } from "./db";
+import { resolveCurrentEmployee } from "./auth";
 
 export interface Env {
   DB: D1Database;
@@ -65,7 +66,8 @@ const handler = startServerAndCreateCloudflareWorkersHandler<
   context: async ({ request, env }) => {
     const db = createDb(env.DB);
     const baseUrl = new URL(request.url).origin;
-    return { db, env, baseUrl };
+    const currentEmployee = await resolveCurrentEmployee(request, db);
+    return { db, env, baseUrl, currentEmployee };
   },
 });
 
@@ -175,6 +177,29 @@ async function handleContractUpload(
 
   const sha256Hash = "sha256-placeholder"; // Optional: compute from file.arrayBuffer() with crypto.subtle
   const db = createDb(env.DB);
+  const employee = await resolveCurrentEmployee(request, db);
+  if (!employee) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Authentication required." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+  const dept = (employee.department ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  const isAdmin =
+    ["human resource", "human resources", "hr", "finance"].includes(dept) &&
+    employee.responsibilityLevel >= 2;
+  if (!isAdmin) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Admin access required." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
 
   await db
     .update(schema.contracts)

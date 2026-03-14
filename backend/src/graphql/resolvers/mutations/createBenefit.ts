@@ -1,12 +1,14 @@
 import { schema } from "../../../db";
-import type { MutationResolvers } from "../../generated/graphql";
+import type { GraphQLContext } from "../../context";
 import { mapBenefitRecordToGraphql } from "../helpers/employeeBenefits";
+import { requireAdmin } from "../../../auth";
 
-export const createBenefit: MutationResolvers["createBenefit"] = async (
-  _,
-  { input },
-  { db }
+export const createBenefit = async (
+  _: unknown,
+  { input }: { input: { name: string; category: string; subsidyPercent: number; vendorName?: string | null; requiresContract?: boolean | null } },
+  { db, currentEmployee }: GraphQLContext,
 ) => {
+  requireAdmin(currentEmployee);
   const [row] = await db
     .insert(schema.benefits)
     .values({

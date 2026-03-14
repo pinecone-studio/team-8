@@ -3,6 +3,7 @@ import { schema } from "../../../db";
 import { evaluateBenefit, getBenefitConfig } from "../../../eligibility";
 import { createContractViewToken, getContractViewUrl } from "../../../contracts";
 import type { GraphQLContext } from "../../context";
+import { requireAuth } from "../../../auth";
 
 export const requestBenefit = async (
   _: unknown,
@@ -10,7 +11,6 @@ export const requestBenefit = async (
     input,
   }: {
     input: {
-      employeeId: string;
       benefitId: string;
       contractVersionAccepted?: string | null;
       contractAcceptedAt?: string | null;
@@ -18,23 +18,16 @@ export const requestBenefit = async (
       repaymentMonths?: number | null;
     };
   },
-  { db, env, baseUrl }: GraphQLContext
+  { db, env, baseUrl, currentEmployee }: GraphQLContext,
 ) => {
+  const employee = requireAuth(currentEmployee);
   const {
-    employeeId,
     benefitId,
     contractVersionAccepted,
     contractAcceptedAt,
     requestedAmount,
     repaymentMonths,
   } = input;
-
-  const employees = await db
-    .select()
-    .from(schema.employees)
-    .where(eq(schema.employees.id, employeeId));
-  const employee = employees[0];
-  if (!employee) throw new Error("Employee not found");
 
   const benefitConfig = getBenefitConfig(benefitId);
   const benefitRows = await db
@@ -46,20 +39,25 @@ export const requestBenefit = async (
   if (benefitConfig) {
     const evaluated = evaluateBenefit(employee, benefitId);
     if (evaluated.status === "locked") {
-      throw new Error(evaluated.failedRule?.errorMessage ?? "Not eligible for this benefit.");
+      throw new Error(
+        evaluated.failedRule?.errorMessage ?? "Not eligible for this benefit.",
+      );
     }
     if (benefitConfig.flowType === "self_service") {
-      throw new Error("This benefit does not require a request; it is self-service.");
+      throw new Error(
+        "This benefit does not require a request; it is self-service.",
+      );
     }
   } else {
     if (!benefitFromDb) throw new Error("Benefit not found.");
-    if (!benefitFromDb.isActive) throw new Error("This benefit is no longer available.");
+    if (!benefitFromDb.isActive)
+      throw new Error("This benefit is no longer available.");
   }
 
   const [inserted] = await db
     .insert(schema.benefitRequests)
     .values({
-      employeeId,
+      employeeId: employee.id,
       benefitId,
       status: "pending",
       contractVersionAccepted: contractVersionAccepted ?? null,
@@ -81,7 +79,10 @@ export const requestBenefit = async (
       .where(eq(schema.contracts.benefitId, benefitId));
     const active = contracts.find((c) => c.isActive);
     if (active) {
-      const token = await createContractViewToken(env.CONTRACT_VIEW_TOKENS, active.r2ObjectKey);
+      const token = await createContractViewToken(
+        env.CONTRACT_VIEW_TOKENS,
+        active.r2ObjectKey,
+      );
       viewContractUrl = getContractViewUrl(baseUrl, token);
     }
   }

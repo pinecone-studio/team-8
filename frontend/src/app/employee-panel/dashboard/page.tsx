@@ -11,16 +11,13 @@ import {
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 
 export default function DashboardPage() {
-  const { employee, employeeId, error, loading: employeeLoading } =
+  const { employee, error, loading: employeeLoading } =
     useCurrentEmployee();
   const {
     data,
     error: benefitsError,
     loading: benefitsLoading,
-  } = useGetMyBenefitsQuery({
-    variables: { employeeId: employeeId ?? "" },
-    skip: !employeeId,
-  });
+  } = useGetMyBenefitsQuery();
 
   const myBenefits = data?.myBenefits ?? [];
   const subtitle = error

@@ -77,14 +77,26 @@ export const benefitTypeDefs = gql`
     viewUrl: String
   }
 
+  type EligibilityRule {
+    id: String!
+    benefitId: String!
+    ruleType: String!
+    operator: String!
+    value: String!
+    errorMessage: String!
+    priority: Int!
+    isActive: Boolean!
+  }
+
   extend type Query {
     benefits(category: String): [Benefit!]!
     adminBenefits: [Benefit!]!
-    myBenefits(employeeId: String!): [BenefitEligibility!]!
+    myBenefits: [BenefitEligibility!]!
     getEmployeeBenefits(employeeId: String!): [BenefitEligibility!]!
-    benefitRequests(employeeId: String!): [BenefitRequest!]!
+    benefitRequests: [BenefitRequest!]!
     allBenefitRequests(status: String): [BenefitRequest!]!
     contracts(benefitId: String): [Contract!]!
+    eligibilityRules(benefitId: String!): [EligibilityRule!]!
   }
 
   input CreateBenefitInput {
@@ -96,7 +108,6 @@ export const benefitTypeDefs = gql`
   }
 
   input RequestBenefitInput {
-    employeeId: String!
     benefitId: String!
     contractVersionAccepted: String
     contractAcceptedAt: String
@@ -104,12 +115,33 @@ export const benefitTypeDefs = gql`
     repaymentMonths: Int
   }
 
+  input CreateEligibilityRuleInput {
+    benefitId: String!
+    ruleType: String!
+    operator: String!
+    value: String!
+    errorMessage: String!
+    priority: Int
+  }
+
+  input UpdateEligibilityRuleInput {
+    ruleType: String
+    operator: String
+    value: String
+    errorMessage: String
+    priority: Int
+    isActive: Boolean
+  }
+
   extend type Mutation {
     createBenefit(input: CreateBenefitInput!): Benefit!
     requestBenefit(input: RequestBenefitInput!): BenefitRequest!
     confirmBenefitRequest(requestId: String!, contractAccepted: Boolean!): BenefitRequest!
-    approveBenefitRequest(requestId: String!, reviewedBy: String!): BenefitRequest!
-    declineBenefitRequest(requestId: String!, reviewedBy: String!, reason: String): BenefitRequest!
-    cancelBenefitRequest(requestId: String!, employeeId: String!): BenefitRequest!
+    approveBenefitRequest(requestId: String!): BenefitRequest!
+    declineBenefitRequest(requestId: String!, reason: String): BenefitRequest!
+    cancelBenefitRequest(requestId: String!): BenefitRequest!
+    createEligibilityRule(input: CreateEligibilityRuleInput!): EligibilityRule!
+    updateEligibilityRule(id: String!, input: UpdateEligibilityRuleInput!): EligibilityRule!
+    deleteEligibilityRule(id: String!): Boolean!
   }
 `;

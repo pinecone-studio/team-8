@@ -26,11 +26,9 @@ const statusTone: Record<string, string> = {
 function RequestsContent() {
   const searchParams = useSearchParams();
   const submitted = searchParams.get("submitted") === "true";
-  const { employeeId, loading: employeeLoading } = useCurrentEmployee();
+  const { loading: employeeLoading } = useCurrentEmployee();
   const { data: requestsData, loading: requestsLoading } =
     useGetBenefitRequestsQuery({
-      variables: { employeeId: employeeId ?? "" },
-      skip: !employeeId,
       // After submit redirect, refetch so the new PENDING request appears
       fetchPolicy: submitted ? "network-only" : "cache-first",
     });
@@ -38,7 +36,7 @@ function RequestsContent() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [cancelRequest] = useCancelBenefitRequestMutation({
-    refetchQueries: [{ query: GetBenefitRequestsDocument, variables: { employeeId: employeeId ?? "" } }],
+    refetchQueries: [{ query: GetBenefitRequestsDocument }],
     onCompleted: () => {
       setCancellingId(null);
       setFeedback({ type: "success", message: "Request cancelled." });
@@ -163,13 +161,13 @@ function RequestsContent() {
                               <Eye className="h-4 w-4" />
                               View
                             </Link>
-                            {request.status.toLowerCase() === "pending" && employeeId && (
+                            {request.status.toLowerCase() === "pending" && (
                               <button
                                 type="button"
                                 onClick={() => {
                                   if (!window.confirm("Cancel this benefit request?")) return;
                                   setCancellingId(request.id);
-                                  cancelRequest({ variables: { requestId: request.id, employeeId } });
+                                  cancelRequest({ variables: { requestId: request.id } });
                                 }}
                                 disabled={cancellingId === request.id}
                                 className="inline-flex items-center gap-1 rounded px-2 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"

@@ -18,21 +18,20 @@ type Props = {
   benefit: Benefit;
   requestStatus: string;
   requestId?: string;
-  employeeId?: string;
 };
 
-export default function RequestedBenefitCard({ benefit, requestStatus, requestId, employeeId }: Props) {
+export default function RequestedBenefitCard({ benefit, requestStatus, requestId }: Props) {
   const [cancelError, setCancelError] = useState<string | null>(null);
   const vendor = benefit.vendorName ?? "Internal Benefit";
   const statusKey = requestStatus.toLowerCase();
   const statusClass = requestStatusStyle[statusKey] ?? "bg-gray-100 text-gray-600 border-gray-200";
   const isPending = statusKey === "pending";
-  const canCancel = isPending && requestId && employeeId;
+  const canCancel = isPending && requestId;
 
   const [cancelRequest, { loading: cancelling }] = useCancelBenefitRequestMutation({
     refetchQueries: [
-      { query: GetBenefitRequestsDocument, variables: { employeeId: employeeId ?? "" } },
-      { query: GetMyBenefitsDocument, variables: { employeeId: employeeId ?? "" } },
+      { query: GetBenefitRequestsDocument },
+      { query: GetMyBenefitsDocument },
     ],
     onError: () => setCancelError("Failed to cancel. Try again."),
   });
@@ -40,11 +39,11 @@ export default function RequestedBenefitCard({ benefit, requestStatus, requestId
   const handleCancel = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!requestId || !employeeId) return;
+    if (!requestId) return;
     if (!window.confirm("Cancel this benefit request?")) return;
     setCancelError(null);
     try {
-      await cancelRequest({ variables: { requestId, employeeId } });
+      await cancelRequest({ variables: { requestId } });
     } catch {
       // onError sets cancelError
     }
