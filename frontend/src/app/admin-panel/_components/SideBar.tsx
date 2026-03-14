@@ -84,42 +84,53 @@ export default function Sidebar() {
     }
   }, [profileOpen]);
 
-  const isActive = (href: string) => {
-    if (href === "/admin-panel") {
-      return pathname === href;
-    }
+  const isActive = (href: string) =>
+    href === "/admin-panel" ? pathname === href : pathname.startsWith(href);
 
-    return pathname.startsWith(href);
-  };
+  const navLinkClass = (href: string) =>
+    `flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition active:scale-[0.98] border-l-2 ${
+      isActive(href)
+        ? "border-primary bg-sidebar-accent text-sidebar-accent-foreground"
+        : "border-transparent text-sidebar-foreground hover:border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+    }`;
 
   return (
     <>
-      <aside className="fixed left-0 top-0 z-10 flex h-screen w-[260px] flex-col justify-between border-r border-gray-200 bg-[#f8f8f9] px-4 py-4">
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="relative mb-5" ref={profileRef}>
+      <aside className="fixed left-0 top-0 z-10 flex h-screen w-[260px] flex-col border-r border-sidebar-border bg-sidebar">
+        <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4">
+          <Link href="/admin-panel" className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <ShieldCheck className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <span className="font-semibold text-sidebar-foreground">Admin</span>
+          </Link>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+          <div className="relative mb-4" ref={profileRef}>
             <button
               type="button"
               onClick={() => setProfileOpen((o) => !o)}
-              className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2.5 text-left transition hover:bg-gray-100/80 active:scale-[0.99]"
+              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-sidebar-accent active:scale-[0.99]"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-200/80">
-                <User className="h-4 w-4 text-gray-500" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-accent">
+                <User className="h-4 w-4 text-sidebar-foreground" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-800">{profileName}</p>
-                <p className="truncate text-xs text-gray-500">{profileRole}</p>
+                <p className="truncate text-sm font-medium text-sidebar-foreground">{profileName}</p>
+                <p className="truncate text-xs text-muted-foreground">{profileRole}</p>
               </div>
-              <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`} />
+              <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`} />
             </button>
             <div
-              className={`absolute left-0 right-0 top-full z-20 mt-1.5 origin-top rounded-lg border border-gray-100 bg-white py-1 shadow-sm transition-all duration-200 ease-out ${
+              className={`absolute left-0 right-0 top-full z-20 mt-1.5 origin-top rounded-lg border border-border bg-popover py-1 shadow-lg transition-all duration-200 ease-out ${
                 profileOpen ? "visible scale-100 opacity-100" : "invisible scale-95 opacity-0 pointer-events-none"
               }`}
             >
               <Link
                 href="/admin-panel/settings"
                 onClick={() => setProfileOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
+                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground"
               >
                 <Settings className="h-4 w-4" />
                 <span>Settings</span>
@@ -127,7 +138,7 @@ export default function Sidebar() {
               <Link
                 href="/employee-panel/dashboard"
                 onClick={() => setProfileOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
+                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground"
               >
                 <LayoutGrid className="h-4 w-4" />
                 <span>My dashboard</span>
@@ -138,7 +149,7 @@ export default function Sidebar() {
                   setProfileOpen(false);
                   signOut({ redirectUrl: "/sign-in" });
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground"
               >
                 <LogOut className="h-4 w-4" />
                 <span>Sign out</span>
@@ -146,21 +157,13 @@ export default function Sidebar() {
             </div>
           </div>
 
-          <nav className="space-y-1">
+          <nav className="space-y-0.5">
+            <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Menu</p>
             {navItems.map((item) => {
               const Icon = item.icon;
-
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition active:scale-[0.98] ${
-                    isActive(item.href)
-                      ? "bg-gray-200 text-gray-900 active:bg-gray-300"
-                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200"
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
+                <Link key={item.href} href={item.href} className={navLinkClass(item.href)}>
+                  <Icon className="h-5 w-5 shrink-0" />
                   <span>{item.label}</span>
                 </Link>
               );

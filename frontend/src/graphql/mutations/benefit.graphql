@@ -68,6 +68,10 @@ mutation CreateBenefit($input: CreateBenefitInput!) {
   }
 }
 
+mutation DeleteBenefit($id: String!) {
+  deleteBenefit(id: $id)
+}
+
 mutation CreateEligibilityRule($input: CreateEligibilityRuleInput!) {
   createEligibilityRule(input: $input) {
     id

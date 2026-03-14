@@ -135,6 +135,7 @@ export const benefitTypeDefs = gql`
 
   extend type Mutation {
     createBenefit(input: CreateBenefitInput!): Benefit!
+    deleteBenefit(id: String!): Boolean!
     requestBenefit(input: RequestBenefitInput!): BenefitRequest!
     confirmBenefitRequest(requestId: String!, contractAccepted: Boolean!): BenefitRequest!
     approveBenefitRequest(requestId: String!): BenefitRequest!

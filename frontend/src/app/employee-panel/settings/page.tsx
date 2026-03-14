@@ -61,11 +61,11 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-[#f8f8f9]">
+    <div className="flex min-h-screen bg-background">
       <SideBar />
-      <div className="flex flex-1 flex-col">
-        <main className="flex-1 bg-[#F9FAFB] min-h-screen py-10 px-6 sm:px-12 flex justify-center">
-  <div className="w-full max-w-[800px] space-y-8">
+      <div className="flex flex-1 flex-col items-center">
+        <main className="w-full max-w-7xl min-h-screen py-10 px-6 sm:px-12">
+  <div className="mx-auto w-full max-w-[800px] space-y-8">
     
     {/* Header Section */}
     <div>

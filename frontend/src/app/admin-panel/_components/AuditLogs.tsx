@@ -3,7 +3,7 @@ import { ClipboardList } from "lucide-react";
 export default function AuditLogs() {
   return (
     <main className="flex-1 px-8 py-9">
-      <section className="mx-auto max-w-6xl">
+      <section className="mx-auto max-w-7xl">
         <div className="mb-8">
           <h1 className="text-xl font-semibold text-gray-900">Audit Logs</h1>
           <p className="mt-1 text-sm text-gray-500">

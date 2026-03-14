@@ -3,6 +3,7 @@
 import Sidebar from "../_components/SideBar";
 import SummaryCard from "../_components/benefits/SummaryCard";
 import BenefitCard from "../_components/benefits/BenefitCard";
+import PageHeader from "../_components/layout/PageHeader";
 import PageLoading from "@/app/_components/PageLoading";
 import {
   BenefitEligibilityStatus,
@@ -38,46 +39,44 @@ export default function DashboardPage() {
   const dashboardError = error ?? benefitsError ?? null;
 
   return (
-    <div className="flex min-h-screen bg-[#f6f7f9]">
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
 
-      <div className="flex-1">
-        <main className="p-8">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">
-              Good to see you, {employee?.name ?? "Employee"}
-            </h1>
-            <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
-          </div>
+      <div className="flex flex-1 flex-col items-center">
+        <main className="w-full max-w-7xl p-8">
+          <PageHeader
+            title={`Good to see you, ${employee?.name ?? "Employee"}`}
+            description={subtitle}
+          />
 
           <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
             <SummaryCard label="Active Benefits" value={stats.active} />
             <SummaryCard
               label="Eligible Benefits"
               value={stats.eligible}
-              valueClassName="text-blue-600"
+              valueClassName="text-primary"
             />
             <SummaryCard
               label="Pending Requests"
               value={stats.pending}
-              valueClassName="text-orange-500"
+              valueClassName="text-amber-600 dark:text-amber-400"
             />
           </div>
 
           <section className="mt-6">
-            <h2 className="text-base font-semibold text-gray-900">
+            <h2 className="text-base font-semibold text-foreground">
               Benefits Overview
             </h2>
 
-            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-3 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] [&>*]:min-w-0">
               {isDashboardLoading ? (
                 <PageLoading message="Loading benefits..." />
               ) : dashboardError ? (
-                <div className="rounded-lg border border-red-100 bg-red-50/80 px-4 py-3 text-sm text-red-700">
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                   Failed to load benefit data.
                 </div>
               ) : myBenefits.length === 0 ? (
-                <div className="rounded-lg border border-gray-100 bg-white px-4 py-6 text-center text-sm text-gray-500">
+                <div className="rounded-lg border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
                   No benefits found for your account.
                 </div>
               ) : (

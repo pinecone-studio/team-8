@@ -14,19 +14,19 @@ export default function Home() {
       : "Here's an overview of your benefits";
 
   return (
-    <div className="flex min-h-screen bg-[#f8f8f9]">
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
 
-      <div className="flex flex-1 flex-col">
-        <main className="p-8">
+      <div className="flex flex-1 flex-col items-center">
+        <main className="w-full max-w-7xl p-8">
           {loading ? (
             <PageLoading message="Loading your profile..." />
           ) : (
             <>
-              <h1 className="text-xl font-semibold text-gray-900">
+              <h1 className="text-xl font-semibold text-foreground">
                 Good to see you, {displayName}
               </h1>
-              <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
             </>
           )}
         </main>

@@ -23,27 +23,27 @@ export default function BenefitCard({ benefit }: Props) {
   return (
     <Link
       href={`/employee-panel/benefits/${benefit.benefitId}`}
-      className="block rounded-lg border border-gray-100 bg-white p-3 transition-colors hover:border-gray-200 hover:bg-gray-50/50"
+      className="block h-full w-full min-w-0 rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-accent/50"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-gray-900">
+          <h3 className="text-sm font-semibold text-card-foreground">
             {benefit.benefit.name}
           </h3>
-          <p className="mt-0.5 text-xs text-gray-500">{vendor}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{vendor}</p>
         </div>
       </div>
 
       <div className="mt-2 flex items-center gap-2">
         <StatusBadge status={benefit.status} />
-        <span className="text-xs text-gray-400">{benefit.benefit.category}</span>
+        <span className="text-xs text-muted-foreground">{benefit.benefit.category}</span>
       </div>
 
-      <p className="mt-2 text-xs leading-relaxed text-gray-600 line-clamp-2">
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground line-clamp-2">
         {buildDescription(benefit)}
       </p>
 
-      <p className="mt-2 text-xs font-medium text-gray-700">{subsidyLabel} subsidy</p>
+      <p className="mt-2 text-xs font-medium text-foreground">{subsidyLabel} subsidy</p>
     </Link>
   );
 }

@@ -69,10 +69,10 @@ function RequestsContent() {
   });
 
   return (
-    <div className="flex min-h-screen bg-[#f6f7f9]">
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <div className="flex-1">
-        <main className="p-8">
+      <div className="flex flex-1 flex-col items-center">
+        <main className="w-full max-w-7xl p-8">
           <h1 className="text-xl font-semibold text-gray-900">My Requests</h1>
           <p className="mt-1 text-sm text-gray-500">
             Benefit request status
