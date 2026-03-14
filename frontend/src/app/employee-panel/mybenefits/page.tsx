@@ -1,10 +1,16 @@
 "use client";
 import { use, useMemo } from "react";
-import Header from "@/app/_features/Header";
 import Sidebar from "../_components/SideBar";
-import CatalogBenefitCard from "../_components/benefits/CatalogBenefitCard";
+import BenefitCard from "../_components/benefits/BenefitCard";
+import RequestedBenefitCard from "../_components/benefits/RequestedBenefitCard";
 import PageLoading from "@/app/_components/PageLoading";
-import { useGetMyBenefitsQuery } from "@/graphql/generated/graphql";
+import type { Benefit } from "@/graphql/generated/graphql";
+import { BenefitEligibilityStatus } from "@/graphql/generated/graphql";
+import {
+  useGetMyBenefitsQuery,
+  useGetBenefitRequestsQuery,
+  useGetBenefitsQuery,
+} from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 
 const STATUS_ORDER: Record<string, number> = { ACTIVE: 0, ELIGIBLE: 1, PENDING: 2, LOCKED: 3 };
@@ -23,11 +29,46 @@ export default function Mybenefits({ params }: PageProps) {
     variables: { employeeId: employeeId ?? "" },
     skip: !employeeId,
   });
+  const { data: requestsData } = useGetBenefitRequestsQuery({
+    variables: { employeeId: employeeId ?? "" },
+    skip: !employeeId,
+  });
+  const { data: benefitsData } = useGetBenefitsQuery();
 
-  const myBenefits = useMemo(() => data?.myBenefits ?? [], [data?.myBenefits]);
+  const myBenefitsRaw = useMemo(() => data?.myBenefits ?? [], [data?.myBenefits]);
+  const myBenefits = useMemo(
+    () => myBenefitsRaw.filter((b) => b.status !== BenefitEligibilityStatus.Locked),
+    [myBenefitsRaw]
+  );
+  const benefitRequests = useMemo(() => requestsData?.benefitRequests ?? [], [requestsData?.benefitRequests]);
+  const benefitsById = useMemo(
+    () => new Map((benefitsData?.benefits ?? []).map((b) => [b.id, b])),
+    [benefitsData?.benefits]
+  );
+
+  const requestedBenefits = useMemo(() => {
+    return benefitRequests
+      .map((req) => {
+        const benefit = benefitsById.get(req.benefitId);
+        if (!benefit) return null;
+        return { requestId: req.id, benefit, requestStatus: req.status };
+      })
+      .filter((x): x is { requestId: string; benefit: Benefit; requestStatus: string } => x !== null);
+  }, [benefitRequests, benefitsById]);
+
+  const requestedBenefitIds = useMemo(
+    () => new Set(requestedBenefits.map((r) => r.benefit.id)),
+    [requestedBenefits]
+  );
+
+  const myBenefitsExcludingRequested = useMemo(
+    () => myBenefits.filter((b) => !requestedBenefitIds.has(b.benefitId)),
+    [myBenefits, requestedBenefitIds]
+  );
+
   const byCategory = useMemo(() => {
-    const map = new Map<string, typeof myBenefits>();
-    for (const b of myBenefits) {
+    const map = new Map<string, typeof myBenefitsExcludingRequested>();
+    for (const b of myBenefitsExcludingRequested) {
       const raw = b.benefit.category || "Other";
       const cat = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
       if (cat.toLowerCase() === "wellness") {
@@ -56,7 +97,7 @@ export default function Mybenefits({ params }: PageProps) {
       if (bi !== -1) return 1;
       return a.localeCompare(b);
     });
-  }, [myBenefits]);
+  }, [myBenefitsExcludingRequested]);
 
   const isLoading = employeeLoading || benefitsLoading;
   const hasError = benefitsError ?? null;
@@ -66,12 +107,11 @@ export default function Mybenefits({ params }: PageProps) {
       <Sidebar />
 
       <div className="flex flex-1 flex-col">
-        <Header />
         <main className="p-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-xl font-semibold text-gray-900">
             Benefits Catalog
           </h1>
-          <p className="mt-2 text-lg text-gray-500">
+          <p className="mt-1 text-sm text-gray-500">
             Explore all company benefits grouped by category.
           </p>
 
@@ -81,20 +121,38 @@ export default function Mybenefits({ params }: PageProps) {
             <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-8 text-red-700">
               Failed to load benefit data.
             </div>
-          ) : myBenefits.length === 0 ? (
+          ) : myBenefits.length === 0 && requestedBenefits.length === 0 ? (
             <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-8 text-center text-gray-500">
               No benefits found for your account.
             </div>
           ) : (
             <div className="mt-10 space-y-10">
+              {requestedBenefits.length > 0 && (
+                <section>
+                  <h2 className="mb-4 text-lg font-semibold text-gray-900">
+                    Your requested benefits
+                  </h2>
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                    {requestedBenefits.map(({ requestId, benefit, requestStatus }) => (
+                      <RequestedBenefitCard
+                        key={requestId}
+                        benefit={benefit}
+                        requestStatus={requestStatus}
+                        requestId={requestId}
+                        employeeId={employeeId ?? undefined}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
               {byCategory.map(([category, benefits]) => (
                 <section key={category}>
-                  <h2 className="mb-6 text-xl font-semibold text-gray-900">
+                  <h2 className="mb-4 text-lg font-semibold text-gray-900">
                     {category}
                   </h2>
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                     {benefits.map((benefit) => (
-                      <CatalogBenefitCard
+                      <BenefitCard
                         key={benefit.benefitId}
                         benefit={benefit}
                       />

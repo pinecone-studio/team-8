@@ -6,13 +6,11 @@ type Props = {
 
 export default function SummaryCard({ label, value, valueClassName }: Props) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-6">
-      <p className="text-sm text-gray-500">{label}</p>
-      <h3
-        className={`mt-2 text-4xl font-bold text-gray-900 ${valueClassName ?? ""}`}
-      >
+    <div className="rounded-lg border border-gray-100 bg-white px-3 py-3">
+      <p className="text-xs text-gray-400">{label}</p>
+      <p className={`mt-1 text-xl font-semibold tabular-nums text-gray-900 ${valueClassName ?? ""}`}>
         {value}
-      </h3>
+      </p>
     </div>
   );
 }

@@ -14,3 +14,19 @@ query GetAdminDashboardSummary {
     }
   }
 }
+
+query GetAdminBenefits {
+  adminBenefits {
+    id
+    name
+    nameEng
+    category
+    subsidyPercent
+    employeePercent
+    unitPrice
+    vendorName
+    requiresContract
+    flowType
+    optionsDescription
+  }
+}

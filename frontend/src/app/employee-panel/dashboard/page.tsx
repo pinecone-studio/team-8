@@ -1,6 +1,5 @@
 "use client";
 
-import Topbar from "../_components/layout/Topbar";
 import Sidebar from "../_components/SideBar";
 import SummaryCard from "../_components/benefits/SummaryCard";
 import BenefitCard from "../_components/benefits/BenefitCard";
@@ -46,17 +45,15 @@ export default function DashboardPage() {
       <Sidebar />
 
       <div className="flex-1">
-        <Topbar />
-
         <main className="p-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-xl font-semibold text-gray-900">
               Good to see you, {employee?.name ?? "Employee"}
             </h1>
-            <p className="mt-2 text-lg text-gray-500">{subtitle}</p>
+            <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
           </div>
 
-          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
             <SummaryCard label="Active Benefits" value={stats.active} />
             <SummaryCard
               label="Eligible Benefits"
@@ -70,20 +67,20 @@ export default function DashboardPage() {
             />
           </div>
 
-          <section className="mt-10">
-            <h2 className="text-3xl font-semibold text-gray-900">
+          <section className="mt-6">
+            <h2 className="text-base font-semibold text-gray-900">
               Benefits Overview
             </h2>
 
-            <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
               {isDashboardLoading ? (
                 <PageLoading message="Loading benefits..." />
               ) : dashboardError ? (
-                <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
+                <div className="rounded-lg border border-red-100 bg-red-50/80 px-4 py-3 text-sm text-red-700">
                   Failed to load benefit data.
                 </div>
               ) : myBenefits.length === 0 ? (
-                <div className="rounded-2xl border border-gray-200 bg-white p-6 text-gray-500">
+                <div className="rounded-lg border border-gray-100 bg-white px-4 py-6 text-center text-sm text-gray-500">
                   No benefits found for your account.
                 </div>
               ) : (

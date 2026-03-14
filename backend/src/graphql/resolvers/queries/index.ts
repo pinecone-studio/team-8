@@ -9,9 +9,11 @@ import { getMyBenefits } from "./getMyBenefits";
 import { getEmployeeBenefits } from "./getEmployeeBenefits";
 import { getSession } from "./getSession";
 import { getAdminDashboardSummary } from "./getAdminDashboardSummary";
+import { getAdminBenefits } from "./getAdminBenefits";
 
 export const queries = {
   adminDashboardSummary: getAdminDashboardSummary,
+  adminBenefits: getAdminBenefits,
   getEmployees,
   getEmployee,
   getEmployeeByEmail,

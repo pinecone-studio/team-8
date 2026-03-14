@@ -2,7 +2,6 @@
 import { use } from "react";
 import { gql, useQuery } from "@apollo/client";
 import { Eye } from "lucide-react";
-import Header from "@/app/_features/Header";
 import Sidebar from "../_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
 
@@ -45,10 +44,9 @@ export default function Contracts({ params }: PageProps) {
       <Sidebar />
 
       <div className="flex flex-1 flex-col">
-        <Header />
         <main className="p-8">
-          <h1 className="text-3xl font-bold text-gray-900">Contracts</h1>
-          <p className="mt-2 text-lg text-gray-500">
+          <h1 className="text-xl font-semibold text-gray-900">Contracts</h1>
+          <p className="mt-1 text-sm text-gray-500">
             View benefit vendor contracts and download or open them.
           </p>
 

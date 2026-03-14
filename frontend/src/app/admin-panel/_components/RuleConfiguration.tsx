@@ -26,10 +26,10 @@ export default function RuleConfiguration() {
     <main className="flex-1 px-8 py-9">
       <section className="mx-auto max-w-5xl">
         <div className="mb-8">
-          <h1 className="text-[2.25rem] font-semibold tracking-[-0.02em] text-slate-900">
+          <h1 className="text-xl font-semibold text-gray-900">
             Rule Configuration
           </h1>
-          <p className="mt-2 text-lg text-slate-500">
+          <p className="mt-1 text-sm text-gray-500">
             Manage eligibility rules for benefits
           </p>
         </div>
@@ -47,7 +47,7 @@ export default function RuleConfiguration() {
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">Eligibility Rules</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Eligibility Rules</h2>
               <p className="mt-2 text-sm text-slate-500">Gym Membership - PineFit</p>
             </div>
 

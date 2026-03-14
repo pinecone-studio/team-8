@@ -1,4 +1,3 @@
-import Header from "@/app/_features/Header";
 import AuditLogs from "../_components/AuditLogs";
 import Sidebar from "../_components/SideBar";
 
@@ -8,7 +7,6 @@ export default function AuditLogsPage() {
       <Sidebar />
 
       <div className="flex flex-1 flex-col">
-        <Header />
         <AuditLogs />
       </div>
     </div>

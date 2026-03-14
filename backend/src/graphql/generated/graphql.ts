@@ -102,6 +102,14 @@ export type Contract = {
   viewUrl?: Maybe<Scalars['String']['output']>;
 };
 
+export type CreateBenefitInput = {
+  category: Scalars['String']['input'];
+  name: Scalars['String']['input'];
+  requiresContract?: InputMaybe<Scalars['Boolean']['input']>;
+  subsidyPercent: Scalars['Int']['input'];
+  vendorName?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type CreateEmployeeInput = {
   department: Scalars['String']['input'];
   email: Scalars['String']['input'];
@@ -153,7 +161,9 @@ export type FailedRule = {
 export type Mutation = {
   __typename?: 'Mutation';
   approveBenefitRequest: BenefitRequest;
+  cancelBenefitRequest: BenefitRequest;
   confirmBenefitRequest: BenefitRequest;
+  createBenefit: Benefit;
   createEmployee: Employee;
   declineBenefitRequest: BenefitRequest;
   deleteEmployee: Scalars['Boolean']['output'];
@@ -168,9 +178,20 @@ export type MutationApproveBenefitRequestArgs = {
 };
 
 
+export type MutationCancelBenefitRequestArgs = {
+  employeeId: Scalars['String']['input'];
+  requestId: Scalars['String']['input'];
+};
+
+
 export type MutationConfirmBenefitRequestArgs = {
   contractAccepted: Scalars['Boolean']['input'];
   requestId: Scalars['String']['input'];
+};
+
+
+export type MutationCreateBenefitArgs = {
+  input: CreateBenefitInput;
 };
 
 
@@ -203,6 +224,7 @@ export type MutationUpdateEmployeeArgs = {
 
 export type Query = {
   __typename?: 'Query';
+  adminBenefits: Array<Benefit>;
   adminDashboardSummary: AdminDashboardSummary;
   allBenefitRequests: Array<BenefitRequest>;
   benefitRequests: Array<BenefitRequest>;
@@ -371,6 +393,7 @@ export type ResolversTypes = ResolversObject<{
   BenefitRequest: ResolverTypeWrapper<BenefitRequest>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
   Contract: ResolverTypeWrapper<Contract>;
+  CreateBenefitInput: CreateBenefitInput;
   CreateEmployeeInput: CreateEmployeeInput;
   DateTime: ResolverTypeWrapper<Scalars['DateTime']['output']>;
   Employee: ResolverTypeWrapper<EmployeeModel>;
@@ -395,6 +418,7 @@ export type ResolversParentTypes = ResolversObject<{
   BenefitRequest: BenefitRequest;
   Boolean: Scalars['Boolean']['output'];
   Contract: Contract;
+  CreateBenefitInput: CreateBenefitInput;
   CreateEmployeeInput: CreateEmployeeInput;
   DateTime: Scalars['DateTime']['output'];
   Employee: EmployeeModel;
@@ -510,7 +534,9 @@ export type FailedRuleResolvers<ContextType = GraphQLContext, ParentType extends
 
 export type MutationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = ResolversObject<{
   approveBenefitRequest?: Resolver<ResolversTypes['BenefitRequest'], ParentType, ContextType, RequireFields<MutationApproveBenefitRequestArgs, 'requestId' | 'reviewedBy'>>;
+  cancelBenefitRequest?: Resolver<ResolversTypes['BenefitRequest'], ParentType, ContextType, RequireFields<MutationCancelBenefitRequestArgs, 'employeeId' | 'requestId'>>;
   confirmBenefitRequest?: Resolver<ResolversTypes['BenefitRequest'], ParentType, ContextType, RequireFields<MutationConfirmBenefitRequestArgs, 'contractAccepted' | 'requestId'>>;
+  createBenefit?: Resolver<ResolversTypes['Benefit'], ParentType, ContextType, RequireFields<MutationCreateBenefitArgs, 'input'>>;
   createEmployee?: Resolver<ResolversTypes['Employee'], ParentType, ContextType, RequireFields<MutationCreateEmployeeArgs, 'input'>>;
   declineBenefitRequest?: Resolver<ResolversTypes['BenefitRequest'], ParentType, ContextType, RequireFields<MutationDeclineBenefitRequestArgs, 'requestId' | 'reviewedBy'>>;
   deleteEmployee?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteEmployeeArgs, 'id'>>;
@@ -519,6 +545,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
 }>;
 
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = ResolversObject<{
+  adminBenefits?: Resolver<Array<ResolversTypes['Benefit']>, ParentType, ContextType>;
   adminDashboardSummary?: Resolver<ResolversTypes['AdminDashboardSummary'], ParentType, ContextType>;
   allBenefitRequests?: Resolver<Array<ResolversTypes['BenefitRequest']>, ParentType, ContextType, Partial<QueryAllBenefitRequestsArgs>>;
   benefitRequests?: Resolver<Array<ResolversTypes['BenefitRequest']>, ParentType, ContextType, RequireFields<QueryBenefitRequestsArgs, 'employeeId'>>;

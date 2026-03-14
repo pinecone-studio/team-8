@@ -116,10 +116,10 @@ export default function VendorContracts() {
       <section className="mx-auto max-w-6xl">
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
-            <h1 className="text-[2.25rem] font-semibold tracking-[-0.02em] text-slate-900">
+            <h1 className="text-xl font-semibold text-gray-900">
               Vendor Contract Management
             </h1>
-            <p className="mt-2 text-lg text-slate-500">
+            <p className="mt-1 text-sm text-gray-500">
               Manage and upload vendor contracts for benefits
             </p>
           </div>
@@ -139,7 +139,7 @@ export default function VendorContracts() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-slate-900">Upload New Contract</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Upload New Contract</h2>
                 <button type="button" onClick={closeModal} className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 active:scale-95 active:bg-slate-200" aria-label="Close">
                   <X className="h-5 w-5" />
                 </button>

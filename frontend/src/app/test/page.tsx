@@ -5,7 +5,6 @@ import {
   useGetBenefitsQuery,
   useGetMyBenefitsQuery,
 } from "@/graphql/generated/graphql";
-import Header from "@/app/_features/Header";
 import Sidebar from "@/app/employee-panel/_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
 import { graphqlUri } from "@/lib/apollo-client";
@@ -41,12 +40,11 @@ export default function TestPage({ params }: PageProps) {
     <div className="flex min-h-screen bg-[#f8f8f9]">
       <Sidebar />
       <div className="flex flex-1 flex-col">
-        <Header />
         <main className="p-8">
-          <h1 className="mb-6 text-3xl font-semibold text-gray-900">
+          <h1 className="mb-4 text-xl font-semibold text-gray-900">
             Employee & Benefits Test
           </h1>
-          <p className="mb-8 text-gray-500">
+          <p className="mb-6 text-sm text-gray-500">
             Ажилтан болон benefit-ийн тест өгөгдөл. Нэг ажилтан сонгоход тухайн ажилтны benefit eligibility харагдана.
           </p>
 
