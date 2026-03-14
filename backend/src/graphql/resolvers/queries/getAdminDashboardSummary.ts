@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
 import type { Database } from "../../../db";
+import type { GraphQLContext } from "../../context";
 
 type DashboardBucket = {
   label: string;
@@ -49,8 +50,12 @@ function toBuckets(counts: Map<string, number>): DashboardBucket[] {
 export const getAdminDashboardSummary = async (
   _: unknown,
   __: unknown,
-  { db }: { db: Database }
+  { db, currentUser }: GraphQLContext & { db: Database },
 ) => {
+  if (!currentUser.isAdmin) {
+    throw new Error("Not authorized to view admin dashboard.");
+  }
+
   const [employees, benefits, eligibilityRows, requestRows] = await Promise.all([
     db
       .select({

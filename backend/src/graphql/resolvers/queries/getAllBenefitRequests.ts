@@ -1,12 +1,15 @@
 import { desc, eq } from "drizzle-orm";
 import { schema } from "../../../db";
+import type { GraphQLContext } from "../../context";
+import { requireAdmin } from "../../../auth";
 
-/** Admin: бүх benefit request-ийг буцаана; status өгвөл тухайн статусаар шүүнэ. */
+/** Admin: return all benefit requests, optionally filtered by status. */
 export const getAllBenefitRequests = async (
   _: unknown,
   { status }: { status?: string | null },
-  { db }: { db: import("../../../db").Database }
+  { db, currentEmployee }: GraphQLContext,
 ) => {
+  requireAdmin(currentEmployee);
   if (status) {
     return db
       .select()

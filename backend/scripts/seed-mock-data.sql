@@ -1,3 +1,5 @@
+BEGIN TRANSACTION;
+
 DELETE FROM benefit_requests;
 DELETE FROM benefit_eligibility;
 DELETE FROM eligibility_rules;
@@ -26,8 +28,8 @@ INSERT INTO employees (
     'ariunbatbumba@gmail.com',
     'Ariunbat',
     'Ariunbat',
-    'engineer',
-    'other',
+    'frontend_engineer',
+    'Engineering',
     1,
     'active',
     '2024-01-15T00:00:00.000Z',
@@ -40,11 +42,11 @@ INSERT INTO employees (
   (
     'emp_hr_saruul',
     'saruul.hr@pinequest.mn',
-    'Saruul',
-    'Saruul',
-    'manager',
-    'human resource',
-    3,
+    'Saruul Erdene',
+    'Saruul Erdene',
+    'hr_manager',
+    'Human Resources',
+    4,
     'active',
     '2022-06-01T00:00:00.000Z',
     1,
@@ -56,10 +58,10 @@ INSERT INTO employees (
   (
     'emp_fin_temuulen',
     'temuulen.finance@pinequest.mn',
-    'Temuulen',
-    'Temuulen',
-    'manager',
-    'finance',
+    'Temuulen Bat',
+    'Temuulen Bat',
+    'finance_manager',
+    'Finance',
     3,
     'active',
     '2021-03-10T00:00:00.000Z',
@@ -72,10 +74,10 @@ INSERT INTO employees (
   (
     'emp_ux_naraa',
     'naraa.ux@pinequest.mn',
-    'Naraa',
-    'Naraa',
+    'Naraa Sainaa',
+    'Naraa Sainaa',
     'ux_engineer',
-    'other',
+    'Design',
     2,
     'active',
     '2023-02-20T00:00:00.000Z',
@@ -88,10 +90,10 @@ INSERT INTO employees (
   (
     'emp_probation_anu',
     'anu.new@pinequest.mn',
-    'Anu',
-    'Anu',
-    'teacher',
-    'other',
+    'Anu Orgil',
+    'Anu Orgil',
+    'operations_associate',
+    'Operations',
     1,
     'probation',
     '2025-12-15T00:00:00.000Z',
@@ -100,6 +102,54 @@ INSERT INTO employees (
     '2026-03-01T09:00:00.000Z',
     '2026-03-12T00:00:00.000Z',
     '2026-03-12T00:00:00.000Z'
+  ),
+  (
+    'emp_eng_erdene',
+    'erdene.eng@pinequest.mn',
+    'Erdene Munkh',
+    'Erdene Munkh',
+    'senior_engineer',
+    'Engineering',
+    2,
+    'active',
+    '2022-11-07T00:00:00.000Z',
+    1,
+    1,
+    '2026-03-01T09:00:00.000Z',
+    '2026-03-12T00:00:00.000Z',
+    '2026-03-12T00:00:00.000Z'
+  ),
+  (
+    'emp_leave_bolor',
+    'bolor.ops@pinequest.mn',
+    'Bolor Tsetseg',
+    'Bolor Tsetseg',
+    'customer_success',
+    'Operations',
+    1,
+    'leave',
+    '2023-08-14T00:00:00.000Z',
+    1,
+    0,
+    '2026-03-01T09:00:00.000Z',
+    '2026-03-12T00:00:00.000Z',
+    '2026-03-12T00:00:00.000Z'
+  ),
+  (
+    'emp_former_bat',
+    'bat.former@pinequest.mn',
+    'Bat-Erdene',
+    'Bat-Erdene',
+    'backend_engineer',
+    'Engineering',
+    2,
+    'terminated',
+    '2020-02-03T00:00:00.000Z',
+    0,
+    0,
+    '2025-12-31T09:00:00.000Z',
+    '2026-01-05T00:00:00.000Z',
+    '2026-01-05T00:00:00.000Z'
   );
 
 INSERT INTO contracts (
@@ -247,6 +297,10 @@ INSERT INTO benefit_eligibility (
   ('emp_fin_temuulen', 'private_insurance', 'eligible', '[{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"},{"rule_type":"attendance","passed":true,"reason":"Passed: attendance lt 3"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
   ('emp_ux_naraa', 'ux_engineer_tools', 'active', '[{"rule_type":"role","passed":true,"reason":"Passed: role eq ux_engineer"},{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
   ('emp_ux_naraa', 'macbook', 'eligible', '[{"rule_type":"tenure_days","passed":true,"reason":"Passed: tenure_days gte 180"},{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"},{"rule_type":"responsibility_level","passed":true,"reason":"Passed: responsibility_level gte 1"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
+  ('emp_eng_erdene', 'remote_work', 'active', '[{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"},{"rule_type":"attendance","passed":true,"reason":"Passed: attendance lt 3"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
+  ('emp_eng_erdene', 'travel', 'eligible', '[{"rule_type":"tenure_days","passed":true,"reason":"Passed: tenure_days gte 365"},{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"responsibility_level","passed":true,"reason":"Passed: responsibility_level gte 1"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
+  ('emp_leave_bolor', 'gym_pinefit', 'locked', '[{"rule_type":"employment_status","passed":false,"reason":"Not available during probation or leave."}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
+  ('emp_leave_bolor', 'digital_wellness', 'eligible', '[{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status neq terminated"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
   ('emp_probation_anu', 'gym_pinefit', 'locked', '[{"rule_type":"employment_status","passed":false,"reason":"Not available during probation or leave."}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
   ('emp_probation_anu', 'digital_wellness', 'eligible', '[{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status neq terminated"}]', '2026-03-12T00:00:00.000Z', 'emp_hr_saruul', 'Manual preview unlock for onboarding review.', '2026-03-31T23:59:59.000Z');
 
@@ -354,4 +408,36 @@ INSERT INTO benefit_requests (
     NULL,
     '2026-03-02T09:00:00.000Z',
     '2026-03-02T09:30:00.000Z'
+  ),
+  (
+    'req_remote_erdene',
+    'emp_eng_erdene',
+    'remote_work',
+    'approved',
+    NULL,
+    NULL,
+    'emp_hr_saruul',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    '2026-03-07T08:45:00.000Z',
+    '2026-03-07T11:20:00.000Z'
+  ),
+  (
+    'req_travel_erdene',
+    'emp_eng_erdene',
+    'travel',
+    'pending',
+    '2026.1',
+    '2026-03-11T16:00:00.000Z',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    '2026-03-11T15:30:00.000Z',
+    '2026-03-11T16:00:00.000Z'
   );
+
+COMMIT;

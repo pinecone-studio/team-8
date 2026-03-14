@@ -1,16 +1,15 @@
 import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
+import type { GraphQLContext } from "../../context";
+import { requireAdmin } from "../../../auth";
 
-/** HR / C-level: decline benefit request. */
+/** HR / Finance admin: decline benefit request. */
 export const declineBenefitRequest = async (
   _: unknown,
-  {
-    requestId,
-    reviewedBy,
-    reason,
-  }: { requestId: string; reviewedBy: string; reason?: string | null },
-  { db }: { db: import("../../../db").Database }
+  { requestId, reason }: { requestId: string; reason?: string | null },
+  { db, currentEmployee }: GraphQLContext,
 ) => {
+  const admin = requireAdmin(currentEmployee);
   const requests = await db
     .select()
     .from(schema.benefitRequests)
@@ -26,7 +25,7 @@ export const declineBenefitRequest = async (
     .update(schema.benefitRequests)
     .set({
       status: "rejected",
-      reviewedBy,
+      reviewedBy: admin.id,
       declineReason: reason ?? null,
       updatedAt: now,
     })

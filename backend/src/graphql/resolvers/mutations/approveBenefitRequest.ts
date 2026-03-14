@@ -1,12 +1,15 @@
 import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
+import type { GraphQLContext } from "../../context";
+import { requireAdmin } from "../../../auth";
 
-/** HR / C-level: approve benefit request. */
+/** HR / Finance admin: approve benefit request. */
 export const approveBenefitRequest = async (
   _: unknown,
-  { requestId, reviewedBy }: { requestId: string; reviewedBy: string },
-  { db }: { db: import("../../../db").Database }
+  { requestId }: { requestId: string },
+  { db, currentEmployee }: GraphQLContext,
 ) => {
+  const admin = requireAdmin(currentEmployee);
   const requests = await db
     .select()
     .from(schema.benefitRequests)
@@ -22,7 +25,7 @@ export const approveBenefitRequest = async (
     .update(schema.benefitRequests)
     .set({
       status: "approved",
-      reviewedBy,
+      reviewedBy: admin.id,
       updatedAt: now,
     })
     .where(eq(schema.benefitRequests.id, requestId))

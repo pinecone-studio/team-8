@@ -1,4 +1,8 @@
+import { eq } from "drizzle-orm";
 import { getBenefitConfig } from "../../eligibility";
+import { schema } from "../../db";
+import type { GraphQLContext } from "../context";
+import { mapBenefitRecordToGraphql } from "./helpers/employeeBenefits";
 
 /** Resolve Benefit.employeePercent when returned from Query.benefits (config may omit it) */
 export const Benefit = {
@@ -7,27 +11,42 @@ export const Benefit = {
   },
 };
 
-/** Resolve BenefitEligibility.benefit from benefitId */
+/** Resolve BenefitEligibility.benefit from benefitId — D1 first, static config fallback */
 export const BenefitEligibility = {
-  benefit(parent: {
-    benefit?: {
-      category: string;
-      employeePercent?: number;
-      id: string;
-      name: string;
-      nameEng?: string | null;
-      optionsDescription?: string | null;
-      requiresContract: boolean;
-      subsidyPercent: number;
-      unitPrice?: number | null;
-      vendorName?: string | null;
-    };
-    benefitId: string;
-  }) {
+  async benefit(
+    parent: {
+      benefit?: {
+        category: string;
+        employeePercent?: number;
+        id: string;
+        name: string;
+        nameEng?: string | null;
+        optionsDescription?: string | null;
+        requiresContract: boolean;
+        subsidyPercent: number;
+        unitPrice?: number | null;
+        vendorName?: string | null;
+        flowType?: string;
+      };
+      benefitId: string;
+    },
+    _: unknown,
+    { db }: GraphQLContext,
+  ) {
     if (parent.benefit) {
       return parent.benefit;
     }
 
+    // Try D1 first
+    const rows = await db
+      .select()
+      .from(schema.benefits)
+      .where(eq(schema.benefits.id, parent.benefitId));
+    if (rows[0]) {
+      return mapBenefitRecordToGraphql(rows[0]);
+    }
+
+    // Fall back to static config
     const config = getBenefitConfig(parent.benefitId);
     if (!config) {
       return {
@@ -45,7 +64,7 @@ export const BenefitEligibility = {
       };
     }
     const employeePercent =
-      config.employeePercent ?? (100 - config.subsidyPercent);
+      config.employeePercent ?? 100 - config.subsidyPercent;
     return {
       id: config.id,
       name: config.name,

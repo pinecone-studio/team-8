@@ -1,12 +1,16 @@
+import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
 import type { GraphQLContext } from "../../context";
 import { requireAdmin } from "../../../auth";
 
-export const getEmployees = async (
+export const deleteEligibilityRule = async (
   _: unknown,
-  __: unknown,
+  { id }: { id: string },
   { db, currentEmployee }: GraphQLContext,
 ) => {
   requireAdmin(currentEmployee);
-  return db.select().from(schema.employees);
+  await db
+    .delete(schema.eligibilityRules)
+    .where(eq(schema.eligibilityRules.id, id));
+  return true;
 };

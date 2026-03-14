@@ -10,6 +10,7 @@ import { getEmployeeBenefits } from "./getEmployeeBenefits";
 import { getSession } from "./getSession";
 import { getAdminDashboardSummary } from "./getAdminDashboardSummary";
 import { getAdminBenefits } from "./getAdminBenefits";
+import { getEligibilityRules } from "./getEligibilityRules";
 
 export const queries = {
   adminDashboardSummary: getAdminDashboardSummary,
@@ -24,4 +25,5 @@ export const queries = {
   myBenefits: getMyBenefits,
   getEmployeeBenefits,
   session: getSession,
+  eligibilityRules: getEligibilityRules,
 };

@@ -3,6 +3,7 @@ import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin
 import { startServerAndCreateCloudflareWorkersHandler } from "@as-integrations/cloudflare-workers";
 import { createDb } from "./db";
 import { typeDefs, resolvers, GraphQLContext } from "./graphql";
+import { getCurrentUserFromRequest } from "./auth";
 import {
   resolveContractViewToken,
   getContract,
@@ -17,6 +18,8 @@ export interface Env {
   CONTRACTS_BUCKET?: R2Bucket;
   CONTRACT_VIEW_TOKENS: KVNamespace;
   ENVIRONMENT: string;
+  CLERK_SECRET_KEY?: string;
+  CLERK_JWT_KEY?: string;
 }
 
 function getCorsHeaders(request: Request): HeadersInit {
@@ -65,7 +68,8 @@ const handler = startServerAndCreateCloudflareWorkersHandler<
   context: async ({ request, env }) => {
     const db = createDb(env.DB);
     const baseUrl = new URL(request.url).origin;
-    return { db, env, baseUrl };
+    const currentUser = await getCurrentUserFromRequest(request, env, db);
+    return { db, env, baseUrl, currentUser, currentEmployee: currentUser.employee };
   },
 });
 
@@ -127,6 +131,29 @@ async function handleContractUpload(
   if (url.pathname !== "/api/contracts/upload" || request.method !== "POST")
     return null;
 
+  const db = createDb(env.DB);
+  const currentUser = await getCurrentUserFromRequest(request, env, db);
+
+  if (!currentUser.employee) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Authentication required." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (!currentUser.isAdmin) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Admin access required." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -174,8 +201,6 @@ async function handleContractUpload(
   });
 
   const sha256Hash = "sha256-placeholder"; // Optional: compute from file.arrayBuffer() with crypto.subtle
-  const db = createDb(env.DB);
-
   await db
     .update(schema.contracts)
     .set({ isActive: false })

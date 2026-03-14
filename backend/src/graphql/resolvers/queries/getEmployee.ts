@@ -1,8 +1,18 @@
 import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
-import { QueryResolvers } from "../../generated/graphql";
+import type { GraphQLContext } from "../../context";
+import { isAdminEmployee, requireAuth } from "../../../auth";
 
-export const getEmployee: QueryResolvers["getEmployee"] = async (_, { id }, { db }) => {
+export const getEmployee = async (
+  _: unknown,
+  { id }: { id: string },
+  { db, currentEmployee }: GraphQLContext,
+) => {
+  const me = requireAuth(currentEmployee);
+  const isAdmin = isAdminEmployee(me);
+  if (!isAdmin && me.id !== id) {
+    throw new Error("Access denied.");
+  }
   const results = await db
     .select()
     .from(schema.employees)

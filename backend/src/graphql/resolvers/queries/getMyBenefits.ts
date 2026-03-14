@@ -1,7 +1,12 @@
 import { getBenefitsForEmployee } from "../helpers/employeeBenefits";
+import type { GraphQLContext } from "../../context";
+import { requireAuth } from "../../../auth";
 
 export const getMyBenefits = async (
   _: unknown,
-  { employeeId }: { employeeId: string },
-  { db }: { db: import("../../../db").Database }
-) => getBenefitsForEmployee(db, employeeId);
+  __: unknown,
+  { db, currentEmployee }: GraphQLContext,
+) => {
+  const employee = requireAuth(currentEmployee);
+  return getBenefitsForEmployee(db, employee.id);
+};

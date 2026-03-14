@@ -1,7 +1,6 @@
 import gql from "graphql-tag";
 
 export const employeeTypeDefs = gql`
-  # enum
   enum EmployeeRole {
     teacher
     engineer
@@ -16,8 +15,6 @@ export const employeeTypeDefs = gql`
     terminated
   }
 
-  # type (hireDate, createdAt, updatedAt = ISO 8601 via DateTime)
-  # role болон employmentStatus-ийг String болгосон: өгөгдлийн сан дахь бүх утга (Designer, Analyst, on_leave, resigned г.м) front руу гарна
   type Employee {
     id: String!
     email: String!
@@ -36,7 +33,6 @@ export const employeeTypeDefs = gql`
     benefits: [BenefitEligibility!]!
   }
 
-  # input
   input CreateEmployeeInput {
     email: String!
     name: String!
@@ -61,15 +57,13 @@ export const employeeTypeDefs = gql`
     lateArrivalUpdatedAt: String
   }
 
-  # Query — session nemeh esehee shiideh: check current user from session
   extend type Query {
     getEmployees: [Employee!]!
     getEmployee(id: String!): Employee
     getEmployeeByEmail(email: String!): Employee
-    session(employeeId: String): Employee
+    session: Employee
   }
 
-  # Mutation
   extend type Mutation {
     createEmployee(input: CreateEmployeeInput!): Employee!
     updateEmployee(id: String!, input: UpdateEmployeeInput!): Employee
