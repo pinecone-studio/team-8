@@ -1,4 +1,4 @@
-import { verifyToken } from "@clerk/backend";
+import { createClerkClient, verifyToken } from "@clerk/backend";
 import { eq } from "drizzle-orm";
 import type { Database, Employee } from "./db";
 import { schema } from "./db";
@@ -11,6 +11,50 @@ export interface CurrentUser {
   employee: Employee | null;
   accessLevel: AccessLevel;
   isAdmin: boolean;
+}
+
+function normalizeEmail(email: string | null | undefined): string | null {
+  const normalized = email?.trim().toLowerCase();
+  return normalized ? normalized : null;
+}
+
+async function resolveEmailFromClaims(
+  claims: Record<string, unknown>,
+  env: Env,
+): Promise<string | null> {
+  const directEmail =
+    (typeof claims.emailAddress === "string" ? claims.emailAddress : undefined) ??
+    (typeof claims.email === "string" ? claims.email : undefined) ??
+    (Array.isArray(claims.emailAddresses)
+      ? claims.emailAddresses.find(
+          (value): value is string => typeof value === "string",
+        )
+      : undefined);
+
+  const normalizedDirectEmail = normalizeEmail(directEmail);
+  if (normalizedDirectEmail) {
+    return normalizedDirectEmail;
+  }
+
+  const userId = typeof claims.sub === "string" ? claims.sub : null;
+  if (!userId || !env.CLERK_SECRET_KEY) {
+    return null;
+  }
+
+  try {
+    const clerkClient = createClerkClient({
+      secretKey: env.CLERK_SECRET_KEY,
+    });
+    const user = await clerkClient.users.getUser(userId);
+    const primaryEmail =
+      user.emailAddresses.find(
+        (email) => email.id === user.primaryEmailAddressId,
+      )?.emailAddress ?? user.emailAddresses[0]?.emailAddress;
+
+    return normalizeEmail(primaryEmail);
+  } catch {
+    return null;
+  }
 }
 
 function normalizeDepartment(department: string | null | undefined): string {
@@ -66,20 +110,7 @@ export async function getCurrentUserFromRequest(
     });
 
     const verifiedClaims = verified as Record<string, unknown>;
-    const emailClaim =
-      (typeof verifiedClaims.emailAddress === "string"
-        ? verifiedClaims.emailAddress
-        : undefined) ??
-      (typeof verifiedClaims.email === "string"
-        ? verifiedClaims.email
-        : undefined) ??
-      (Array.isArray(verifiedClaims.emailAddresses)
-        ? verifiedClaims.emailAddresses.find(
-            (value): value is string => typeof value === "string",
-          )
-        : undefined);
-
-    const email = emailClaim ? emailClaim.trim().toLowerCase() : null;
+    const email = await resolveEmailFromClaims(verifiedClaims, env);
 
     let employee: Employee | null = null;
     if (email) {

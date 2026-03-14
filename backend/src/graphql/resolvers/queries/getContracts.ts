@@ -3,7 +3,7 @@ import { schema } from "../../../db";
 import { getBenefitConfig } from "../../../eligibility";
 import { createContractViewToken, getContractViewUrl } from "../../../contracts";
 import type { GraphQLContext } from "../../context";
-import { requireAdmin } from "../../../auth";
+import { requireAuth, isAdminEmployee } from "../../../auth";
 
 type ContractsArgs = { benefitId?: string | null };
 
@@ -12,9 +12,10 @@ export const getContracts = async (
   { benefitId }: ContractsArgs,
   { db, env, baseUrl, currentEmployee }: GraphQLContext,
 ) => {
-  requireAdmin(currentEmployee);
+  const employee = requireAuth(currentEmployee);
+  const canViewAllContracts = isAdminEmployee(employee);
 
-  const rows = benefitId
+  let rows = benefitId
     ? await db
         .select()
         .from(schema.contracts)
@@ -24,6 +25,10 @@ export const getContracts = async (
         .select()
         .from(schema.contracts)
         .orderBy(desc(schema.contracts.effectiveDate));
+
+  if (!canViewAllContracts) {
+    rows = rows.filter((row) => row.isActive);
+  }
 
   // Preload benefit names from D1 for all benefitIds
   const benefitIds = [...new Set(rows.map((r) => r.benefitId))];

@@ -9,9 +9,10 @@ import {
 import { setContext } from "@apollo/client/link/context";
 import { useAuth } from "@clerk/nextjs";
 import { createHttpLink } from "./apollo-client";
+import PageLoading from "@/app/_components/PageLoading";
 
 export function ApolloWrapper({ children }: { children: React.ReactNode }) {
-  const { getToken } = useAuth();
+  const { getToken, isLoaded, userId } = useAuth();
 
   const client = useMemo(() => {
     const httpLink = createHttpLink();
@@ -41,7 +42,13 @@ export function ApolloWrapper({ children }: { children: React.ReactNode }) {
     });
   }, [getToken]);
 
+  if (!isLoaded) {
+    return <PageLoading message="Loading account..." className="m-6" />;
+  }
+
   return (
-    <ApolloProvider client={client}>{children}</ApolloProvider>
+    <ApolloProvider client={client} key={userId ?? "anonymous"}>
+      {children}
+    </ApolloProvider>
   );
 }
