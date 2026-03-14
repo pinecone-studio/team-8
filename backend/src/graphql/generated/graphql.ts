@@ -188,6 +188,7 @@ export type Mutation = {
   createEligibilityRule: EligibilityRule;
   createEmployee: Employee;
   declineBenefitRequest: BenefitRequest;
+  deleteBenefit: Scalars['Boolean']['output'];
   deleteEligibilityRule: Scalars['Boolean']['output'];
   deleteEmployee: Scalars['Boolean']['output'];
   requestBenefit: BenefitRequest;
@@ -230,6 +231,11 @@ export type MutationCreateEmployeeArgs = {
 export type MutationDeclineBenefitRequestArgs = {
   reason?: InputMaybe<Scalars['String']['input']>;
   requestId: Scalars['String']['input'];
+};
+
+
+export type MutationDeleteBenefitArgs = {
+  id: Scalars['String']['input'];
 };
 
 
@@ -594,6 +600,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   createEligibilityRule?: Resolver<ResolversTypes['EligibilityRule'], ParentType, ContextType, RequireFields<MutationCreateEligibilityRuleArgs, 'input'>>;
   createEmployee?: Resolver<ResolversTypes['Employee'], ParentType, ContextType, RequireFields<MutationCreateEmployeeArgs, 'input'>>;
   declineBenefitRequest?: Resolver<ResolversTypes['BenefitRequest'], ParentType, ContextType, RequireFields<MutationDeclineBenefitRequestArgs, 'requestId'>>;
+  deleteBenefit?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteBenefitArgs, 'id'>>;
   deleteEligibilityRule?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteEligibilityRuleArgs, 'id'>>;
   deleteEmployee?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteEmployeeArgs, 'id'>>;
   requestBenefit?: Resolver<ResolversTypes['BenefitRequest'], ParentType, ContextType, RequireFields<MutationRequestBenefitArgs, 'input'>>;

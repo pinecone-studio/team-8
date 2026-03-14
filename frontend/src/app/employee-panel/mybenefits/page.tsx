@@ -97,11 +97,11 @@ export default function Mybenefits({ params }: PageProps) {
   const hasError = benefitsError ?? null;
 
   return (
-    <div className="flex min-h-screen bg-[#f8f8f9]">
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
 
-      <div className="flex flex-1 flex-col">
-        <main className="p-8">
+      <div className="flex flex-1 flex-col items-center">
+        <main className="w-full max-w-7xl p-8">
           <h1 className="text-xl font-semibold text-gray-900">
             Benefits Catalog
           </h1>

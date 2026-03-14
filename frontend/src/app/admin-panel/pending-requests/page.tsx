@@ -114,20 +114,20 @@ export default function PendingRequestsPage() {
 
   if (!isAdmin) {
     return (
-      <div className="flex min-h-screen bg-[#f3f4f6]">
+      <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <div className="flex flex-1 items-center justify-center">
-          <p className="text-gray-500">Admin access required.</p>
+        <div className="flex flex-1 flex-col items-center justify-center">
+          <p className="text-muted-foreground">Admin access required.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-[#f3f4f6]">
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <div className="flex flex-1 flex-col">
-        <main className="p-8">
+      <div className="flex flex-1 flex-col items-center">
+        <main className="w-full max-w-7xl p-8">
           <h1 className="text-xl font-semibold text-gray-900">
             Pending Requests
           </h1>

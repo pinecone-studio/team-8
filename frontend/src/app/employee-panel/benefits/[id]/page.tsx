@@ -41,10 +41,10 @@ export default function BenefitDetailPage() {
 
   if (employeeLoading || loading) {
     return (
-      <div className="flex min-h-screen bg-[#f6f7f9]">
+      <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <div className="flex-1">
-          <main className="flex items-center justify-center p-8">
+        <div className="flex flex-1 flex-col items-center">
+          <main className="flex w-full max-w-7xl items-center justify-center p-8">
             <PageLoading message="Loading benefit details..." />
           </main>
         </div>
@@ -54,17 +54,17 @@ export default function BenefitDetailPage() {
 
   if (error || !benefitEligibility) {
     return (
-      <div className="flex min-h-screen bg-[#f6f7f9]">
+      <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <div className="flex-1">
-          <main className="p-8">
+        <div className="flex flex-1 flex-col items-center">
+          <main className="w-full max-w-7xl p-8">
             <Link
               href="/employee-panel/mybenefits"
-              className="inline-flex items-center gap-1 text-sm text-gray-500 transition hover:text-gray-900 active:opacity-80"
+              className="inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground active:opacity-80"
             >
               ← Back to Benefits
             </Link>
-            <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-8 text-red-700">
+            <div className="mt-6 rounded-2xl border border-destructive/30 bg-destructive/10 p-8 text-destructive">
               Benefit data could not be loaded.
             </div>
           </main>
@@ -77,14 +77,14 @@ export default function BenefitDetailPage() {
   const vendor = benefit.vendorName ?? "Internal Benefit";
 
   return (
-    <div className="flex min-h-screen bg-[#f6f7f9]">
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
 
-      <div className="flex-1">
-        <main className="p-8">
+      <div className="flex flex-1 flex-col items-center">
+        <main className="w-full max-w-7xl p-8">
           <Link
             href="/employee-panel/mybenefits"
-            className="inline-flex items-center gap-1 text-sm text-gray-500 transition hover:text-gray-900 active:opacity-80"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground active:opacity-80"
           >
             ← Back to Benefits
           </Link>

@@ -4,10 +4,11 @@ import { useState } from "react";
 import {
   useGetAdminBenefitsQuery,
   useCreateBenefitMutation,
+  useDeleteBenefitMutation,
   GetAdminBenefitsDocument,
 } from "@/graphql/generated/graphql";
 import PageLoading from "@/app/_components/PageLoading";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { isAdminEmployee } from "../_lib/access";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 
@@ -26,6 +27,11 @@ export default function CompanyBenefits() {
       setForm({ name: "", category: "wellness", subsidyPercent: 50, vendorName: "", requiresContract: false });
     },
   });
+  const [deleteBenefit, { loading: deleting }] = useDeleteBenefitMutation({
+    refetchQueries: [{ query: GetAdminBenefitsDocument }],
+    onCompleted: () => setFeedback({ type: "success", message: "Benefit removed." }),
+    onError: () => setFeedback({ type: "error", message: "Failed to remove benefit." }),
+  });
 
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({
@@ -36,6 +42,19 @@ export default function CompanyBenefits() {
     requiresContract: false,
   });
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Remove benefit "${name}"? This will also remove related requests, rules, and contracts.`)) return;
+    setDeletingId(id);
+    setFeedback(null);
+    try {
+      await deleteBenefit({ variables: { id } });
+      setTimeout(() => setFeedback(null), 3000);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const benefits = data?.adminBenefits ?? [];
 
@@ -222,6 +241,7 @@ export default function CompanyBenefits() {
                     <th className="px-4 py-3">Subsidy</th>
                     <th className="px-4 py-3">Vendor</th>
                     <th className="px-4 py-3">Contract</th>
+                    <th className="px-4 py-3 w-20">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -236,6 +256,17 @@ export default function CompanyBenefits() {
                       <td className="px-4 py-3 text-sm text-gray-600">{b.vendorName ?? "—"}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {b.requiresContract ? "Yes" : "No"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(b.id, b.name)}
+                          disabled={deletingId !== null}
+                          className="inline-flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                          title="Remove benefit"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </td>
                     </tr>
                   ))}

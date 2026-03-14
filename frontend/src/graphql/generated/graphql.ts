@@ -191,6 +191,7 @@ export type Mutation = {
   createEligibilityRule: EligibilityRule;
   createEmployee: Employee;
   declineBenefitRequest: BenefitRequest;
+  deleteBenefit: Scalars['Boolean']['output'];
   deleteEligibilityRule: Scalars['Boolean']['output'];
   deleteEmployee: Scalars['Boolean']['output'];
   requestBenefit: BenefitRequest;
@@ -233,6 +234,11 @@ export type MutationCreateEmployeeArgs = {
 export type MutationDeclineBenefitRequestArgs = {
   reason?: InputMaybe<Scalars['String']['input']>;
   requestId: Scalars['String']['input'];
+};
+
+
+export type MutationDeleteBenefitArgs = {
+  id: Scalars['String']['input'];
 };
 
 
@@ -386,6 +392,13 @@ export type CreateBenefitMutationVariables = Exact<{
 
 
 export type CreateBenefitMutation = { __typename?: 'Mutation', createBenefit: { __typename?: 'Benefit', id: string, name: string, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null } };
+
+export type DeleteBenefitMutationVariables = Exact<{
+  id: Scalars['String']['input'];
+}>;
+
+
+export type DeleteBenefitMutation = { __typename?: 'Mutation', deleteBenefit: boolean };
 
 export type CreateEligibilityRuleMutationVariables = Exact<{
   input: CreateEligibilityRuleInput;
@@ -705,6 +718,37 @@ export function useCreateBenefitMutation(baseOptions?: Apollo.MutationHookOption
 export type CreateBenefitMutationHookResult = ReturnType<typeof useCreateBenefitMutation>;
 export type CreateBenefitMutationResult = Apollo.MutationResult<CreateBenefitMutation>;
 export type CreateBenefitMutationOptions = Apollo.BaseMutationOptions<CreateBenefitMutation, CreateBenefitMutationVariables>;
+export const DeleteBenefitDocument = gql`
+    mutation DeleteBenefit($id: String!) {
+  deleteBenefit(id: $id)
+}
+    `;
+export type DeleteBenefitMutationFn = Apollo.MutationFunction<DeleteBenefitMutation, DeleteBenefitMutationVariables>;
+
+/**
+ * __useDeleteBenefitMutation__
+ *
+ * To run a mutation, you first call `useDeleteBenefitMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteBenefitMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteBenefitMutation, { data, loading, error }] = useDeleteBenefitMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteBenefitMutation(baseOptions?: Apollo.MutationHookOptions<DeleteBenefitMutation, DeleteBenefitMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteBenefitMutation, DeleteBenefitMutationVariables>(DeleteBenefitDocument, options);
+      }
+export type DeleteBenefitMutationHookResult = ReturnType<typeof useDeleteBenefitMutation>;
+export type DeleteBenefitMutationResult = Apollo.MutationResult<DeleteBenefitMutation>;
+export type DeleteBenefitMutationOptions = Apollo.BaseMutationOptions<DeleteBenefitMutation, DeleteBenefitMutationVariables>;
 export const CreateEligibilityRuleDocument = gql`
     mutation CreateEligibilityRule($input: CreateEligibilityRuleInput!) {
   createEligibilityRule(input: $input) {

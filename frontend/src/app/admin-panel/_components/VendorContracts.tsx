@@ -120,7 +120,7 @@ export default function VendorContracts() {
 
   return (
     <main className="flex-1 px-8 py-9">
-      <section className="mx-auto max-w-6xl">
+      <section className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">
