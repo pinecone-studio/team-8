@@ -5,8 +5,12 @@ import { mapBenefitRecordToGraphql } from "../helpers/employeeBenefits";
 export const createBenefit: MutationResolvers["createBenefit"] = async (
   _,
   { input },
-  { db }
+  { db, currentUser },
 ) => {
+  if (!currentUser.isAdmin) {
+    throw new Error("Not authorized to create benefits.");
+  }
+
   const [row] = await db
     .insert(schema.benefits)
     .values({
@@ -17,6 +21,7 @@ export const createBenefit: MutationResolvers["createBenefit"] = async (
       requiresContract: input.requiresContract ?? false,
     })
     .returning();
+
   if (!row) throw new Error("Failed to create benefit");
   return mapBenefitRecordToGraphql(row);
 };

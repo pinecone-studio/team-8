@@ -1,12 +1,21 @@
 import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
+import type { GraphQLContext } from "../../context";
 
 /** Employee: cancel own pending benefit request. */
 export const cancelBenefitRequest = async (
   _: unknown,
   { requestId, employeeId }: { requestId: string; employeeId: string },
-  { db }: { db: import("../../../db").Database }
+  { db, currentUser }: GraphQLContext
 ) => {
+  if (!currentUser.employee) {
+    throw new Error("Not authenticated.");
+  }
+
+  if (!currentUser.isAdmin && currentUser.employee.id !== employeeId) {
+    throw new Error("You can only cancel your own request.");
+  }
+
   const requests = await db
     .select()
     .from(schema.benefitRequests)

@@ -6,8 +6,16 @@ import { QueryResolvers } from "../../generated/graphql";
 export const getBenefitRequests: QueryResolvers["benefitRequests"] = async (
   _,
   { employeeId },
-  { db }
+  { db, currentUser },
 ) => {
+  if (!currentUser.employee) {
+    throw new Error("Not authenticated.");
+  }
+
+  if (!currentUser.isAdmin && currentUser.employee.id !== employeeId) {
+    throw new Error("Not authorized to view these requests.");
+  }
+
   return db
     .select()
     .from(schema.benefitRequests)

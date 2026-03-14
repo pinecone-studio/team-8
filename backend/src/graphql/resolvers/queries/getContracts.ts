@@ -1,6 +1,5 @@
 import { desc, eq } from "drizzle-orm";
 import { schema } from "../../../db";
-import { getBenefitConfig } from "../../../eligibility";
 import { createContractViewToken, getContractViewUrl } from "../../../contracts";
 import type { GraphQLContext } from "../../context";
 
@@ -9,8 +8,12 @@ type ContractsArgs = { benefitId?: string | null };
 export const getContracts = async (
   _: unknown,
   { benefitId }: ContractsArgs,
-  { db, env, baseUrl }: GraphQLContext
+  { db, env, baseUrl, currentUser }: GraphQLContext
 ) => {
+  if (!currentUser.isAdmin) {
+    throw new Error("Not authorized to view contracts.");
+  }
+
   const rows = benefitId
     ? await db
         .select()
@@ -24,7 +27,11 @@ export const getContracts = async (
 
   return Promise.all(
     rows.map(async (row) => {
-      const benefitName = getBenefitConfig(row.benefitId)?.name ?? null;
+      const benefitRow = await db
+        .select({ name: schema.benefits.name })
+        .from(schema.benefits)
+        .where(eq(schema.benefits.id, row.benefitId));
+      const benefitName = benefitRow[0]?.name ?? null;
       let viewUrl: string | null = null;
       try {
         const token = await createContractViewToken(env.CONTRACT_VIEW_TOKENS, row.r2ObjectKey);
