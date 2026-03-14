@@ -1,87 +1,135 @@
+import { verifyToken } from "@clerk/backend";
 import { eq } from "drizzle-orm";
-import type { Database } from "./db";
+import type { Database, Employee } from "./db";
 import { schema } from "./db";
+import type { Env } from "./graphql/context";
 
-/** Parse a JWT payload without verifying the signature (pragmatic for Workers). */
-function parseJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    let payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    while (payload.length % 4 !== 0) payload += "=";
-    const decoded = atob(payload);
-    return JSON.parse(decoded) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
+export type AccessLevel = "anonymous" | "employee" | "admin";
+
+export interface CurrentUser {
+  email: string | null;
+  employee: Employee | null;
+  accessLevel: AccessLevel;
+  isAdmin: boolean;
 }
 
-/**
- * Resolve the current employee from the request.
- * Tries Authorization Bearer JWT (email claim), then X-Employee-Email header.
- */
-export async function resolveCurrentEmployee(
+function normalizeDepartment(department: string | null | undefined): string {
+  return (department ?? "").trim().toLowerCase();
+}
+
+export function isAdminEmployee(employee: Employee | null | undefined): boolean {
+  if (!employee) return false;
+
+  const dept = normalizeDepartment(employee.department);
+  const isHr =
+    dept === "human resources" ||
+    dept === "human resource" ||
+    dept === "hr" ||
+    dept === "people" ||
+    dept === "people operations";
+  const isFinance =
+    dept === "finance" ||
+    dept === "finance & accounting" ||
+    dept === "financial operations";
+
+  return (isHr || isFinance) && (employee.responsibilityLevel ?? 0) >= 2;
+}
+
+export function deriveAccessLevel(employee: Employee | null): AccessLevel {
+  if (!employee) return "anonymous";
+  if (isAdminEmployee(employee)) return "admin";
+  return "employee";
+}
+
+export async function getCurrentUserFromRequest(
   request: Request,
+  env: Env,
   db: Database,
-) {
-  let email: string | null = null;
+): Promise<CurrentUser> {
+  const authHeader = request.headers.get("Authorization") ?? "";
+  const tokenMatch = authHeader.match(/^Bearer (.+)$/i);
+  const token = tokenMatch?.[1];
 
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    const token = authHeader.slice(7);
-    const payload = parseJwtPayload(token);
-    if (payload && typeof payload.email === "string") {
-      email = payload.email.trim().toLowerCase();
+  if (!token || !env.CLERK_SECRET_KEY) {
+    return {
+      email: null,
+      employee: null,
+      accessLevel: "anonymous",
+      isAdmin: false,
+    };
+  }
+
+  try {
+    const verified = await verifyToken(token, {
+      secretKey: env.CLERK_SECRET_KEY,
+      ...(env.CLERK_JWT_KEY ? { jwtKey: env.CLERK_JWT_KEY } : {}),
+    });
+
+    const verifiedClaims = verified as Record<string, unknown>;
+    const emailClaim =
+      (typeof verifiedClaims.emailAddress === "string"
+        ? verifiedClaims.emailAddress
+        : undefined) ??
+      (typeof verifiedClaims.email === "string"
+        ? verifiedClaims.email
+        : undefined) ??
+      (Array.isArray(verifiedClaims.emailAddresses)
+        ? verifiedClaims.emailAddresses.find(
+            (value): value is string => typeof value === "string",
+          )
+        : undefined);
+
+    const email = emailClaim ? emailClaim.trim().toLowerCase() : null;
+
+    let employee: Employee | null = null;
+    if (email) {
+      const rows = await db
+        .select()
+        .from(schema.employees)
+        .where(eq(schema.employees.email, email));
+      employee = rows[0] ?? null;
     }
+
+    const accessLevel = deriveAccessLevel(employee);
+
+    return {
+      email,
+      employee,
+      accessLevel,
+      isAdmin: accessLevel === "admin",
+    };
+  } catch {
+    return {
+      email: null,
+      employee: null,
+      accessLevel: "anonymous",
+      isAdmin: false,
+    };
   }
-
-  // Fallback: X-Employee-Email header (set by frontend for backends that don't include email in JWT)
-  if (!email) {
-    const headerEmail = request.headers.get("X-Employee-Email");
-    if (headerEmail) email = headerEmail.trim().toLowerCase();
-  }
-
-  if (!email) return null;
-
-  const results = await db
-    .select()
-    .from(schema.employees)
-    .where(eq(schema.employees.email, email));
-  return results[0] ?? null;
 }
 
-export type CurrentEmployee = NonNullable<
-  Awaited<ReturnType<typeof resolveCurrentEmployee>>
->;
+export type CurrentEmployee = Employee;
 
-/** Throw if there is no authenticated employee. */
 export function requireAuth(
   currentEmployee: CurrentEmployee | null,
 ): CurrentEmployee {
-  if (!currentEmployee) throw new Error("Authentication required.");
+  if (!currentEmployee) {
+    throw new Error("Authentication required.");
+  }
+
   return currentEmployee;
 }
 
-/**
- * Throw if the current employee is not an admin
- * (HR/Finance department + responsibilityLevel >= 2).
- */
 export function requireAdmin(
   currentEmployee: CurrentEmployee | null,
 ): CurrentEmployee {
-  if (!currentEmployee) throw new Error("Authentication required.");
-  const dept = (currentEmployee.department ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ");
-  const isHrOrFinance = [
-    "human resource",
-    "human resources",
-    "hr",
-    "finance",
-  ].includes(dept);
-  if (!isHrOrFinance || currentEmployee.responsibilityLevel < 2) {
+  if (!currentEmployee) {
+    throw new Error("Authentication required.");
+  }
+
+  if (!isAdminEmployee(currentEmployee)) {
     throw new Error("Admin access required.");
   }
+
   return currentEmployee;
 }

@@ -20,6 +20,7 @@
   "dependencies": {
     "@apollo/server": "^4.11.3",
     "@as-integrations/cloudflare-workers": "^1.1.1",
+    "@clerk/backend": "^1.1.1",
     "drizzle-orm": "^0.38.4",
     "graphql": "^16.10.0",
     "graphql-tag": "^2.12.6",

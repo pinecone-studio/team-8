@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { gql, useQuery } from "@apollo/client";
+import { useAuth } from "@clerk/nextjs";
 import { Eye, Upload, X } from "lucide-react";
 import PageLoading from "@/app/_components/PageLoading";
 
@@ -52,6 +53,7 @@ function getUploadUrl(): string {
 }
 
 export default function VendorContracts() {
+  const { getToken } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -95,7 +97,12 @@ export default function VendorContracts() {
       fd.set("expiryDate", form.expiryDate);
       fd.set("vendorName", form.vendorName || "Vendor");
       fd.set("file", file);
-      const res = await fetch(getUploadUrl(), { method: "POST", body: fd });
+      const token = await getToken();
+      const res = await fetch(getUploadUrl(), {
+        method: "POST",
+        body: fd,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         setUploadError(json?.error || `Upload failed (${res.status})`);
@@ -109,7 +116,7 @@ export default function VendorContracts() {
     } finally {
       setUploading(false);
     }
-  }, [form, file, refetch, closeModal]);
+  }, [closeModal, file, form, getToken, refetch]);
 
   return (
     <main className="flex-1 px-8 py-9">

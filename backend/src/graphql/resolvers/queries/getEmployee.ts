@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
 import type { GraphQLContext } from "../../context";
-import { requireAuth } from "../../../auth";
+import { isAdminEmployee, requireAuth } from "../../../auth";
 
 export const getEmployee = async (
   _: unknown,
@@ -9,11 +9,7 @@ export const getEmployee = async (
   { db, currentEmployee }: GraphQLContext,
 ) => {
   const me = requireAuth(currentEmployee);
-  // Allow self lookup or admin lookup
-  const dept = (me.department ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-  const isAdmin =
-    ["human resource", "human resources", "hr", "finance"].includes(dept) &&
-    me.responsibilityLevel >= 2;
+  const isAdmin = isAdminEmployee(me);
   if (!isAdmin && me.id !== id) {
     throw new Error("Access denied.");
   }

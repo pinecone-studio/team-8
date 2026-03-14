@@ -3,14 +3,17 @@ import { schema } from "../../../db";
 import { getBenefitConfig } from "../../../eligibility";
 import { createContractViewToken, getContractViewUrl } from "../../../contracts";
 import type { GraphQLContext } from "../../context";
+import { requireAdmin } from "../../../auth";
 
 type ContractsArgs = { benefitId?: string | null };
 
 export const getContracts = async (
   _: unknown,
   { benefitId }: ContractsArgs,
-  { db, env, baseUrl }: GraphQLContext,
+  { db, env, baseUrl, currentEmployee }: GraphQLContext,
 ) => {
+  requireAdmin(currentEmployee);
+
   const rows = benefitId
     ? await db
         .select()

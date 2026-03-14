@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
-import { evaluateBenefit, getBenefitConfig } from "../../../eligibility";
 import { createContractViewToken, getContractViewUrl } from "../../../contracts";
 import type { GraphQLContext } from "../../context";
 import { requireAuth } from "../../../auth";
+import { getBenefitsForEmployee } from "../helpers/employeeBenefits";
 
 export const requestBenefit = async (
   _: unknown,
@@ -29,29 +29,32 @@ export const requestBenefit = async (
     repaymentMonths,
   } = input;
 
-  const benefitConfig = getBenefitConfig(benefitId);
   const benefitRows = await db
     .select()
     .from(schema.benefits)
     .where(eq(schema.benefits.id, benefitId));
   const benefitFromDb = benefitRows[0];
 
-  if (benefitConfig) {
-    const evaluated = evaluateBenefit(employee, benefitId);
-    if (evaluated.status === "locked") {
-      throw new Error(
-        evaluated.failedRule?.errorMessage ?? "Not eligible for this benefit.",
-      );
-    }
-    if (benefitConfig.flowType === "self_service") {
-      throw new Error(
-        "This benefit does not require a request; it is self-service.",
-      );
-    }
-  } else {
-    if (!benefitFromDb) throw new Error("Benefit not found.");
-    if (!benefitFromDb.isActive)
-      throw new Error("This benefit is no longer available.");
+  if (!benefitFromDb) {
+    throw new Error("Benefit not found.");
+  }
+
+  if (!benefitFromDb.isActive) {
+    throw new Error("This benefit is no longer available.");
+  }
+
+  const eligibilities = await getBenefitsForEmployee(db, employee.id);
+  const eligibility = eligibilities.find((item) => item.benefitId === benefitId);
+
+  if (!eligibility) {
+    throw new Error("No eligibility information found for this benefit.");
+  }
+
+  if (eligibility.status !== "ELIGIBLE") {
+    throw new Error(
+      eligibility.failedRule?.errorMessage ??
+        "You are not currently eligible to request this benefit.",
+    );
   }
 
   const [inserted] = await db
@@ -69,8 +72,7 @@ export const requestBenefit = async (
 
   if (!inserted) throw new Error("Failed to create benefit request");
 
-  const requiresContract =
-    benefitConfig?.requiresContract ?? benefitFromDb?.requiresContract ?? false;
+  const requiresContract = benefitFromDb.requiresContract;
   let viewContractUrl: string | null = null;
   if (requiresContract && env.CONTRACT_VIEW_TOKENS) {
     const contracts = await db
