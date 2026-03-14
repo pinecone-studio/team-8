@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Eye, X } from "lucide-react";
 import Sidebar from "../_components/SideBar";
@@ -22,7 +23,7 @@ const statusTone: Record<string, string> = {
   cancelled: "bg-gray-100 text-gray-500 border-gray-200",
 };
 
-export default function RequestsPage() {
+function RequestsContent() {
   const searchParams = useSearchParams();
   const submitted = searchParams.get("submitted") === "true";
   const { employeeId, loading: employeeLoading } = useCurrentEmployee();
@@ -51,7 +52,7 @@ export default function RequestsPage() {
   });
 
   const benefitsById = new Map(
-    (benefitsData?.benefits ?? []).map((benefit) => [benefit.id, benefit])
+    (benefitsData?.benefits ?? []).map((benefit) => [benefit.id, benefit]),
   );
 
   const requests = (requestsData?.benefitRequests ?? []).map((request) => {
@@ -189,5 +190,13 @@ export default function RequestsPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function RequestsPage() {
+  return (
+    <Suspense fallback={<PageLoading message="Loading..." />}>
+      <RequestsContent />
+    </Suspense>
   );
 }

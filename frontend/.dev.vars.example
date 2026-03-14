@@ -1,3 +1,14 @@
 # Copy to .dev.vars for local preview (opennextjs-cloudflare preview).
 # .dev.vars is gitignored.
+# For production, set these in Cloudflare Dashboard → Worker → Settings → Variables and Secrets.
+# See DEPLOYMENT.md for details.
+
 NEXTJS_ENV=development
+
+# Required for auth (set in Cloudflare dashboard for production):
+# NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+# CLERK_SECRET_KEY=sk_test_...
+# NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+
+# Optional (defaults in code):
+# NEXT_PUBLIC_GRAPHQL_URL=https://team8-api.team8pinequest.workers.dev/
