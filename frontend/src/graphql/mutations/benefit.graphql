@@ -4,16 +4,26 @@ mutation RequestBenefit($input: RequestBenefitInput!) {
     employeeId
     benefitId
     status
-    contractVersionAccepted
-    contractAcceptedAt
     reviewedBy
     requestedAmount
     repaymentMonths
-    employeeApprovedAt
     declineReason
     createdAt
     updatedAt
     viewContractUrl
+  }
+}
+
+mutation ConfirmBenefitRequest($requestId: String!, $contractAccepted: Boolean!) {
+  confirmBenefitRequest(requestId: $requestId, contractAccepted: $contractAccepted) {
+    id
+    employeeId
+    benefitId
+    status
+    contractVersionAccepted
+    contractAcceptedAt
+    createdAt
+    updatedAt
   }
 }
 
@@ -100,4 +110,15 @@ mutation UpdateEligibilityRule($id: String!, $input: UpdateEligibilityRuleInput!
 
 mutation DeleteEligibilityRule($id: String!) {
   deleteEligibilityRule(id: $id)
+}
+
+mutation OverrideEligibility($input: OverrideEligibilityInput!) {
+  overrideEligibility(input: $input) {
+    benefitId
+    status
+    overrideStatus
+    overrideBy
+    overrideReason
+    overrideExpiresAt
+  }
 }

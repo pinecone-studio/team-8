@@ -3,7 +3,7 @@ import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin
 import { startServerAndCreateCloudflareWorkersHandler } from "@as-integrations/cloudflare-workers";
 import { createDb } from "./db";
 import { typeDefs, resolvers, GraphQLContext } from "./graphql";
-import { getCurrentUserFromRequest } from "./auth";
+import { getCurrentUserFromRequest, canUploadContracts } from "./auth";
 import {
   resolveContractViewToken,
   getContract,
@@ -12,6 +12,7 @@ import {
 } from "./contracts";
 import { eq } from "drizzle-orm";
 import { schema } from "./db";
+import { writeAuditLog } from "./graphql/resolvers/helpers/audit";
 
 export interface Env {
   DB: D1Database;
@@ -144,10 +145,10 @@ async function handleContractUpload(
     );
   }
 
-  if (!currentUser.isAdmin) {
+  if (!canUploadContracts(currentUser.employee)) {
     return withCors(
       request,
-      new Response(JSON.stringify({ error: "Admin access required." }), {
+      new Response(JSON.stringify({ error: "HR admin access required to upload contracts." }), {
         status: 403,
         headers: { "Content-Type": "application/json" },
       }),
@@ -196,11 +197,18 @@ async function handleContractUpload(
 
   const filename = file.name || "contract.pdf";
   const r2Key = getContractObjectKey(benefitId, version, filename);
-  await putContract(env.CONTRACTS_BUCKET, r2Key, await file.arrayBuffer(), {
+  const fileBuffer = await file.arrayBuffer();
+  await putContract(env.CONTRACTS_BUCKET, r2Key, fileBuffer, {
     contentType: file.type || "application/pdf",
   });
 
-  const sha256Hash = "sha256-placeholder"; // Optional: compute from file.arrayBuffer() with crypto.subtle
+  // Compute real SHA-256 using Cloudflare Workers Web Crypto API
+  const hashBuffer = await crypto.subtle.digest("SHA-256", fileBuffer);
+  const sha256Hash = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  // Phase 5: Deactivate previous active contract versions cleanly
   await db
     .update(schema.contracts)
     .set({ isActive: false })
@@ -219,6 +227,20 @@ async function handleContractUpload(
       isActive: true,
     })
     .returning();
+
+  // Phase 4: Audit log on contract upload
+  if (inserted) {
+    await writeAuditLog({
+      db,
+      actor: currentUser.employee,
+      actionType: "CONTRACT_UPLOADED",
+      entityType: "contract",
+      entityId: inserted.id,
+      benefitId,
+      contractId: inserted.id,
+      metadata: { version, effectiveDate, expiryDate, vendorName },
+    });
+  }
 
   return withCors(
     request,

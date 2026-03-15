@@ -15,6 +15,16 @@ type StoredRuleEvaluation = {
   rule_type?: string;
 };
 
+// All non-terminal in-flight statuses
+const IN_FLIGHT_STATUSES = new Set([
+  "pending",
+  "awaiting_contract_acceptance",
+  "awaiting_hr_review",
+  "awaiting_finance_review",
+  "hr_approved",
+  "finance_approved",
+]);
+
 function normalizeStatus(status: string | null | undefined) {
   return status?.trim().toLowerCase() ?? "";
 }
@@ -122,8 +132,9 @@ export const getAdminDashboardSummary = async (
     lockedBenefits: eligibilityRows.filter(
       (row) => normalizeStatus(row.status) === "locked"
     ).length,
+    // Phase 2: Count all in-flight request statuses as "pending"
     pendingRequests: requestRows.filter(
-      (row) => normalizeStatus(row.status) === "pending"
+      (row) => IN_FLIGHT_STATUSES.has(normalizeStatus(row.status))
     ).length,
     totalEmployees: employees.filter(
       (employee) => normalizeStatus(employee.employmentStatus) !== "terminated"

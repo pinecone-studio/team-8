@@ -12,6 +12,7 @@ import {
   GetBenefitRequestsDocument,
   useGetMyBenefitsQuery,
   useRequestBenefitMutation,
+  useConfirmBenefitRequestMutation,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 
@@ -20,13 +21,9 @@ export default function BenefitRequestPage() {
   const params = useParams();
   const id = params.id as string;
   const { loading: employeeLoading } = useCurrentEmployee();
-  const {
-    data,
-    error,
-    loading,
-  } = useGetMyBenefitsQuery();
-  const [requestBenefit, { loading: submitting, error: submitError }] =
-    useRequestBenefitMutation();
+  const { data, error, loading } = useGetMyBenefitsQuery();
+  const [requestBenefit, { loading: submitting }] = useRequestBenefitMutation();
+  const [confirmBenefitRequest, { loading: confirming }] = useConfirmBenefitRequestMutation();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [accepted, setAccepted] = useState(false);
@@ -37,24 +34,21 @@ export default function BenefitRequestPage() {
   const requiresContract = benefit?.requiresContract ?? false;
   const isSelfService = benefit?.flowType === BenefitFlowType.SelfService;
 
+  const isWorking = submitting || confirming;
+
   const submitRequest = async () => {
     if (!benefitEligibility || !benefit) return;
     setSubmitMessage(null);
 
     try {
+      // Step 1: Create the request (no contract acceptance fields)
       const result = await requestBenefit({
         variables: {
           input: {
             benefitId: benefit.id,
-            contractAcceptedAt: requiresContract ? new Date().toISOString() : null,
-            contractVersionAccepted: requiresContract ? "accepted-from-ui" : null,
           },
         },
-        refetchQueries: [
-          {
-            query: GetBenefitRequestsDocument,
-          },
-        ],
+        refetchQueries: [{ query: GetBenefitRequestsDocument }],
       });
 
       const errs = result.errors;
@@ -62,9 +56,37 @@ export default function BenefitRequestPage() {
         setSubmitMessage(errs[0].message ?? "Failed to submit request.");
         return;
       }
-      if (result.data?.requestBenefit) {
-        router.push("/employee-panel/requests?submitted=true");
+
+      const createdRequest = result.data?.requestBenefit;
+      if (!createdRequest) {
+        setSubmitMessage("Failed to submit request.");
+        return;
       }
+
+      // Step 2: If contract was accepted in step 2 and request is awaiting contract acceptance,
+      // call confirmBenefitRequest to properly record the acceptance
+      if (
+        requiresContract &&
+        accepted &&
+        createdRequest.status === "awaiting_contract_acceptance"
+      ) {
+        const confirmResult = await confirmBenefitRequest({
+          variables: {
+            requestId: createdRequest.id,
+            contractAccepted: true,
+          },
+          refetchQueries: [{ query: GetBenefitRequestsDocument }],
+        });
+
+        if (confirmResult.errors?.length) {
+          setSubmitMessage(
+            confirmResult.errors[0].message ?? "Contract acceptance failed."
+          );
+          return;
+        }
+      }
+
+      router.push("/employee-panel/requests?submitted=true");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to submit request.";
       setSubmitMessage(msg);
@@ -170,8 +192,7 @@ export default function BenefitRequestPage() {
                   Confirm Eligibility
                 </h1>
                 <p className="mt-1 text-sm text-gray-500">
-                  Please review your eligibility for {benefit.name} before
-                  proceeding.
+                  Please review your eligibility for {benefit.name} before proceeding.
                 </p>
 
                 <div className="mt-8 rounded-2xl border border-green-200 bg-green-50 p-6">
@@ -186,9 +207,7 @@ export default function BenefitRequestPage() {
                 <div className="mt-8 space-y-6 text-base">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Benefit Name</span>
-                    <span className="font-medium text-gray-900">
-                      {benefit.name}
-                    </span>
+                    <span className="font-medium text-gray-900">{benefit.name}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Vendor</span>
@@ -198,9 +217,7 @@ export default function BenefitRequestPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Subsidy</span>
-                    <span className="font-medium text-gray-900">
-                      {benefit.subsidyPercent}%
-                    </span>
+                    <span className="font-medium text-gray-900">{benefit.subsidyPercent}%</span>
                   </div>
                 </div>
 
@@ -226,16 +243,12 @@ export default function BenefitRequestPage() {
                   <div className="flex min-h-[380px] items-center justify-center rounded-2xl border border-gray-200 bg-gray-50">
                     <div className="text-center text-gray-500">
                       <p className="text-lg font-medium">Contract Preview</p>
-                      <p className="mt-2 text-sm">
-                        {benefit.vendorName ?? "Internal Benefit"}
-                      </p>
+                      <p className="mt-2 text-sm">{benefit.vendorName ?? "Internal Benefit"}</p>
                     </div>
                   </div>
 
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">
-                      Contract Information
-                    </h2>
+                    <h2 className="text-lg font-semibold text-gray-900">Contract Information</h2>
 
                     <div className="mt-6 space-y-5 text-base">
                       <div>
@@ -247,14 +260,6 @@ export default function BenefitRequestPage() {
                       <div>
                         <p className="text-gray-500">Contract Version</p>
                         <p className="font-medium text-gray-900">Active version</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Effective Date</p>
-                        <p className="font-medium text-gray-900">2026-01-01</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Expiry Date</p>
-                        <p className="font-medium text-gray-900">2026-12-31</p>
                       </div>
                     </div>
 
@@ -282,12 +287,8 @@ export default function BenefitRequestPage() {
 
             {step === 3 && (
               <>
-                <h1 className="text-xl font-semibold text-gray-900">
-                  Submit Request
-                </h1>
-                <p className="mt-1 text-sm text-gray-500">
-                  Review and submit for approval.
-                </p>
+                <h1 className="text-xl font-semibold text-gray-900">Submit Request</h1>
+                <p className="mt-1 text-sm text-gray-500">Review and submit for approval.</p>
 
                 <div className="mt-6 rounded-lg border border-gray-100 bg-gray-50/50 py-4 px-5">
                   <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Summary</p>
@@ -306,23 +307,25 @@ export default function BenefitRequestPage() {
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-gray-500">Contract</dt>
-                      <dd className="font-medium text-gray-900">{requiresContract ? "Accepted" : "—"}</dd>
+                      <dd className="font-medium text-gray-900">
+                        {requiresContract ? (accepted ? "Accepted" : "Pending") : "—"}
+                      </dd>
                     </div>
                   </dl>
                 </div>
 
-                {(submitMessage || submitError) && (
+                {submitMessage && (
                   <div className="mt-4 rounded-lg border border-red-100 bg-red-50/80 px-3 py-2 text-xs text-red-700">
-                    {submitMessage ?? "Failed to submit request."}
+                    {submitMessage}
                   </div>
                 )}
 
                 <button
                   onClick={submitRequest}
-                  disabled={submitting}
+                  disabled={isWorking}
                   className="mt-6 h-10 w-full rounded-lg bg-gray-900 text-sm font-medium text-white transition hover:bg-gray-800 active:scale-[0.99] disabled:bg-gray-300 disabled:active:scale-100"
                 >
-                  {submitting ? "Submitting..." : "Submit Request"}
+                  {isWorking ? "Submitting..." : "Submit Request"}
                 </button>
               </>
             )}

@@ -1,13 +1,26 @@
 import { schema } from "../../../db";
 import type { GraphQLContext } from "../../context";
-import { requireAdmin } from "../../../auth";
+import { requireHrAdmin } from "../../../auth";
+import { writeAuditLog } from "../helpers/audit";
 
 export const createEligibilityRule = async (
   _: unknown,
-  { input }: { input: { benefitId: string; ruleType: string; operator: string; value: string; errorMessage: string; priority?: number | null } },
+  {
+    input,
+  }: {
+    input: {
+      benefitId: string;
+      ruleType: string;
+      operator: string;
+      value: string;
+      errorMessage: string;
+      priority?: number | null;
+    };
+  },
   { db, currentEmployee }: GraphQLContext,
 ) => {
-  requireAdmin(currentEmployee);
+  requireHrAdmin(currentEmployee);
+
   const [row] = await db
     .insert(schema.eligibilityRules)
     .values({
@@ -17,9 +30,20 @@ export const createEligibilityRule = async (
       value: input.value,
       errorMessage: input.errorMessage,
       priority: input.priority ?? 0,
-      isActive: true,
     })
     .returning();
+
   if (!row) throw new Error("Failed to create eligibility rule");
+
+  await writeAuditLog({
+    db,
+    actor: currentEmployee,
+    actionType: "ELIGIBILITY_RULE_CREATED",
+    entityType: "eligibility_rule",
+    entityId: row.id,
+    benefitId: input.benefitId,
+    after: row,
+  });
+
   return row;
 };

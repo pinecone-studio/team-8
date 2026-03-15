@@ -6,6 +6,13 @@ import type { Env } from "./graphql/context";
 
 export type AccessLevel = "anonymous" | "employee" | "admin";
 
+export type InternalRole =
+  | "employee"
+  | "hr_admin"
+  | "hr_manager"
+  | "finance_admin"
+  | "finance_manager";
+
 export interface CurrentUser {
   email: string | null;
   employee: Employee | null;
@@ -61,22 +68,113 @@ function normalizeDepartment(department: string | null | undefined): string {
   return (department ?? "").trim().toLowerCase();
 }
 
-export function isAdminEmployee(employee: Employee | null | undefined): boolean {
-  if (!employee) return false;
-
-  const dept = normalizeDepartment(employee.department);
-  const isHr =
+function isHrDepartment(dept: string): boolean {
+  return (
     dept === "human resources" ||
     dept === "human resource" ||
     dept === "hr" ||
     dept === "people" ||
-    dept === "people operations";
-  const isFinance =
+    dept === "people operations"
+  );
+}
+
+function isFinanceDepartment(dept: string): boolean {
+  return (
     dept === "finance" ||
     dept === "finance & accounting" ||
-    dept === "financial operations";
+    dept === "financial operations"
+  );
+}
 
-  return (isHr || isFinance) && (employee.responsibilityLevel ?? 0) >= 2;
+/** Derive the most specific internal role from employee record. */
+export function getInternalRole(employee: Employee | null | undefined): InternalRole {
+  if (!employee) return "employee";
+  const dept = normalizeDepartment(employee.department);
+  const level = employee.responsibilityLevel ?? 0;
+
+  if (isHrDepartment(dept)) {
+    if (level >= 3) return "hr_manager";
+    if (level >= 2) return "hr_admin";
+  }
+  if (isFinanceDepartment(dept)) {
+    if (level >= 3) return "finance_manager";
+    if (level >= 2) return "finance_admin";
+  }
+  return "employee";
+}
+
+export function isAdminEmployee(employee: Employee | null | undefined): boolean {
+  if (!employee) return false;
+  const dept = normalizeDepartment(employee.department);
+  return (isHrDepartment(dept) || isFinanceDepartment(dept)) &&
+    (employee.responsibilityLevel ?? 0) >= 2;
+}
+
+// --- Role predicates ---
+
+export function isHrAdmin(employee: Employee | null | undefined): boolean {
+  const role = getInternalRole(employee);
+  return role === "hr_admin" || role === "hr_manager";
+}
+
+export function isHrManager(employee: Employee | null | undefined): boolean {
+  return getInternalRole(employee) === "hr_manager";
+}
+
+export function isFinanceAdmin(employee: Employee | null | undefined): boolean {
+  const role = getInternalRole(employee);
+  return role === "finance_admin" || role === "finance_manager";
+}
+
+export function isFinanceManager(employee: Employee | null | undefined): boolean {
+  return getInternalRole(employee) === "finance_manager";
+}
+
+// --- Permission predicates ---
+
+/** Any HR or Finance admin can review a benefit request (routing is enforced per-approval-policy). */
+export function canReviewBenefitRequest(employee: Employee | null | undefined): boolean {
+  return isAdminEmployee(employee);
+}
+
+/** Can review an HR-policy benefit request. */
+export function canReviewHrBenefit(employee: Employee | null | undefined): boolean {
+  return isHrAdmin(employee);
+}
+
+/** Can review a Finance-policy benefit request. */
+export function canReviewFinanceBenefit(employee: Employee | null | undefined): boolean {
+  return isFinanceAdmin(employee);
+}
+
+/** Override eligibility: HR admin or manager only. */
+export function canOverrideEligibility(employee: Employee | null | undefined): boolean {
+  return isHrAdmin(employee);
+}
+
+/** Upload contracts: HR admin only (governance action). */
+export function canUploadContracts(employee: Employee | null | undefined): boolean {
+  return isHrAdmin(employee);
+}
+
+/** Read audit logs: HR admin only (governance data). */
+export function canReadAuditLogs(employee: Employee | null | undefined): boolean {
+  return isHrAdmin(employee);
+}
+
+/** Approve eligibility rule changes: HR admin or manager. */
+export function canApproveRuleChanges(employee: Employee | null | undefined): boolean {
+  return isHrAdmin(employee);
+}
+
+/** Read HR review queue. */
+export function canReadHrQueue(employee: Employee | null | undefined): boolean {
+  return isHrAdmin(employee);
+}
+
+/** Read Finance review queue. */
+export function canReadFinanceQueue(employee: Employee | null | undefined): boolean {
+  return isFinanceAdmin(employee);
 }
 
 export function deriveAccessLevel(employee: Employee | null): AccessLevel {
@@ -147,7 +245,6 @@ export function requireAuth(
   if (!currentEmployee) {
     throw new Error("Authentication required.");
   }
-
   return currentEmployee;
 }
 
@@ -157,10 +254,24 @@ export function requireAdmin(
   if (!currentEmployee) {
     throw new Error("Authentication required.");
   }
-
   if (!isAdminEmployee(currentEmployee)) {
     throw new Error("Admin access required.");
   }
+  return currentEmployee;
+}
 
+export function requireHrAdmin(
+  currentEmployee: CurrentEmployee | null,
+): CurrentEmployee {
+  if (!currentEmployee) throw new Error("Authentication required.");
+  if (!isHrAdmin(currentEmployee)) throw new Error("HR admin access required.");
+  return currentEmployee;
+}
+
+export function requireFinanceAdmin(
+  currentEmployee: CurrentEmployee | null,
+): CurrentEmployee {
+  if (!currentEmployee) throw new Error("Authentication required.");
+  if (!isFinanceAdmin(currentEmployee)) throw new Error("Finance admin access required.");
   return currentEmployee;
 }

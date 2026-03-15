@@ -6,9 +6,11 @@ import PageLoading from "@/app/_components/PageLoading";
 import {
   useGetEmployeesQuery,
   useGetEmployeeBenefitsQuery,
+  useOverrideEligibilityMutation,
+  GetEmployeeBenefitsDocument,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
-import { isAdminEmployee } from "@/app/admin-panel/_lib/access";
+import { isAdminEmployee, isHrAdmin } from "@/app/admin-panel/_lib/access";
 
 function StatusBadge({ passed, label }: { passed: boolean; label: string }) {
   if (passed) {
@@ -27,11 +29,23 @@ function StatusBadge({ passed, label }: { passed: boolean; label: string }) {
   );
 }
 
+interface OverrideFormState {
+  benefitId: string;
+  benefitName: string;
+}
+
 export default function EligibilityInspector() {
   const { employee: me } = useCurrentEmployee();
   const isAdmin = isAdminEmployee(me);
+  const canOverride = isHrAdmin(me);
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [overrideTarget, setOverrideTarget] = useState<OverrideFormState | null>(null);
+  const [overrideStatus, setOverrideStatus] = useState("eligible");
+  const [overrideReason, setOverrideReason] = useState("");
+  const [overrideExpiresAt, setOverrideExpiresAt] = useState("");
+  const [overrideError, setOverrideError] = useState<string | null>(null);
+  const [overrideSuccess, setOverrideSuccess] = useState(false);
 
   const { data: employeesData, loading: employeesLoading } = useGetEmployeesQuery({
     skip: !isAdmin,
@@ -42,6 +56,23 @@ export default function EligibilityInspector() {
       variables: { employeeId: selectedEmployeeId },
       skip: !selectedEmployeeId || !isAdmin,
     });
+
+  const [overrideEligibility, { loading: overriding }] = useOverrideEligibilityMutation({
+    refetchQueries: [
+      { query: GetEmployeeBenefitsDocument, variables: { employeeId: selectedEmployeeId } },
+    ],
+    onCompleted: () => {
+      setOverrideTarget(null);
+      setOverrideReason("");
+      setOverrideExpiresAt("");
+      setOverrideError(null);
+      setOverrideSuccess(true);
+      setTimeout(() => setOverrideSuccess(false), 4000);
+    },
+    onError: (err) => {
+      setOverrideError(err.message);
+    },
+  });
 
   const employees = employeesData?.getEmployees ?? [];
   const selectedEmployee = employees.find((e) => e.id === selectedEmployeeId);
@@ -54,6 +85,26 @@ export default function EligibilityInspector() {
       </main>
     );
   }
+
+  const handleOverrideSubmit = () => {
+    if (!overrideTarget || !selectedEmployeeId) return;
+    if (!overrideReason.trim()) {
+      setOverrideError("Reason is required.");
+      return;
+    }
+    setOverrideError(null);
+    overrideEligibility({
+      variables: {
+        input: {
+          employeeId: selectedEmployeeId,
+          benefitId: overrideTarget.benefitId,
+          overrideStatus,
+          reason: overrideReason,
+          expiresAt: overrideExpiresAt || null,
+        },
+      },
+    });
+  };
 
   return (
     <main className="flex-1 px-8 py-9">
@@ -90,6 +141,12 @@ export default function EligibilityInspector() {
             <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           </div>
         </div>
+
+        {overrideSuccess && (
+          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800">
+            Eligibility override applied successfully.
+          </div>
+        )}
 
         {selectedEmployee && (
           <div className="rounded-2xl border border-slate-200 bg-white p-5 mb-6">
@@ -143,19 +200,21 @@ export default function EligibilityInspector() {
                   <tr>
                     <th className="px-5 py-4">Benefit</th>
                     <th className="px-5 py-4">Status</th>
+                    <th className="px-5 py-4">Override</th>
                     <th className="px-5 py-4">Blocking Rule</th>
+                    {canOverride && <th className="px-5 py-4" />}
                   </tr>
                 </thead>
                 <tbody>
                   {eligibilityLoading ? (
                     <tr>
-                      <td colSpan={3} className="px-5 py-8">
+                      <td colSpan={canOverride ? 5 : 4} className="px-5 py-8">
                         <PageLoading inline message="Loading eligibility…" />
                       </td>
                     </tr>
                   ) : eligibilities.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="px-5 py-6 text-sm text-slate-500">
+                      <td colSpan={canOverride ? 5 : 4} className="px-5 py-6 text-sm text-slate-500">
                         No benefits found.
                       </td>
                     </tr>
@@ -170,6 +229,7 @@ export default function EligibilityInspector() {
                             : row.status === "ELIGIBLE"
                               ? "Eligible"
                               : "Not Eligible";
+                      const hasOverride = !!row.overrideStatus;
                       return (
                         <tr
                           key={row.benefitId}
@@ -182,8 +242,40 @@ export default function EligibilityInspector() {
                             <StatusBadge passed={eligible} label={statusLabel} />
                           </td>
                           <td className="px-5 py-5 text-sm text-slate-500">
+                            {hasOverride ? (
+                              <span className="inline-flex flex-col gap-0.5">
+                                <span className="inline-flex rounded bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700">
+                                  {row.overrideStatus}
+                                </span>
+                                {row.overrideExpiresAt && (
+                                  <span className="text-xs text-slate-400">
+                                    expires {row.overrideExpiresAt.split("T")[0]}
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="px-5 py-5 text-sm text-slate-500">
                             {row.failedRule?.errorMessage ?? "—"}
                           </td>
+                          {canOverride && (
+                            <td className="px-5 py-5">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setOverrideTarget({
+                                    benefitId: row.benefitId,
+                                    benefitName: row.benefit.name,
+                                  })
+                                }
+                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                              >
+                                Override
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       );
                     })
@@ -197,6 +289,89 @@ export default function EligibilityInspector() {
         {!selectedEmployeeId && !employeesLoading && (
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
             Select an employee above to inspect their benefit eligibility.
+          </div>
+        )}
+
+        {/* Override Modal */}
+        {overrideTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="text-base font-semibold text-slate-900">
+                Override Eligibility — {overrideTarget.benefitName}
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                This override will take effect immediately and be recorded in the audit log.
+              </p>
+
+              <div className="mt-5 space-y-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">
+                    Override Status
+                  </label>
+                  <select
+                    value={overrideStatus}
+                    onChange={(e) => setOverrideStatus(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700"
+                  >
+                    <option value="eligible">Eligible</option>
+                    <option value="active">Active</option>
+                    <option value="locked">Locked</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">
+                    Reason <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={overrideReason}
+                    onChange={(e) => setOverrideReason(e.target.value)}
+                    rows={3}
+                    placeholder="Explain why this override is being applied…"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 placeholder:text-slate-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">
+                    Expires At (optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={overrideExpiresAt}
+                    onChange={(e) => setOverrideExpiresAt(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700"
+                  />
+                </div>
+
+                {overrideError && (
+                  <p className="text-sm text-red-600">{overrideError}</p>
+                )}
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOverrideTarget(null);
+                    setOverrideError(null);
+                    setOverrideReason("");
+                    setOverrideExpiresAt("");
+                  }}
+                  className="rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOverrideSubmit}
+                  disabled={overriding}
+                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+                >
+                  {overriding ? "Applying…" : "Apply Override"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </section>

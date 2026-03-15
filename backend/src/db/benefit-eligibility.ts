@@ -11,6 +11,7 @@ export const benefitEligibility = sqliteTable(
     overrideBy: text("override_by"),
     overrideReason: text("override_reason"),
     overrideExpiresAt: text("override_expires_at"),
+    overrideStatus: text("override_status"), // The effective status when an override is active
   },
   (table) => [
     primaryKey({ columns: [table.employeeId, table.benefitId] }),

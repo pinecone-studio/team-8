@@ -1,14 +1,25 @@
 import { schema } from "../../../db";
 import type { GraphQLContext } from "../../context";
 import { mapBenefitRecordToGraphql } from "../helpers/employeeBenefits";
-import { requireAdmin } from "../../../auth";
+import { requireHrAdmin } from "../../../auth";
 
 export const createBenefit = async (
   _: unknown,
-  { input }: { input: { name: string; category: string; subsidyPercent: number; vendorName?: string | null; requiresContract?: boolean | null } },
+  {
+    input,
+  }: {
+    input: {
+      name: string;
+      category: string;
+      subsidyPercent: number;
+      vendorName?: string | null;
+      requiresContract?: boolean | null;
+      approvalPolicy?: string | null;
+    };
+  },
   { db, currentEmployee }: GraphQLContext,
 ) => {
-  requireAdmin(currentEmployee);
+  requireHrAdmin(currentEmployee);
   const [row] = await db
     .insert(schema.benefits)
     .values({
@@ -17,6 +28,7 @@ export const createBenefit = async (
       subsidyPercent: input.subsidyPercent,
       vendorName: input.vendorName ?? null,
       requiresContract: input.requiresContract ?? false,
+      approvalPolicy: input.approvalPolicy ?? "hr",
     })
     .returning();
   if (!row) throw new Error("Failed to create benefit");

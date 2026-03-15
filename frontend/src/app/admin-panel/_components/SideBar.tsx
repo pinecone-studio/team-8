@@ -18,43 +18,50 @@ import {
   User,
 } from "lucide-react";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
-import { getAdminRoleLabel, isAdminEmployee } from "../_lib/access";
+import { getAdminRoleLabel, isAdminEmployee, isHrAdmin } from "../_lib/access";
 
-const navItems = [
+const ALL_NAV_ITEMS = [
   {
     href: "/admin-panel",
     label: "Dashboard",
     icon: LayoutGrid,
+    hrOnly: false,
   },
   {
     href: "/admin-panel/company-benefits",
     label: "Company Benefits",
     icon: Gift,
+    hrOnly: false,
   },
   {
     href: "/admin-panel/pending-requests",
     label: "Pending Requests",
     icon: CheckCircle,
+    hrOnly: false,
   },
   {
     href: "/admin-panel/eligibility-inspector",
     label: "Eligibility Inspector",
     icon: FileText,
+    hrOnly: true,
   },
   {
     href: "/admin-panel/rule-configuration",
     label: "Rule Configuration",
     icon: ClipboardList,
+    hrOnly: true,
   },
   {
     href: "/admin-panel/vendor-contracts",
     label: "Vendor Contracts",
     icon: FileBadge,
+    hrOnly: true,
   },
   {
     href: "/admin-panel/audit-logs",
     label: "Audit Logs",
     icon: ShieldCheck,
+    hrOnly: true,
   },
 ];
 
@@ -65,12 +72,16 @@ export default function Sidebar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const hasAdminAccess = isAdminEmployee(employee);
+  const hasHrAccess = isHrAdmin(employee);
   const profileName = loading ? "Loading..." : employee?.name ?? "Employee";
   const profileRole = loading
     ? "Profile"
     : hasAdminAccess
       ? getAdminRoleLabel(employee)
       : "No admin access";
+
+  // Finance-only admins must not see HR-governance pages
+  const navItems = ALL_NAV_ITEMS.filter((item) => !item.hrOnly || hasHrAccess);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

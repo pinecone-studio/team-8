@@ -4,24 +4,144 @@ import { useState } from "react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Eye, X } from "lucide-react";
+import { Eye, FileCheck, X } from "lucide-react";
 import Sidebar from "../_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
 import {
   useGetBenefitRequestsQuery,
   useGetBenefitsQuery,
   useCancelBenefitRequestMutation,
+  useConfirmBenefitRequestMutation,
   GetBenefitRequestsDocument,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 
-const statusTone: Record<string, string> = {
-  pending: "bg-orange-50 text-orange-600 border-orange-200",
-  approved: "bg-green-50 text-green-600 border-green-200",
-  rejected: "bg-red-50 text-red-600 border-red-200",
-  declined: "bg-red-50 text-red-600 border-red-200",
-  cancelled: "bg-gray-100 text-gray-500 border-gray-200",
+// Statuses that can be cancelled by the employee
+const CANCELLABLE_STATUSES = new Set([
+  "pending",
+  "awaiting_contract_acceptance",
+  "awaiting_hr_review",
+  "awaiting_finance_review",
+]);
+
+// Statuses that are considered "in-flight" (show as pending-ish tone)
+const IN_FLIGHT_STATUSES = new Set([
+  "pending",
+  "awaiting_contract_acceptance",
+  "awaiting_hr_review",
+  "awaiting_finance_review",
+  "hr_approved",
+  "finance_approved",
+]);
+
+function getStatusTone(status: string): string {
+  const s = status.toLowerCase();
+  if (s === "approved") return "bg-green-50 text-green-600 border-green-200";
+  if (s === "rejected" || s === "declined") return "bg-red-50 text-red-600 border-red-200";
+  if (s === "cancelled") return "bg-gray-100 text-gray-500 border-gray-200";
+  if (s === "hr_approved" || s === "finance_approved") return "bg-teal-50 text-teal-700 border-teal-200";
+  if (IN_FLIGHT_STATUSES.has(s)) return "bg-orange-50 text-orange-600 border-orange-200";
+  return "bg-gray-100 text-gray-500 border-gray-200";
+}
+
+function formatStatusLabel(status: string): string {
+  switch (status.toLowerCase()) {
+    case "awaiting_contract_acceptance": return "Contract Pending";
+    case "awaiting_hr_review": return "HR Review";
+    case "awaiting_finance_review": return "Finance Review";
+    case "hr_approved": return "HR Approved";
+    case "finance_approved": return "Finance Approved";
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  }
+}
+
+type ContractModalState = {
+  requestId: string;
+  benefitLabel: string;
+  viewContractUrl: string | null | undefined;
 };
+
+function ContractAcceptModal({
+  state,
+  onClose,
+  onConfirm,
+  confirming,
+}: {
+  state: ContractModalState;
+  onClose: () => void;
+  onConfirm: () => void;
+  confirming: boolean;
+}) {
+  const [accepted, setAccepted] = useState(false);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Accept Contract</h2>
+            <p className="mt-0.5 text-sm text-gray-500">{state.benefitLabel}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-4 rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm text-gray-600">
+          {state.viewContractUrl ? (
+            <>
+              <p className="mb-3">Please review the contract before accepting.</p>
+              <a
+                href={state.viewContractUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 font-medium text-blue-600 hover:underline"
+              >
+                <FileCheck className="h-4 w-4" />
+                View contract document
+              </a>
+            </>
+          ) : (
+            <p>Your vendor contract is ready for acceptance. Please confirm below to proceed with your request.</p>
+          )}
+        </div>
+
+        <label className="mt-5 flex cursor-pointer items-start gap-3 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={accepted}
+            onChange={(e) => setAccepted(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-blue-600"
+          />
+          <span>I have read and agree to the contract terms and conditions.</span>
+        </label>
+
+        <div className="mt-5 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!accepted || confirming}
+            onClick={onConfirm}
+            className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            {confirming ? "Confirming…" : "Accept & Submit"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function RequestsContent() {
   const searchParams = useSearchParams();
@@ -29,12 +149,13 @@ function RequestsContent() {
   const { loading: employeeLoading } = useCurrentEmployee();
   const { data: requestsData, loading: requestsLoading } =
     useGetBenefitRequestsQuery({
-      // After submit redirect, refetch so the new PENDING request appears
       fetchPolicy: submitted ? "network-only" : "cache-first",
     });
   const { data: benefitsData } = useGetBenefitsQuery();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [contractModal, setContractModal] = useState<ContractModalState | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
   const [cancelRequest] = useCancelBenefitRequestMutation({
     refetchQueries: [{ query: GetBenefitRequestsDocument }],
     onCompleted: () => {
@@ -46,6 +167,20 @@ function RequestsContent() {
       setCancellingId(null);
       setFeedback({ type: "error", message: "Failed to cancel. Please try again." });
       setTimeout(() => setFeedback(null), 5000);
+    },
+  });
+
+  const [confirmContract, { loading: confirming }] = useConfirmBenefitRequestMutation({
+    refetchQueries: [{ query: GetBenefitRequestsDocument }],
+    onCompleted: () => {
+      setContractModal(null);
+      setFeedback({ type: "success", message: "Contract accepted. Your request is now under review." });
+      setTimeout(() => setFeedback(null), 5000);
+    },
+    onError: (err) => {
+      setContractModal(null);
+      setFeedback({ type: "error", message: err.message ?? "Failed to accept contract. Please try again." });
+      setTimeout(() => setFeedback(null), 6000);
     },
   });
 
@@ -65,129 +200,158 @@ function RequestsContent() {
       status: request.status,
       requestDate: request.createdAt?.split("T")[0] ?? "—",
       reviewer: request.reviewedBy ?? "—",
+      viewContractUrl: request.viewContractUrl,
     };
   });
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      <div className="flex flex-1 flex-col items-center">
-        <main className="w-full max-w-7xl p-8">
-          <h1 className="text-xl font-semibold text-gray-900">My Requests</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Benefit request status
-          </p>
+    <>
+      {contractModal && (
+        <ContractAcceptModal
+          state={contractModal}
+          onClose={() => setContractModal(null)}
+          onConfirm={() => {
+            confirmContract({
+              variables: { requestId: contractModal.requestId, contractAccepted: true },
+            });
+          }}
+          confirming={confirming}
+        />
+      )}
 
-          {submitted && (
-            <div className="mt-4 rounded-lg border border-green-100 bg-green-50/80 px-3 py-2 text-xs text-green-700">
-              Submitted. Shown below as PENDING until approved.
-            </div>
-          )}
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <div className="flex flex-1 flex-col items-center">
+          <main className="w-full max-w-7xl p-8">
+            <h1 className="text-xl font-semibold text-gray-900">My Requests</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Benefit request status
+            </p>
 
-          {feedback && (
-            <div
-              className={`mt-4 rounded-lg border px-3 py-2 text-sm ${
-                feedback.type === "success"
-                  ? "border-green-200 bg-green-50 text-green-800"
-                  : "border-red-200 bg-red-50 text-red-800"
-              }`}
-            >
-              {feedback.message}
-            </div>
-          )}
+            {submitted && (
+              <div className="mt-4 rounded-lg border border-green-100 bg-green-50/80 px-3 py-2 text-xs text-green-700">
+                Submitted. Shown below as PENDING until approved.
+              </div>
+            )}
 
-          <div className="mt-6 overflow-hidden rounded-lg border border-gray-100 bg-white">
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left">
-                <thead className="border-b border-gray-100 text-xs font-medium uppercase tracking-wide text-gray-500">
-                  <tr>
-                    <th className="px-4 py-3">Benefit</th>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Reviewer</th>
-                    <th className="px-4 py-3 w-16" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {employeeLoading || requestsLoading ? (
+            {feedback && (
+              <div
+                className={`mt-4 rounded-lg border px-3 py-2 text-sm ${
+                  feedback.type === "success"
+                    ? "border-green-200 bg-green-50 text-green-800"
+                    : "border-red-200 bg-red-50 text-red-800"
+                }`}
+              >
+                {feedback.message}
+              </div>
+            )}
+
+            <div className="mt-6 overflow-hidden rounded-lg border border-gray-100 bg-white">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left">
+                  <thead className="border-b border-gray-100 text-xs font-medium uppercase tracking-wide text-gray-500">
                     <tr>
-                      <td colSpan={5} className="px-4 py-10">
-                        <PageLoading inline message="Loading..." />
-                      </td>
+                      <th className="px-4 py-3">Benefit</th>
+                      <th className="px-4 py-3">Date</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Reviewer</th>
+                      <th className="px-4 py-3 w-16" />
                     </tr>
-                  ) : requests.length === 0 ? (
-                    <tr>
-                      <td className="px-4 py-8 text-center" colSpan={5}>
-                        <p className="text-sm text-gray-500">No requests yet.</p>
-                        <Link
-                          href="/employee-panel/mybenefits"
-                          className="mt-2 inline-block text-sm font-medium text-blue-600 hover:underline"
-                        >
-                          Browse benefits →
-                        </Link>
-                      </td>
-                    </tr>
-                  ) : (
-                    requests.map((request) => (
-                      <tr
-                        key={request.id}
-                        className="border-b border-gray-50 last:border-b-0 transition-colors hover:bg-gray-50/50"
-                      >
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                          {request.benefitLabel}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
-                          {request.requestDate}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
-                              statusTone[request.status.toLowerCase()] ??
-                              "bg-gray-100 text-gray-500"
-                            }`}
-                          >
-                            {request.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
-                          {request.reviewer}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Link
-                              href={`/employee-panel/benefits/${request.benefitId}`}
-                              className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
-                            >
-                              <Eye className="h-4 w-4" />
-                              View
-                            </Link>
-                            {request.status.toLowerCase() === "pending" && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (!window.confirm("Cancel this benefit request?")) return;
-                                  setCancellingId(request.id);
-                                  cancelRequest({ variables: { requestId: request.id } });
-                                }}
-                                disabled={cancellingId === request.id}
-                                className="inline-flex items-center gap-1 rounded px-2 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-                              >
-                                <X className="h-4 w-4" />
-                                {cancellingId === request.id ? "Cancelling..." : "Cancel"}
-                              </button>
-                            )}
-                          </div>
+                  </thead>
+                  <tbody>
+                    {employeeLoading || requestsLoading ? (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-10">
+                          <PageLoading inline message="Loading..." />
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : requests.length === 0 ? (
+                      <tr>
+                        <td className="px-4 py-8 text-center" colSpan={5}>
+                          <p className="text-sm text-gray-500">No requests yet.</p>
+                          <Link
+                            href="/employee-panel/mybenefits"
+                            className="mt-2 inline-block text-sm font-medium text-blue-600 hover:underline"
+                          >
+                            Browse benefits →
+                          </Link>
+                        </td>
+                      </tr>
+                    ) : (
+                      requests.map((request) => (
+                        <tr
+                          key={request.id}
+                          className="border-b border-gray-50 last:border-b-0 transition-colors hover:bg-gray-50/50"
+                        >
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                            {request.benefitLabel}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {request.requestDate}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${getStatusTone(request.status)}`}
+                            >
+                              {formatStatusLabel(request.status)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {request.reviewer}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <Link
+                                href={`/employee-panel/benefits/${request.benefitId}`}
+                                className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
+                              >
+                                <Eye className="h-4 w-4" />
+                                View
+                              </Link>
+                              {request.status.toLowerCase() === "awaiting_contract_acceptance" && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setContractModal({
+                                      requestId: request.id,
+                                      benefitLabel: request.benefitLabel,
+                                      viewContractUrl: request.viewContractUrl,
+                                    })
+                                  }
+                                  className="inline-flex items-center gap-1 rounded px-2 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50"
+                                >
+                                  <FileCheck className="h-4 w-4" />
+                                  Accept Contract
+                                </button>
+                              )}
+                              {CANCELLABLE_STATUSES.has(request.status.toLowerCase()) && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!window.confirm("Cancel this benefit request?")) return;
+                                    setCancellingId(request.id);
+                                    cancelRequest({ variables: { requestId: request.id } });
+                                  }}
+                                  disabled={cancellingId === request.id}
+                                  className="inline-flex items-center gap-1 rounded px-2 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                                >
+                                  <X className="h-4 w-4" />
+                                  {cancellingId === request.id ? "Cancelling..." : "Cancel"}
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

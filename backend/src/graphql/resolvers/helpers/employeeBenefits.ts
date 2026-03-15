@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { schema } from "../../../db";
 import type { Database } from "../../../db";
 import type { Benefit, BenefitEligibility, EligibilityRule, Employee } from "../../../db";
@@ -15,6 +15,7 @@ type GraphqlBenefit = {
   subsidyPercent: number;
   unitPrice: number | null;
   vendorName: string | null;
+  approvalPolicy: string;
 };
 
 type RuleEvaluation = {
@@ -36,7 +37,20 @@ type BenefitEligibilityResult = {
   failedRule?: FailedRule;
   ruleEvaluation: RuleEvaluation[];
   status: BenefitStatus;
+  overrideStatus?: string | null;
+  overrideBy?: string | null;
+  overrideReason?: string | null;
+  overrideExpiresAt?: string | null;
 };
+
+const IN_FLIGHT_REQUEST_STATUSES = new Set([
+  "pending",
+  "awaiting_contract_acceptance",
+  "awaiting_hr_review",
+  "awaiting_finance_review",
+  "hr_approved",
+  "finance_approved",
+]);
 
 export function mapBenefitRecordToGraphql(benefit: Benefit): GraphqlBenefit {
   return {
@@ -51,6 +65,7 @@ export function mapBenefitRecordToGraphql(benefit: Benefit): GraphqlBenefit {
     subsidyPercent: benefit.subsidyPercent,
     unitPrice: null,
     vendorName: benefit.vendorName ?? null,
+    approvalPolicy: benefit.approvalPolicy ?? "hr",
   };
 }
 
@@ -143,12 +158,18 @@ function evaluateRule(rule: EligibilityRule, employee: Employee): RuleEvaluation
   };
 }
 
+function isOverrideActive(row: Pick<BenefitEligibility, "overrideStatus" | "overrideExpiresAt">): boolean {
+  if (!row.overrideStatus) return false;
+  if (!row.overrideExpiresAt) return true; // indefinite override
+  return new Date(row.overrideExpiresAt) > new Date();
+}
+
 function normalizeStatus(
   status: string | null | undefined,
   requestStatus?: string
 ): BenefitStatus {
   if (requestStatus === "approved") return "ACTIVE";
-  if (requestStatus === "pending") return "PENDING";
+  if (requestStatus && IN_FLIGHT_REQUEST_STATUSES.has(requestStatus)) return "PENDING";
 
   switch (status?.toUpperCase()) {
     case "ACTIVE":
@@ -219,13 +240,43 @@ function buildComputedEligibility(input: {
   employee: Employee;
   requestStatus?: string;
   rules: EligibilityRule[];
+  storedEligibility?: BenefitEligibility | null;
+  isEnrolled?: boolean;
 }): BenefitEligibilityResult {
-  const ruleEvaluation = input.rules.map((rule) => evaluateRule(rule, input.employee));
+  const { benefit, employee, requestStatus, rules, storedEligibility, isEnrolled } = input;
+
+  // Phase 3: Check active override first
+  if (storedEligibility && isOverrideActive(storedEligibility)) {
+    const overrideStatusNorm = normalizeStatus(storedEligibility.overrideStatus ?? "eligible");
+    return {
+      benefit: mapBenefitRecordToGraphql(benefit),
+      benefitId: benefit.id,
+      ruleEvaluation: normalizeRuleEvaluation(storedEligibility.ruleEvaluationJson),
+      status: overrideStatusNorm,
+      overrideStatus: storedEligibility.overrideStatus,
+      overrideBy: storedEligibility.overrideBy,
+      overrideReason: storedEligibility.overrideReason,
+      overrideExpiresAt: storedEligibility.overrideExpiresAt,
+    };
+  }
+
+  // Phase 6: Active enrollment → ACTIVE
+  if (isEnrolled) {
+    const ruleEvaluation = rules.map((rule) => evaluateRule(rule, employee));
+    return {
+      benefit: mapBenefitRecordToGraphql(benefit),
+      benefitId: benefit.id,
+      ruleEvaluation,
+      status: "ACTIVE",
+    };
+  }
+
+  const ruleEvaluation = rules.map((rule) => evaluateRule(rule, employee));
   const failedRuleEvaluation = ruleEvaluation.find((rule) => !rule.passed);
 
   return {
-    benefit: mapBenefitRecordToGraphql(input.benefit),
-    benefitId: input.benefit.id,
+    benefit: mapBenefitRecordToGraphql(benefit),
+    benefitId: benefit.id,
     failedRule: failedRuleEvaluation
       ? {
           errorMessage: failedRuleEvaluation.reason,
@@ -235,7 +286,7 @@ function buildComputedEligibility(input: {
     ruleEvaluation,
     status: failedRuleEvaluation
       ? "LOCKED"
-      : normalizeStatus("ELIGIBLE", input.requestStatus),
+      : normalizeStatus("ELIGIBLE", requestStatus),
   };
 }
 
@@ -244,16 +295,63 @@ function buildStoredEligibility(input: {
   requestStatus?: string;
   rules: EligibilityRule[];
   storedEligibility: BenefitEligibility;
+  employee: Employee;
+  isEnrolled?: boolean;
 }): BenefitEligibilityResult {
-  const ruleEvaluation = normalizeRuleEvaluation(input.storedEligibility.ruleEvaluationJson);
+  const { benefit, requestStatus, rules, storedEligibility, employee, isEnrolled } = input;
+
+  // Phase 3: Check active override
+  if (isOverrideActive(storedEligibility)) {
+    const overrideStatusNorm = normalizeStatus(storedEligibility.overrideStatus ?? "eligible");
+    return {
+      benefit: mapBenefitRecordToGraphql(benefit),
+      benefitId: benefit.id,
+      ruleEvaluation: normalizeRuleEvaluation(storedEligibility.ruleEvaluationJson),
+      status: overrideStatusNorm,
+      overrideStatus: storedEligibility.overrideStatus,
+      overrideBy: storedEligibility.overrideBy,
+      overrideReason: storedEligibility.overrideReason,
+      overrideExpiresAt: storedEligibility.overrideExpiresAt,
+    };
+  }
+
+  // Phase 6: Active enrollment → ACTIVE
+  if (isEnrolled) {
+    return {
+      benefit: mapBenefitRecordToGraphql(benefit),
+      benefitId: benefit.id,
+      ruleEvaluation: normalizeRuleEvaluation(storedEligibility.ruleEvaluationJson),
+      status: "ACTIVE",
+    };
+  }
+
+  const ruleEvaluation = normalizeRuleEvaluation(storedEligibility.ruleEvaluationJson);
   const failedRuleEvaluation = ruleEvaluation.find((rule) => !rule.passed);
-  const fallbackFailedRule = input.rules.find(
+  const fallbackFailedRule = rules.find(
     (rule) => rule.ruleType === failedRuleEvaluation?.ruleType
   );
 
+  // Legacy snapshot rows may carry status='active' from the old approval-based model.
+  // At this point isEnrolled is false (checked above), so a stored 'active' must NOT
+  // produce ACTIVE — that would be a ghost enrollment.
+  // Derive status from: in-flight request state first, then live rule evaluation.
+  let storedStatus: BenefitStatus;
+  if (requestStatus === "approved") {
+    // Defensive: approved request without enrollment (backfill may have missed this row)
+    storedStatus = "ACTIVE";
+  } else if (requestStatus && IN_FLIGHT_REQUEST_STATUSES.has(requestStatus)) {
+    storedStatus = "PENDING";
+  } else if (storedEligibility.status?.toUpperCase() === "ACTIVE") {
+    // Legacy snapshot: re-evaluate live rules to determine true eligibility
+    const liveEval = rules.map((rule) => evaluateRule(rule, employee));
+    storedStatus = liveEval.some((r) => !r.passed) ? "LOCKED" : "ELIGIBLE";
+  } else {
+    storedStatus = normalizeStatus(storedEligibility.status, undefined);
+  }
+
   return {
-    benefit: mapBenefitRecordToGraphql(input.benefit),
-    benefitId: input.benefit.id,
+    benefit: mapBenefitRecordToGraphql(benefit),
+    benefitId: benefit.id,
     failedRule: failedRuleEvaluation
       ? {
           errorMessage:
@@ -264,12 +362,19 @@ function buildStoredEligibility(input: {
         }
       : undefined,
     ruleEvaluation,
-    status: normalizeStatus(input.storedEligibility.status, input.requestStatus),
+    status: storedStatus,
+    overrideStatus: null,
+    overrideBy: storedEligibility.overrideBy,
+    overrideReason: storedEligibility.overrideReason,
+    overrideExpiresAt: storedEligibility.overrideExpiresAt,
   };
+
 }
 
 /**
  * Get benefit eligibilities for an employee (shared by myBenefits, getEmployeeBenefits, Employee.benefits).
+ * Phase 3: Respects active eligibility overrides.
+ * Phase 6: Uses enrollment table for durable ACTIVE status.
  */
 export async function getBenefitsForEmployee(
   db: Database,
@@ -302,6 +407,18 @@ export async function getBenefitsForEmployee(
     .from(schema.benefitRequests)
     .where(eq(schema.benefitRequests.employeeId, employeeId));
 
+  // Phase 6: Load active enrollments
+  const activeEnrollments = await db
+    .select()
+    .from(schema.employeeBenefitEnrollments)
+    .where(
+      and(
+        eq(schema.employeeBenefitEnrollments.employeeId, employeeId),
+        eq(schema.employeeBenefitEnrollments.status, "active")
+      )
+    );
+  const enrolledBenefitIds = new Set(activeEnrollments.map((e) => e.benefitId));
+
   const requestStatusByBenefit = getLatestRequestStatusByBenefit(requests);
   const storedEligibilityByBenefit = Object.fromEntries(
     storedEligibilities.map((eligibility) => [eligibility.benefitId, eligibility])
@@ -322,6 +439,7 @@ export async function getBenefitsForEmployee(
     const storedEligibility = storedEligibilityByBenefit[benefit.id];
     const rules = rulesByBenefit[benefit.id] ?? [];
     const requestStatus = requestStatusByBenefit[benefit.id];
+    const isEnrolled = enrolledBenefitIds.has(benefit.id);
 
     if (storedEligibility) {
       return buildStoredEligibility({
@@ -329,6 +447,8 @@ export async function getBenefitsForEmployee(
         requestStatus,
         rules,
         storedEligibility,
+        employee,
+        isEnrolled,
       });
     }
 
@@ -337,6 +457,8 @@ export async function getBenefitsForEmployee(
       employee,
       requestStatus,
       rules,
+      storedEligibility: null,
+      isEnrolled,
     });
   });
 }

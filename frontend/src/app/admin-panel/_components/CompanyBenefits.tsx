@@ -9,22 +9,35 @@ import {
 } from "@/graphql/generated/graphql";
 import PageLoading from "@/app/_components/PageLoading";
 import { Plus, Trash2 } from "lucide-react";
-import { isAdminEmployee } from "../_lib/access";
+import { isAdminEmployee, isHrAdmin } from "../_lib/access";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 
 const CATEGORIES = ["wellness", "equipment", "financial", "career", "flexibility", "other"];
 
+const APPROVAL_POLICIES = [
+  { value: "hr", label: "HR only" },
+  { value: "finance", label: "Finance only" },
+  { value: "dual", label: "Dual (HR + Finance)" },
+];
+
+const APPROVAL_POLICY_LABELS: Record<string, string> = {
+  hr: "HR",
+  finance: "Finance",
+  dual: "Dual",
+};
+
 export default function CompanyBenefits() {
   const { employee, loading: employeeLoading } = useCurrentEmployee();
   const hasAdminAccess = isAdminEmployee(employee);
-  const { data, loading, error, refetch } = useGetAdminBenefitsQuery({
+  const canCreate = isHrAdmin(employee);
+  const { data, loading, error } = useGetAdminBenefitsQuery({
     skip: !hasAdminAccess,
   });
   const [createBenefit, { loading: creating, error: createError }] = useCreateBenefitMutation({
     refetchQueries: [{ query: GetAdminBenefitsDocument }],
     onCompleted: () => {
       setFormOpen(false);
-      setForm({ name: "", category: "wellness", subsidyPercent: 50, vendorName: "", requiresContract: false });
+      setForm({ name: "", category: "wellness", subsidyPercent: 50, vendorName: "", requiresContract: false, approvalPolicy: "hr" });
     },
   });
   const [deleteBenefit, { loading: deleting }] = useDeleteBenefitMutation({
@@ -40,6 +53,7 @@ export default function CompanyBenefits() {
     subsidyPercent: 50,
     vendorName: "",
     requiresContract: false,
+    approvalPolicy: "hr",
   });
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -78,6 +92,7 @@ export default function CompanyBenefits() {
             subsidyPercent: form.subsidyPercent,
             vendorName: form.vendorName.trim() || undefined,
             requiresContract: form.requiresContract,
+            approvalPolicy: form.approvalPolicy,
           },
         },
       });
@@ -108,14 +123,16 @@ export default function CompanyBenefits() {
               Add and view benefits offered by the company.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setFormOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
-          >
-            <Plus className="h-4 w-4" />
-            Add benefit
-          </button>
+          {canCreate && (
+            <button
+              type="button"
+              onClick={() => setFormOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+            >
+              <Plus className="h-4 w-4" />
+              Add benefit
+            </button>
+          )}
         </div>
 
         {feedback && (
@@ -130,7 +147,7 @@ export default function CompanyBenefits() {
           </div>
         )}
 
-        {formOpen && (
+        {formOpen && canCreate && (
           <form
             onSubmit={handleSubmit}
             className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
@@ -182,7 +199,21 @@ export default function CompanyBenefits() {
                   placeholder="Vendor name"
                 />
               </div>
-              <div className="flex items-center gap-2 sm:col-span-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Approval Policy</label>
+                <select
+                  value={form.approvalPolicy}
+                  onChange={(e) => setForm((f) => ({ ...f, approvalPolicy: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                >
+                  {APPROVAL_POLICIES.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2 self-end pb-2">
                 <input
                   type="checkbox"
                   id="requiresContract"
@@ -241,7 +272,8 @@ export default function CompanyBenefits() {
                     <th className="px-4 py-3">Subsidy</th>
                     <th className="px-4 py-3">Vendor</th>
                     <th className="px-4 py-3">Contract</th>
-                    <th className="px-4 py-3 w-20">Actions</th>
+                    <th className="px-4 py-3">Approval</th>
+                    {canCreate && <th className="px-4 py-3 w-20">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -257,17 +289,30 @@ export default function CompanyBenefits() {
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {b.requiresContract ? "Yes" : "No"}
                       </td>
-                      <td className="px-4 py-3">
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(b.id, b.name)}
-                          disabled={deletingId !== null}
-                          className="inline-flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                          title="Remove benefit"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
+                          b.approvalPolicy === "dual"
+                            ? "bg-purple-50 text-purple-700"
+                            : b.approvalPolicy === "finance"
+                              ? "bg-blue-50 text-blue-700"
+                              : "bg-gray-100 text-gray-600"
+                        }`}>
+                          {APPROVAL_POLICY_LABELS[b.approvalPolicy ?? "hr"] ?? b.approvalPolicy}
+                        </span>
                       </td>
+                      {canCreate && (
+                        <td className="px-4 py-3">
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(b.id, b.name)}
+                            disabled={deleting || deletingId !== null}
+                            className="inline-flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                            title="Remove benefit"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

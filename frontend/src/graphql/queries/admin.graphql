@@ -28,5 +28,73 @@ query GetAdminBenefits {
     requiresContract
     flowType
     optionsDescription
+    approvalPolicy
+  }
+}
+
+query GetAuditLogs(
+  $employeeId: String
+  $benefitId: String
+  $actionType: String
+  $fromDate: String
+  $toDate: String
+  $limit: Int
+) {
+  auditLogs(
+    employeeId: $employeeId
+    benefitId: $benefitId
+    actionType: $actionType
+    fromDate: $fromDate
+    toDate: $toDate
+    limit: $limit
+  ) {
+    id
+    actorEmployeeId
+    actorRole
+    actionType
+    entityType
+    entityId
+    targetEmployeeId
+    benefitId
+    requestId
+    contractId
+    reason
+    beforeJson
+    afterJson
+    metadataJson
+    ipAddress
+    createdAt
+  }
+}
+
+query GetContractAcceptances($employeeId: String, $benefitId: String, $requestId: String) {
+  contractAcceptances(employeeId: $employeeId, benefitId: $benefitId, requestId: $requestId) {
+    id
+    employeeId
+    benefitId
+    contractId
+    contractVersion
+    contractHash
+    acceptedAt
+    ipAddress
+    requestId
+    createdAt
+  }
+}
+
+query GetEnrollments($employeeId: String, $benefitId: String) {
+  enrollments(employeeId: $employeeId, benefitId: $benefitId) {
+    id
+    employeeId
+    benefitId
+    requestId
+    status
+    subsidyPercentApplied
+    employeePercentApplied
+    approvedBy
+    startedAt
+    endedAt
+    createdAt
+    updatedAt
   }
 }

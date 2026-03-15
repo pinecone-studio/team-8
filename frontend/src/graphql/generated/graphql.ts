@@ -34,8 +34,29 @@ export type AdminDashboardSummary = {
   usageByCategory: Array<AdminDashboardBucket>;
 };
 
+export type AuditLog = {
+  __typename?: 'AuditLog';
+  actionType: Scalars['String']['output'];
+  actorEmployeeId?: Maybe<Scalars['String']['output']>;
+  actorRole: Scalars['String']['output'];
+  afterJson?: Maybe<Scalars['String']['output']>;
+  beforeJson?: Maybe<Scalars['String']['output']>;
+  benefitId?: Maybe<Scalars['String']['output']>;
+  contractId?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['String']['output'];
+  entityId: Scalars['String']['output'];
+  entityType: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  ipAddress?: Maybe<Scalars['String']['output']>;
+  metadataJson?: Maybe<Scalars['String']['output']>;
+  reason?: Maybe<Scalars['String']['output']>;
+  requestId?: Maybe<Scalars['String']['output']>;
+  targetEmployeeId?: Maybe<Scalars['String']['output']>;
+};
+
 export type Benefit = {
   __typename?: 'Benefit';
+  approvalPolicy: Scalars['String']['output'];
   category: Scalars['String']['output'];
   employeePercent: Scalars['Int']['output'];
   flowType: BenefitFlowType;
@@ -54,6 +75,10 @@ export type BenefitEligibility = {
   benefit: Benefit;
   benefitId: Scalars['String']['output'];
   failedRule?: Maybe<FailedRule>;
+  overrideBy?: Maybe<Scalars['String']['output']>;
+  overrideExpiresAt?: Maybe<Scalars['String']['output']>;
+  overrideReason?: Maybe<Scalars['String']['output']>;
+  overrideStatus?: Maybe<Scalars['String']['output']>;
   ruleEvaluation: Array<RuleEvaluation>;
   status: BenefitEligibilityStatus;
 };
@@ -103,7 +128,22 @@ export type Contract = {
   viewUrl?: Maybe<Scalars['String']['output']>;
 };
 
+export type ContractAcceptance = {
+  __typename?: 'ContractAcceptance';
+  acceptedAt: Scalars['String']['output'];
+  benefitId: Scalars['String']['output'];
+  contractHash: Scalars['String']['output'];
+  contractId: Scalars['String']['output'];
+  contractVersion: Scalars['String']['output'];
+  createdAt: Scalars['String']['output'];
+  employeeId: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  ipAddress?: Maybe<Scalars['String']['output']>;
+  requestId?: Maybe<Scalars['String']['output']>;
+};
+
 export type CreateBenefitInput = {
+  approvalPolicy?: InputMaybe<Scalars['String']['input']>;
   category: Scalars['String']['input'];
   name: Scalars['String']['input'];
   requiresContract?: InputMaybe<Scalars['Boolean']['input']>;
@@ -162,6 +202,22 @@ export type Employee = {
   updatedAt: Scalars['DateTime']['output'];
 };
 
+export type EmployeeBenefitEnrollment = {
+  __typename?: 'EmployeeBenefitEnrollment';
+  approvedBy?: Maybe<Scalars['String']['output']>;
+  benefitId: Scalars['String']['output'];
+  createdAt: Scalars['String']['output'];
+  employeeId: Scalars['String']['output'];
+  employeePercentApplied?: Maybe<Scalars['Int']['output']>;
+  endedAt?: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  requestId?: Maybe<Scalars['String']['output']>;
+  startedAt: Scalars['String']['output'];
+  status: Scalars['String']['output'];
+  subsidyPercentApplied?: Maybe<Scalars['Int']['output']>;
+  updatedAt: Scalars['String']['output'];
+};
+
 export enum EmployeeRole {
   Engineer = 'engineer',
   Manager = 'manager',
@@ -194,6 +250,7 @@ export type Mutation = {
   deleteBenefit: Scalars['Boolean']['output'];
   deleteEligibilityRule: Scalars['Boolean']['output'];
   deleteEmployee: Scalars['Boolean']['output'];
+  overrideEligibility: BenefitEligibility;
   requestBenefit: BenefitRequest;
   updateEligibilityRule: EligibilityRule;
   updateEmployee?: Maybe<Employee>;
@@ -252,6 +309,11 @@ export type MutationDeleteEmployeeArgs = {
 };
 
 
+export type MutationOverrideEligibilityArgs = {
+  input: OverrideEligibilityInput;
+};
+
+
 export type MutationRequestBenefitArgs = {
   input: RequestBenefitInput;
 };
@@ -268,15 +330,26 @@ export type MutationUpdateEmployeeArgs = {
   input: UpdateEmployeeInput;
 };
 
+export type OverrideEligibilityInput = {
+  benefitId: Scalars['String']['input'];
+  employeeId: Scalars['String']['input'];
+  expiresAt?: InputMaybe<Scalars['String']['input']>;
+  overrideStatus: Scalars['String']['input'];
+  reason: Scalars['String']['input'];
+};
+
 export type Query = {
   __typename?: 'Query';
   adminBenefits: Array<Benefit>;
   adminDashboardSummary: AdminDashboardSummary;
   allBenefitRequests: Array<BenefitRequest>;
+  auditLogs: Array<AuditLog>;
   benefitRequests: Array<BenefitRequest>;
   benefits: Array<Benefit>;
+  contractAcceptances: Array<ContractAcceptance>;
   contracts: Array<Contract>;
   eligibilityRules: Array<EligibilityRule>;
+  enrollments: Array<EmployeeBenefitEnrollment>;
   getEmployee?: Maybe<Employee>;
   getEmployeeBenefits: Array<BenefitEligibility>;
   getEmployeeByEmail?: Maybe<Employee>;
@@ -287,12 +360,30 @@ export type Query = {
 
 
 export type QueryAllBenefitRequestsArgs = {
+  queue?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryAuditLogsArgs = {
+  actionType?: InputMaybe<Scalars['String']['input']>;
+  benefitId?: InputMaybe<Scalars['String']['input']>;
+  employeeId?: InputMaybe<Scalars['String']['input']>;
+  fromDate?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  toDate?: InputMaybe<Scalars['String']['input']>;
 };
 
 
 export type QueryBenefitsArgs = {
   category?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryContractAcceptancesArgs = {
+  benefitId?: InputMaybe<Scalars['String']['input']>;
+  employeeId?: InputMaybe<Scalars['String']['input']>;
+  requestId?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -303,6 +394,12 @@ export type QueryContractsArgs = {
 
 export type QueryEligibilityRulesArgs = {
   benefitId: Scalars['String']['input'];
+};
+
+
+export type QueryEnrollmentsArgs = {
+  benefitId?: InputMaybe<Scalars['String']['input']>;
+  employeeId?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -322,8 +419,6 @@ export type QueryGetEmployeeByEmailArgs = {
 
 export type RequestBenefitInput = {
   benefitId: Scalars['String']['input'];
-  contractAcceptedAt?: InputMaybe<Scalars['String']['input']>;
-  contractVersionAccepted?: InputMaybe<Scalars['String']['input']>;
   repaymentMonths?: InputMaybe<Scalars['Int']['input']>;
   requestedAmount?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -362,7 +457,15 @@ export type RequestBenefitMutationVariables = Exact<{
 }>;
 
 
-export type RequestBenefitMutation = { __typename?: 'Mutation', requestBenefit: { __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, employeeApprovedAt?: string | null, declineReason?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null } };
+export type RequestBenefitMutation = { __typename?: 'Mutation', requestBenefit: { __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, declineReason?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null } };
+
+export type ConfirmBenefitRequestMutationVariables = Exact<{
+  requestId: Scalars['String']['input'];
+  contractAccepted: Scalars['Boolean']['input'];
+}>;
+
+
+export type ConfirmBenefitRequestMutation = { __typename?: 'Mutation', confirmBenefitRequest: { __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, createdAt: string, updatedAt: string } };
 
 export type ApproveBenefitRequestMutationVariables = Exact<{
   requestId: Scalars['String']['input'];
@@ -422,6 +525,13 @@ export type DeleteEligibilityRuleMutationVariables = Exact<{
 
 export type DeleteEligibilityRuleMutation = { __typename?: 'Mutation', deleteEligibilityRule: boolean };
 
+export type OverrideEligibilityMutationVariables = Exact<{
+  input: OverrideEligibilityInput;
+}>;
+
+
+export type OverrideEligibilityMutation = { __typename?: 'Mutation', overrideEligibility: { __typename?: 'BenefitEligibility', benefitId: string, status: BenefitEligibilityStatus, overrideStatus?: string | null, overrideBy?: string | null, overrideReason?: string | null, overrideExpiresAt?: string | null } };
+
 export type CreateEmployeeMutationVariables = Exact<{
   input: CreateEmployeeInput;
 }>;
@@ -452,19 +562,48 @@ export type GetAdminDashboardSummaryQuery = { __typename?: 'Query', adminDashboa
 export type GetAdminBenefitsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetAdminBenefitsQuery = { __typename?: 'Query', adminBenefits: Array<{ __typename?: 'Benefit', id: string, name: string, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null }> };
+export type GetAdminBenefitsQuery = { __typename?: 'Query', adminBenefits: Array<{ __typename?: 'Benefit', id: string, name: string, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string }> };
+
+export type GetAuditLogsQueryVariables = Exact<{
+  employeeId?: InputMaybe<Scalars['String']['input']>;
+  benefitId?: InputMaybe<Scalars['String']['input']>;
+  actionType?: InputMaybe<Scalars['String']['input']>;
+  fromDate?: InputMaybe<Scalars['String']['input']>;
+  toDate?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type GetAuditLogsQuery = { __typename?: 'Query', auditLogs: Array<{ __typename?: 'AuditLog', id: string, actorEmployeeId?: string | null, actorRole: string, actionType: string, entityType: string, entityId: string, targetEmployeeId?: string | null, benefitId?: string | null, requestId?: string | null, contractId?: string | null, reason?: string | null, beforeJson?: string | null, afterJson?: string | null, metadataJson?: string | null, ipAddress?: string | null, createdAt: string }> };
+
+export type GetContractAcceptancesQueryVariables = Exact<{
+  employeeId?: InputMaybe<Scalars['String']['input']>;
+  benefitId?: InputMaybe<Scalars['String']['input']>;
+  requestId?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type GetContractAcceptancesQuery = { __typename?: 'Query', contractAcceptances: Array<{ __typename?: 'ContractAcceptance', id: string, employeeId: string, benefitId: string, contractId: string, contractVersion: string, contractHash: string, acceptedAt: string, ipAddress?: string | null, requestId?: string | null, createdAt: string }> };
+
+export type GetEnrollmentsQueryVariables = Exact<{
+  employeeId?: InputMaybe<Scalars['String']['input']>;
+  benefitId?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type GetEnrollmentsQuery = { __typename?: 'Query', enrollments: Array<{ __typename?: 'EmployeeBenefitEnrollment', id: string, employeeId: string, benefitId: string, requestId?: string | null, status: string, subsidyPercentApplied?: number | null, employeePercentApplied?: number | null, approvedBy?: string | null, startedAt: string, endedAt?: string | null, createdAt: string, updatedAt: string }> };
 
 export type GetBenefitsQueryVariables = Exact<{
   category?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
-export type GetBenefitsQuery = { __typename?: 'Query', benefits: Array<{ __typename?: 'Benefit', id: string, name: string, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null }> };
+export type GetBenefitsQuery = { __typename?: 'Query', benefits: Array<{ __typename?: 'Benefit', id: string, name: string, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string }> };
 
 export type GetMyBenefitsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetMyBenefitsQuery = { __typename?: 'Query', myBenefits: Array<{ __typename?: 'BenefitEligibility', benefitId: string, status: BenefitEligibilityStatus, benefit: { __typename?: 'Benefit', id: string, name: string, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null }, ruleEvaluation: Array<{ __typename?: 'RuleEvaluation', ruleType: string, passed: boolean, reason: string }>, failedRule?: { __typename?: 'FailedRule', ruleType: string, errorMessage: string } | null }> };
+export type GetMyBenefitsQuery = { __typename?: 'Query', myBenefits: Array<{ __typename?: 'BenefitEligibility', benefitId: string, status: BenefitEligibilityStatus, overrideStatus?: string | null, overrideBy?: string | null, overrideReason?: string | null, overrideExpiresAt?: string | null, benefit: { __typename?: 'Benefit', id: string, name: string, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string }, ruleEvaluation: Array<{ __typename?: 'RuleEvaluation', ruleType: string, passed: boolean, reason: string }>, failedRule?: { __typename?: 'FailedRule', ruleType: string, errorMessage: string } | null }> };
 
 export type GetBenefitRequestsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -473,6 +612,7 @@ export type GetBenefitRequestsQuery = { __typename?: 'Query', benefitRequests: A
 
 export type GetAllBenefitRequestsQueryVariables = Exact<{
   status?: InputMaybe<Scalars['String']['input']>;
+  queue?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
@@ -483,7 +623,7 @@ export type GetEmployeeBenefitsQueryVariables = Exact<{
 }>;
 
 
-export type GetEmployeeBenefitsQuery = { __typename?: 'Query', getEmployeeBenefits: Array<{ __typename?: 'BenefitEligibility', benefitId: string, status: BenefitEligibilityStatus, benefit: { __typename?: 'Benefit', id: string, name: string, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null }, ruleEvaluation: Array<{ __typename?: 'RuleEvaluation', ruleType: string, passed: boolean, reason: string }>, failedRule?: { __typename?: 'FailedRule', ruleType: string, errorMessage: string } | null }> };
+export type GetEmployeeBenefitsQuery = { __typename?: 'Query', getEmployeeBenefits: Array<{ __typename?: 'BenefitEligibility', benefitId: string, status: BenefitEligibilityStatus, overrideStatus?: string | null, overrideBy?: string | null, overrideReason?: string | null, overrideExpiresAt?: string | null, benefit: { __typename?: 'Benefit', id: string, name: string, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string }, ruleEvaluation: Array<{ __typename?: 'RuleEvaluation', ruleType: string, passed: boolean, reason: string }>, failedRule?: { __typename?: 'FailedRule', ruleType: string, errorMessage: string } | null }> };
 
 export type GetEligibilityRulesQueryVariables = Exact<{
   benefitId: Scalars['String']['input'];
@@ -519,12 +659,9 @@ export const RequestBenefitDocument = gql`
     employeeId
     benefitId
     status
-    contractVersionAccepted
-    contractAcceptedAt
     reviewedBy
     requestedAmount
     repaymentMonths
-    employeeApprovedAt
     declineReason
     createdAt
     updatedAt
@@ -558,6 +695,50 @@ export function useRequestBenefitMutation(baseOptions?: Apollo.MutationHookOptio
 export type RequestBenefitMutationHookResult = ReturnType<typeof useRequestBenefitMutation>;
 export type RequestBenefitMutationResult = Apollo.MutationResult<RequestBenefitMutation>;
 export type RequestBenefitMutationOptions = Apollo.BaseMutationOptions<RequestBenefitMutation, RequestBenefitMutationVariables>;
+export const ConfirmBenefitRequestDocument = gql`
+    mutation ConfirmBenefitRequest($requestId: String!, $contractAccepted: Boolean!) {
+  confirmBenefitRequest(
+    requestId: $requestId
+    contractAccepted: $contractAccepted
+  ) {
+    id
+    employeeId
+    benefitId
+    status
+    contractVersionAccepted
+    contractAcceptedAt
+    createdAt
+    updatedAt
+  }
+}
+    `;
+export type ConfirmBenefitRequestMutationFn = Apollo.MutationFunction<ConfirmBenefitRequestMutation, ConfirmBenefitRequestMutationVariables>;
+
+/**
+ * __useConfirmBenefitRequestMutation__
+ *
+ * To run a mutation, you first call `useConfirmBenefitRequestMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useConfirmBenefitRequestMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [confirmBenefitRequestMutation, { data, loading, error }] = useConfirmBenefitRequestMutation({
+ *   variables: {
+ *      requestId: // value for 'requestId'
+ *      contractAccepted: // value for 'contractAccepted'
+ *   },
+ * });
+ */
+export function useConfirmBenefitRequestMutation(baseOptions?: Apollo.MutationHookOptions<ConfirmBenefitRequestMutation, ConfirmBenefitRequestMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ConfirmBenefitRequestMutation, ConfirmBenefitRequestMutationVariables>(ConfirmBenefitRequestDocument, options);
+      }
+export type ConfirmBenefitRequestMutationHookResult = ReturnType<typeof useConfirmBenefitRequestMutation>;
+export type ConfirmBenefitRequestMutationResult = Apollo.MutationResult<ConfirmBenefitRequestMutation>;
+export type ConfirmBenefitRequestMutationOptions = Apollo.BaseMutationOptions<ConfirmBenefitRequestMutation, ConfirmBenefitRequestMutationVariables>;
 export const ApproveBenefitRequestDocument = gql`
     mutation ApproveBenefitRequest($requestId: String!) {
   approveBenefitRequest(requestId: $requestId) {
@@ -861,6 +1042,44 @@ export function useDeleteEligibilityRuleMutation(baseOptions?: Apollo.MutationHo
 export type DeleteEligibilityRuleMutationHookResult = ReturnType<typeof useDeleteEligibilityRuleMutation>;
 export type DeleteEligibilityRuleMutationResult = Apollo.MutationResult<DeleteEligibilityRuleMutation>;
 export type DeleteEligibilityRuleMutationOptions = Apollo.BaseMutationOptions<DeleteEligibilityRuleMutation, DeleteEligibilityRuleMutationVariables>;
+export const OverrideEligibilityDocument = gql`
+    mutation OverrideEligibility($input: OverrideEligibilityInput!) {
+  overrideEligibility(input: $input) {
+    benefitId
+    status
+    overrideStatus
+    overrideBy
+    overrideReason
+    overrideExpiresAt
+  }
+}
+    `;
+export type OverrideEligibilityMutationFn = Apollo.MutationFunction<OverrideEligibilityMutation, OverrideEligibilityMutationVariables>;
+
+/**
+ * __useOverrideEligibilityMutation__
+ *
+ * To run a mutation, you first call `useOverrideEligibilityMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useOverrideEligibilityMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [overrideEligibilityMutation, { data, loading, error }] = useOverrideEligibilityMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useOverrideEligibilityMutation(baseOptions?: Apollo.MutationHookOptions<OverrideEligibilityMutation, OverrideEligibilityMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<OverrideEligibilityMutation, OverrideEligibilityMutationVariables>(OverrideEligibilityDocument, options);
+      }
+export type OverrideEligibilityMutationHookResult = ReturnType<typeof useOverrideEligibilityMutation>;
+export type OverrideEligibilityMutationResult = Apollo.MutationResult<OverrideEligibilityMutation>;
+export type OverrideEligibilityMutationOptions = Apollo.BaseMutationOptions<OverrideEligibilityMutation, OverrideEligibilityMutationVariables>;
 export const CreateEmployeeDocument = gql`
     mutation CreateEmployee($input: CreateEmployeeInput!) {
   createEmployee(input: $input) {
@@ -1043,6 +1262,7 @@ export const GetAdminBenefitsDocument = gql`
     requiresContract
     flowType
     optionsDescription
+    approvalPolicy
   }
 }
     `;
@@ -1081,6 +1301,189 @@ export type GetAdminBenefitsQueryHookResult = ReturnType<typeof useGetAdminBenef
 export type GetAdminBenefitsLazyQueryHookResult = ReturnType<typeof useGetAdminBenefitsLazyQuery>;
 export type GetAdminBenefitsSuspenseQueryHookResult = ReturnType<typeof useGetAdminBenefitsSuspenseQuery>;
 export type GetAdminBenefitsQueryResult = Apollo.QueryResult<GetAdminBenefitsQuery, GetAdminBenefitsQueryVariables>;
+export const GetAuditLogsDocument = gql`
+    query GetAuditLogs($employeeId: String, $benefitId: String, $actionType: String, $fromDate: String, $toDate: String, $limit: Int) {
+  auditLogs(
+    employeeId: $employeeId
+    benefitId: $benefitId
+    actionType: $actionType
+    fromDate: $fromDate
+    toDate: $toDate
+    limit: $limit
+  ) {
+    id
+    actorEmployeeId
+    actorRole
+    actionType
+    entityType
+    entityId
+    targetEmployeeId
+    benefitId
+    requestId
+    contractId
+    reason
+    beforeJson
+    afterJson
+    metadataJson
+    ipAddress
+    createdAt
+  }
+}
+    `;
+
+/**
+ * __useGetAuditLogsQuery__
+ *
+ * To run a query within a React component, call `useGetAuditLogsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetAuditLogsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetAuditLogsQuery({
+ *   variables: {
+ *      employeeId: // value for 'employeeId'
+ *      benefitId: // value for 'benefitId'
+ *      actionType: // value for 'actionType'
+ *      fromDate: // value for 'fromDate'
+ *      toDate: // value for 'toDate'
+ *      limit: // value for 'limit'
+ *   },
+ * });
+ */
+export function useGetAuditLogsQuery(baseOptions?: Apollo.QueryHookOptions<GetAuditLogsQuery, GetAuditLogsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetAuditLogsQuery, GetAuditLogsQueryVariables>(GetAuditLogsDocument, options);
+      }
+export function useGetAuditLogsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetAuditLogsQuery, GetAuditLogsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetAuditLogsQuery, GetAuditLogsQueryVariables>(GetAuditLogsDocument, options);
+        }
+// @ts-ignore
+export function useGetAuditLogsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetAuditLogsQuery, GetAuditLogsQueryVariables>): Apollo.UseSuspenseQueryResult<GetAuditLogsQuery, GetAuditLogsQueryVariables>;
+export function useGetAuditLogsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetAuditLogsQuery, GetAuditLogsQueryVariables>): Apollo.UseSuspenseQueryResult<GetAuditLogsQuery | undefined, GetAuditLogsQueryVariables>;
+export function useGetAuditLogsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetAuditLogsQuery, GetAuditLogsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetAuditLogsQuery, GetAuditLogsQueryVariables>(GetAuditLogsDocument, options);
+        }
+export type GetAuditLogsQueryHookResult = ReturnType<typeof useGetAuditLogsQuery>;
+export type GetAuditLogsLazyQueryHookResult = ReturnType<typeof useGetAuditLogsLazyQuery>;
+export type GetAuditLogsSuspenseQueryHookResult = ReturnType<typeof useGetAuditLogsSuspenseQuery>;
+export type GetAuditLogsQueryResult = Apollo.QueryResult<GetAuditLogsQuery, GetAuditLogsQueryVariables>;
+export const GetContractAcceptancesDocument = gql`
+    query GetContractAcceptances($employeeId: String, $benefitId: String, $requestId: String) {
+  contractAcceptances(
+    employeeId: $employeeId
+    benefitId: $benefitId
+    requestId: $requestId
+  ) {
+    id
+    employeeId
+    benefitId
+    contractId
+    contractVersion
+    contractHash
+    acceptedAt
+    ipAddress
+    requestId
+    createdAt
+  }
+}
+    `;
+
+/**
+ * __useGetContractAcceptancesQuery__
+ *
+ * To run a query within a React component, call `useGetContractAcceptancesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetContractAcceptancesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetContractAcceptancesQuery({
+ *   variables: {
+ *      employeeId: // value for 'employeeId'
+ *      benefitId: // value for 'benefitId'
+ *      requestId: // value for 'requestId'
+ *   },
+ * });
+ */
+export function useGetContractAcceptancesQuery(baseOptions?: Apollo.QueryHookOptions<GetContractAcceptancesQuery, GetContractAcceptancesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetContractAcceptancesQuery, GetContractAcceptancesQueryVariables>(GetContractAcceptancesDocument, options);
+      }
+export function useGetContractAcceptancesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetContractAcceptancesQuery, GetContractAcceptancesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetContractAcceptancesQuery, GetContractAcceptancesQueryVariables>(GetContractAcceptancesDocument, options);
+        }
+// @ts-ignore
+export function useGetContractAcceptancesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetContractAcceptancesQuery, GetContractAcceptancesQueryVariables>): Apollo.UseSuspenseQueryResult<GetContractAcceptancesQuery, GetContractAcceptancesQueryVariables>;
+export function useGetContractAcceptancesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetContractAcceptancesQuery, GetContractAcceptancesQueryVariables>): Apollo.UseSuspenseQueryResult<GetContractAcceptancesQuery | undefined, GetContractAcceptancesQueryVariables>;
+export function useGetContractAcceptancesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetContractAcceptancesQuery, GetContractAcceptancesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetContractAcceptancesQuery, GetContractAcceptancesQueryVariables>(GetContractAcceptancesDocument, options);
+        }
+export type GetContractAcceptancesQueryHookResult = ReturnType<typeof useGetContractAcceptancesQuery>;
+export type GetContractAcceptancesLazyQueryHookResult = ReturnType<typeof useGetContractAcceptancesLazyQuery>;
+export type GetContractAcceptancesSuspenseQueryHookResult = ReturnType<typeof useGetContractAcceptancesSuspenseQuery>;
+export type GetContractAcceptancesQueryResult = Apollo.QueryResult<GetContractAcceptancesQuery, GetContractAcceptancesQueryVariables>;
+export const GetEnrollmentsDocument = gql`
+    query GetEnrollments($employeeId: String, $benefitId: String) {
+  enrollments(employeeId: $employeeId, benefitId: $benefitId) {
+    id
+    employeeId
+    benefitId
+    requestId
+    status
+    subsidyPercentApplied
+    employeePercentApplied
+    approvedBy
+    startedAt
+    endedAt
+    createdAt
+    updatedAt
+  }
+}
+    `;
+
+/**
+ * __useGetEnrollmentsQuery__
+ *
+ * To run a query within a React component, call `useGetEnrollmentsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetEnrollmentsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetEnrollmentsQuery({
+ *   variables: {
+ *      employeeId: // value for 'employeeId'
+ *      benefitId: // value for 'benefitId'
+ *   },
+ * });
+ */
+export function useGetEnrollmentsQuery(baseOptions?: Apollo.QueryHookOptions<GetEnrollmentsQuery, GetEnrollmentsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetEnrollmentsQuery, GetEnrollmentsQueryVariables>(GetEnrollmentsDocument, options);
+      }
+export function useGetEnrollmentsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetEnrollmentsQuery, GetEnrollmentsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetEnrollmentsQuery, GetEnrollmentsQueryVariables>(GetEnrollmentsDocument, options);
+        }
+// @ts-ignore
+export function useGetEnrollmentsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetEnrollmentsQuery, GetEnrollmentsQueryVariables>): Apollo.UseSuspenseQueryResult<GetEnrollmentsQuery, GetEnrollmentsQueryVariables>;
+export function useGetEnrollmentsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetEnrollmentsQuery, GetEnrollmentsQueryVariables>): Apollo.UseSuspenseQueryResult<GetEnrollmentsQuery | undefined, GetEnrollmentsQueryVariables>;
+export function useGetEnrollmentsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetEnrollmentsQuery, GetEnrollmentsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetEnrollmentsQuery, GetEnrollmentsQueryVariables>(GetEnrollmentsDocument, options);
+        }
+export type GetEnrollmentsQueryHookResult = ReturnType<typeof useGetEnrollmentsQuery>;
+export type GetEnrollmentsLazyQueryHookResult = ReturnType<typeof useGetEnrollmentsLazyQuery>;
+export type GetEnrollmentsSuspenseQueryHookResult = ReturnType<typeof useGetEnrollmentsSuspenseQuery>;
+export type GetEnrollmentsQueryResult = Apollo.QueryResult<GetEnrollmentsQuery, GetEnrollmentsQueryVariables>;
 export const GetBenefitsDocument = gql`
     query GetBenefits($category: String) {
   benefits(category: $category) {
@@ -1095,6 +1498,7 @@ export const GetBenefitsDocument = gql`
     requiresContract
     flowType
     optionsDescription
+    approvalPolicy
   }
 }
     `;
@@ -1139,6 +1543,10 @@ export const GetMyBenefitsDocument = gql`
   myBenefits {
     benefitId
     status
+    overrideStatus
+    overrideBy
+    overrideReason
+    overrideExpiresAt
     benefit {
       id
       name
@@ -1151,6 +1559,7 @@ export const GetMyBenefitsDocument = gql`
       requiresContract
       flowType
       optionsDescription
+      approvalPolicy
     }
     ruleEvaluation {
       ruleType
@@ -1255,8 +1664,8 @@ export type GetBenefitRequestsLazyQueryHookResult = ReturnType<typeof useGetBene
 export type GetBenefitRequestsSuspenseQueryHookResult = ReturnType<typeof useGetBenefitRequestsSuspenseQuery>;
 export type GetBenefitRequestsQueryResult = Apollo.QueryResult<GetBenefitRequestsQuery, GetBenefitRequestsQueryVariables>;
 export const GetAllBenefitRequestsDocument = gql`
-    query GetAllBenefitRequests($status: String) {
-  allBenefitRequests(status: $status) {
+    query GetAllBenefitRequests($status: String, $queue: String) {
+  allBenefitRequests(status: $status, queue: $queue) {
     id
     employeeId
     benefitId
@@ -1288,6 +1697,7 @@ export const GetAllBenefitRequestsDocument = gql`
  * const { data, loading, error } = useGetAllBenefitRequestsQuery({
  *   variables: {
  *      status: // value for 'status'
+ *      queue: // value for 'queue'
  *   },
  * });
  */
@@ -1315,6 +1725,10 @@ export const GetEmployeeBenefitsDocument = gql`
   getEmployeeBenefits(employeeId: $employeeId) {
     benefitId
     status
+    overrideStatus
+    overrideBy
+    overrideReason
+    overrideExpiresAt
     benefit {
       id
       name
@@ -1327,6 +1741,7 @@ export const GetEmployeeBenefitsDocument = gql`
       requiresContract
       flowType
       optionsDescription
+      approvalPolicy
     }
     ruleEvaluation {
       ruleType

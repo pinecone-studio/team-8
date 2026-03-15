@@ -1,5 +1,8 @@
 BEGIN TRANSACTION;
 
+DELETE FROM audit_logs;
+DELETE FROM contract_acceptances;
+DELETE FROM employee_benefit_enrollments;
 DELETE FROM benefit_requests;
 DELETE FROM benefit_eligibility;
 DELETE FROM eligibility_rules;
@@ -8,436 +11,211 @@ DELETE FROM benefits;
 DELETE FROM employees;
 
 INSERT INTO employees (
-  id,
-  email,
-  name,
-  name_eng,
-  role,
-  department,
-  responsibility_level,
-  employment_status,
-  hire_date,
-  okr_submitted,
-  late_arrival_count,
-  late_arrival_updated_at,
-  created_at,
-  updated_at
+  id, email, name, name_eng, role, department, responsibility_level,
+  employment_status, hire_date, okr_submitted, late_arrival_count,
+  late_arrival_updated_at, created_at, updated_at
 ) VALUES
-  (
-    'emp_ariunbat',
-    'ariunbatbumba@gmail.com',
-    'Ariunbat',
-    'Ariunbat',
-    'frontend_engineer',
-    'Engineering',
-    1,
-    'active',
-    '2024-01-15T00:00:00.000Z',
-    1,
-    1,
-    '2026-03-01T09:00:00.000Z',
-    '2026-03-12T00:00:00.000Z',
-    '2026-03-12T00:00:00.000Z'
-  ),
-  (
-    'emp_hr_saruul',
-    'saruul.hr@pinequest.mn',
-    'Saruul Erdene',
-    'Saruul Erdene',
-    'hr_manager',
-    'Human Resources',
-    4,
-    'active',
-    '2022-06-01T00:00:00.000Z',
-    1,
-    0,
-    '2026-03-01T09:00:00.000Z',
-    '2026-03-12T00:00:00.000Z',
-    '2026-03-12T00:00:00.000Z'
-  ),
-  (
-    'emp_fin_temuulen',
-    'temuulen.finance@pinequest.mn',
-    'Temuulen Bat',
-    'Temuulen Bat',
-    'finance_manager',
-    'Finance',
-    3,
-    'active',
-    '2021-03-10T00:00:00.000Z',
-    1,
-    0,
-    '2026-03-01T09:00:00.000Z',
-    '2026-03-12T00:00:00.000Z',
-    '2026-03-12T00:00:00.000Z'
-  ),
-  (
-    'emp_ux_naraa',
-    'naraa.ux@pinequest.mn',
-    'Naraa Sainaa',
-    'Naraa Sainaa',
-    'ux_engineer',
-    'Design',
-    2,
-    'active',
-    '2023-02-20T00:00:00.000Z',
-    1,
-    0,
-    '2026-03-01T09:00:00.000Z',
-    '2026-03-12T00:00:00.000Z',
-    '2026-03-12T00:00:00.000Z'
-  ),
-  (
-    'emp_probation_anu',
-    'anu.new@pinequest.mn',
-    'Anu Orgil',
-    'Anu Orgil',
-    'operations_associate',
-    'Operations',
-    1,
-    'probation',
-    '2025-12-15T00:00:00.000Z',
-    0,
-    4,
-    '2026-03-01T09:00:00.000Z',
-    '2026-03-12T00:00:00.000Z',
-    '2026-03-12T00:00:00.000Z'
-  ),
-  (
-    'emp_eng_erdene',
-    'erdene.eng@pinequest.mn',
-    'Erdene Munkh',
-    'Erdene Munkh',
-    'senior_engineer',
-    'Engineering',
-    2,
-    'active',
-    '2022-11-07T00:00:00.000Z',
-    1,
-    1,
-    '2026-03-01T09:00:00.000Z',
-    '2026-03-12T00:00:00.000Z',
-    '2026-03-12T00:00:00.000Z'
-  ),
-  (
-    'emp_leave_bolor',
-    'bolor.ops@pinequest.mn',
-    'Bolor Tsetseg',
-    'Bolor Tsetseg',
-    'customer_success',
-    'Operations',
-    1,
-    'leave',
-    '2023-08-14T00:00:00.000Z',
-    1,
-    0,
-    '2026-03-01T09:00:00.000Z',
-    '2026-03-12T00:00:00.000Z',
-    '2026-03-12T00:00:00.000Z'
-  ),
-  (
-    'emp_former_bat',
-    'bat.former@pinequest.mn',
-    'Bat-Erdene',
-    'Bat-Erdene',
-    'backend_engineer',
-    'Engineering',
-    2,
-    'terminated',
-    '2020-02-03T00:00:00.000Z',
-    0,
-    0,
-    '2025-12-31T09:00:00.000Z',
-    '2026-01-05T00:00:00.000Z',
-    '2026-01-05T00:00:00.000Z'
-  );
+  ('emp_ariunbat',    'ariunbatbumba@gmail.com',         'Ariunbat',        'Ariunbat',        'frontend_engineer',    'Engineering',    1, 'active',     '2024-01-15T00:00:00.000Z', 1, 1, '2026-03-01T09:00:00.000Z', '2026-03-12T00:00:00.000Z', '2026-03-12T00:00:00.000Z'),
+  ('emp_hr_saruul',   'saruul.hr@pinequest.mn',          'Saruul Erdene',   'Saruul Erdene',   'hr_manager',           'Human Resources',4, 'active',     '2022-06-01T00:00:00.000Z', 1, 0, '2026-03-01T09:00:00.000Z', '2026-03-12T00:00:00.000Z', '2026-03-12T00:00:00.000Z'),
+  ('emp_fin_temuulen','temuulen.finance@pinequest.mn',   'Temuulen Bat',    'Temuulen Bat',    'finance_manager',      'Finance',        3, 'active',     '2021-03-10T00:00:00.000Z', 1, 0, '2026-03-01T09:00:00.000Z', '2026-03-12T00:00:00.000Z', '2026-03-12T00:00:00.000Z'),
+  ('emp_ux_naraa',    'naraa.ux@pinequest.mn',           'Naraa Sainaa',    'Naraa Sainaa',    'ux_engineer',          'Design',         2, 'active',     '2023-02-20T00:00:00.000Z', 1, 0, '2026-03-01T09:00:00.000Z', '2026-03-12T00:00:00.000Z', '2026-03-12T00:00:00.000Z'),
+  ('emp_probation_anu','anu.new@pinequest.mn',           'Anu Orgil',       'Anu Orgil',       'operations_associate', 'Operations',     1, 'probation',  '2025-12-15T00:00:00.000Z', 0, 4, '2026-03-01T09:00:00.000Z', '2026-03-12T00:00:00.000Z', '2026-03-12T00:00:00.000Z'),
+  ('emp_eng_erdene',  'erdene.eng@pinequest.mn',         'Erdene Munkh',    'Erdene Munkh',    'senior_engineer',      'Engineering',    2, 'active',     '2022-11-07T00:00:00.000Z', 1, 1, '2026-03-01T09:00:00.000Z', '2026-03-12T00:00:00.000Z', '2026-03-12T00:00:00.000Z'),
+  ('emp_leave_bolor', 'bolor.ops@pinequest.mn',          'Bolor Tsetseg',   'Bolor Tsetseg',   'customer_success',     'Operations',     1, 'leave',      '2023-08-14T00:00:00.000Z', 1, 0, '2026-03-01T09:00:00.000Z', '2026-03-12T00:00:00.000Z', '2026-03-12T00:00:00.000Z'),
+  ('emp_former_bat',  'bat.former@pinequest.mn',         'Bat-Erdene',      'Bat-Erdene',      'backend_engineer',     'Engineering',    2, 'terminated', '2020-02-03T00:00:00.000Z', 0, 0, '2025-12-31T09:00:00.000Z', '2026-01-05T00:00:00.000Z', '2026-01-05T00:00:00.000Z');
 
 INSERT INTO contracts (
-  id,
-  benefit_id,
-  vendor_name,
-  version,
-  r2_object_key,
-  sha256_hash,
-  effective_date,
-  expiry_date,
-  is_active
+  id, benefit_id, vendor_name, version, r2_object_key, sha256_hash,
+  effective_date, expiry_date, is_active
 ) VALUES
-  (
-    'contract_gym_2026_v1',
-    'gym_pinefit',
-    'PineFit',
-    '2026.1',
-    'contracts/gym_pinefit/2026.1/pinefit_contract_2026v1.pdf',
-    'sha256-gym-2026-v1',
-    '2026-01-01T00:00:00.000Z',
-    '2026-12-31T23:59:59.000Z',
-    1
-  ),
-  (
-    'contract_insurance_2026_v1',
-    'private_insurance',
-    'Insurance Partner',
-    '2026.1',
-    'contracts/private_insurance/2026.1/private_insurance_2026v1.pdf',
-    'sha256-insurance-2026-v1',
-    '2026-01-01T00:00:00.000Z',
-    '2026-12-31T23:59:59.000Z',
-    1
-  ),
-  (
-    'contract_macbook_2026_v1',
-    'macbook',
-    'Apple',
-    '2026.1',
-    'contracts/macbook/2026.1/macbook_2026v1.pdf',
-    'sha256-macbook-2026-v1',
-    '2026-01-01T00:00:00.000Z',
-    '2026-12-31T23:59:59.000Z',
-    1
-  ),
-  (
-    'contract_travel_2026_v1',
-    'travel',
-    'Nomad Travel',
-    '2026.1',
-    'contracts/travel/2026.1/travel_2026v1.pdf',
-    'sha256-travel-2026-v1',
-    '2026-01-01T00:00:00.000Z',
-    '2026-12-31T23:59:59.000Z',
-    1
-  );
+  ('contract_gym_2026_v1',       'gym_pinefit',       'PineFit',          '2026.1', 'contracts/gym_pinefit/2026.1/pinefit_contract_2026v1.pdf',             'sha256-gym-2026-v1',       '2026-01-01T00:00:00.000Z', '2026-12-31T23:59:59.000Z', 1),
+  ('contract_insurance_2026_v1', 'private_insurance', 'Insurance Partner', '2026.1', 'contracts/private_insurance/2026.1/private_insurance_2026v1.pdf',     'sha256-insurance-2026-v1', '2026-01-01T00:00:00.000Z', '2026-12-31T23:59:59.000Z', 1),
+  ('contract_macbook_2026_v1',   'macbook',           'Apple',             '2026.1', 'contracts/macbook/2026.1/macbook_2026v1.pdf',                         'sha256-macbook-2026-v1',   '2026-01-01T00:00:00.000Z', '2026-12-31T23:59:59.000Z', 1),
+  ('contract_travel_2026_v1',    'travel',            'Nomad Travel',      '2026.1', 'contracts/travel/2026.1/travel_2026v1.pdf',                           'sha256-travel-2026-v1',    '2026-01-01T00:00:00.000Z', '2026-12-31T23:59:59.000Z', 1);
 
+-- approval_policy:
+--   hr      → HR manages alone (wellness, equipment, career, flexibility)
+--   finance → Finance approves (financial category: down_payment, bonus_okr)
+--   dual    → Both HR + Finance review (high-value: travel with significant subsidy)
 INSERT INTO benefits (
-  id,
-  name,
-  category,
-  subsidy_percent,
-  vendor_name,
-  requires_contract,
-  active_contract_id,
-  is_active
+  id, name, category, subsidy_percent, vendor_name, requires_contract,
+  active_contract_id, is_active, approval_policy
 ) VALUES
-  ('gym_pinefit', 'Gym - PineFit 50%', 'wellness', 50, 'PineFit', 1, 'contract_gym_2026_v1', 1),
-  ('private_insurance', 'Private Insurance 50%', 'wellness', 50, 'Insurance Partner', 1, 'contract_insurance_2026_v1', 1),
-  ('digital_wellness', 'Digital Wellness', 'wellness', 100, NULL, 0, NULL, 1),
-  ('macbook', 'MacBook 50%', 'equipment', 50, 'Apple', 1, 'contract_macbook_2026_v1', 1),
-  ('extra_responsibility', 'Extra Responsibility', 'career', 0, NULL, 0, NULL, 1),
-  ('ux_engineer_tools', 'UX Engineer Tools', 'career', 100, NULL, 0, NULL, 1),
-  ('down_payment', 'Down Payment Assistance', 'financial', 0, NULL, 0, NULL, 1),
-  ('shit_happened_days', 'Shit Happened Days', 'flexibility', 0, NULL, 0, NULL, 1),
-  ('remote_work', 'Remote Work', 'flexibility', 0, NULL, 0, NULL, 1),
-  ('travel', 'Travel 50%', 'flexibility', 50, 'Nomad Travel', 1, 'contract_travel_2026_v1', 1),
-  ('bonus_okr', 'Bonus Based on OKR', 'financial', 0, NULL, 0, NULL, 1);
+  ('gym_pinefit',         'Gym - PineFit 50%',          'wellness',     50, 'PineFit',          1, 'contract_gym_2026_v1',       1, 'hr'),
+  ('private_insurance',   'Private Insurance 50%',       'wellness',     50, 'Insurance Partner',1, 'contract_insurance_2026_v1', 1, 'hr'),
+  ('digital_wellness',    'Digital Wellness',            'wellness',    100,  NULL,              0,  NULL,                        1, 'hr'),
+  ('macbook',             'MacBook 50%',                 'equipment',    50, 'Apple',             1, 'contract_macbook_2026_v1',   1, 'hr'),
+  ('extra_responsibility','Extra Responsibility',        'career',        0,  NULL,              0,  NULL,                        1, 'hr'),
+  ('ux_engineer_tools',   'UX Engineer Tools',           'career',      100,  NULL,              0,  NULL,                        1, 'hr'),
+  ('down_payment',        'Down Payment Assistance',     'financial',     0,  NULL,              0,  NULL,                        1, 'finance'),
+  ('shit_happened_days',  'Shit Happened Days',          'flexibility',   0,  NULL,              0,  NULL,                        1, 'hr'),
+  ('remote_work',         'Remote Work',                 'flexibility',   0,  NULL,              0,  NULL,                        1, 'hr'),
+  ('travel',              'Travel 50%',                  'flexibility',  50, 'Nomad Travel',     1, 'contract_travel_2026_v1',    1, 'dual'),
+  ('bonus_okr',           'Bonus Based on OKR',          'financial',     0,  NULL,              0,  NULL,                        1, 'finance');
 
 INSERT INTO eligibility_rules (
-  id,
-  benefit_id,
-  rule_type,
-  operator,
-  value,
-  error_message,
-  priority,
-  is_active
+  id, benefit_id, rule_type, operator, value, error_message, priority, is_active
 ) VALUES
-  ('rule_gym_1', 'gym_pinefit', 'employment_status', 'eq', '"active"', 'Not available during probation or leave.', 0, 1),
-  ('rule_gym_2', 'gym_pinefit', 'okr_submitted', 'eq', 'true', 'Submit your Q[current] OKR to unlock this benefit.', 1, 1),
-  ('rule_gym_3', 'gym_pinefit', 'attendance', 'lt', '3', 'Attendance threshold exceeded this month.', 2, 1),
-  ('rule_ins_1', 'private_insurance', 'employment_status', 'eq', '"active"', 'Not available during probation or leave.', 0, 1),
-  ('rule_ins_2', 'private_insurance', 'okr_submitted', 'eq', 'true', 'Submit your Q[current] OKR to unlock this benefit.', 1, 1),
-  ('rule_ins_3', 'private_insurance', 'attendance', 'lt', '3', 'Attendance threshold exceeded this month.', 2, 1),
-  ('rule_digital_1', 'digital_wellness', 'employment_status', 'neq', '"terminated"', 'Not available after termination.', 0, 1),
-  ('rule_mac_1', 'macbook', 'tenure_days', 'gte', '180', 'Available after 6 months of employment.', 0, 1),
-  ('rule_mac_2', 'macbook', 'employment_status', 'eq', '"active"', 'Not available during probation or leave.', 1, 1),
-  ('rule_mac_3', 'macbook', 'okr_submitted', 'eq', 'true', 'Submit your Q[current] OKR to unlock this benefit.', 2, 1),
-  ('rule_mac_4', 'macbook', 'responsibility_level', 'gte', '1', 'Requires at least Standard level.', 3, 1),
-  ('rule_extra_1', 'extra_responsibility', 'employment_status', 'eq', '"active"', 'Not available during probation.', 0, 1),
-  ('rule_extra_2', 'extra_responsibility', 'okr_submitted', 'eq', 'true', 'Submit your Q[current] OKR to unlock this benefit.', 1, 1),
-  ('rule_extra_3', 'extra_responsibility', 'attendance', 'lt', '3', 'Attendance threshold exceeded.', 2, 1),
-  ('rule_extra_4', 'extra_responsibility', 'responsibility_level', 'gte', '2', 'Requires Senior level (Level 2+).', 3, 1),
-  ('rule_ux_1', 'ux_engineer_tools', 'role', 'eq', '"ux_engineer"', 'Available to UX/Design role only.', 0, 1),
-  ('rule_ux_2', 'ux_engineer_tools', 'employment_status', 'eq', '"active"', 'Active employment required.', 1, 1),
-  ('rule_ux_3', 'ux_engineer_tools', 'okr_submitted', 'eq', 'true', 'OKR submission required.', 2, 1),
-  ('rule_down_1', 'down_payment', 'tenure_days', 'gte', '730', 'Available after 2 years of employment.', 0, 1),
-  ('rule_down_2', 'down_payment', 'employment_status', 'eq', '"active"', 'Active employment required.', 1, 1),
-  ('rule_down_3', 'down_payment', 'responsibility_level', 'gte', '2', 'Requires Senior level (Level 2+).', 2, 1),
-  ('rule_down_4', 'down_payment', 'okr_submitted', 'eq', 'true', 'OKR submission required.', 3, 1),
-  ('rule_shd_1', 'shit_happened_days', 'employment_status', 'neq', '"terminated"', 'Not available after termination.', 0, 1),
-  ('rule_shd_2', 'shit_happened_days', 'okr_submitted', 'eq', 'true', 'Submit OKR for full allocation.', 1, 1),
-  ('rule_remote_1', 'remote_work', 'employment_status', 'eq', '"active"', 'Not available during probation.', 0, 1),
-  ('rule_remote_2', 'remote_work', 'okr_submitted', 'eq', 'true', 'OKR submission required.', 1, 1),
-  ('rule_remote_3', 'remote_work', 'attendance', 'lt', '3', 'Attendance threshold exceeded.', 2, 1),
-  ('rule_travel_1', 'travel', 'tenure_days', 'gte', '365', 'Available after 12 months of employment.', 0, 1),
-  ('rule_travel_2', 'travel', 'employment_status', 'eq', '"active"', 'Not available during probation or leave.', 1, 1),
-  ('rule_travel_3', 'travel', 'responsibility_level', 'gte', '1', 'Requires at least Standard level.', 2, 1),
-  ('rule_travel_4', 'travel', 'okr_submitted', 'eq', 'true', 'OKR submission required.', 3, 1),
-  ('rule_bonus_1', 'bonus_okr', 'employment_status', 'eq', '"active"', 'Active employment required.', 0, 1),
-  ('rule_bonus_2', 'bonus_okr', 'okr_submitted', 'eq', 'true', 'OKR not submitted or score below threshold.', 1, 1),
-  ('rule_bonus_3', 'bonus_okr', 'attendance', 'lt', '3', 'Attendance threshold exceeded.', 2, 1);
+  ('rule_gym_1',    'gym_pinefit',         'employment_status', 'eq',  '"active"',      'Not available during probation or leave.', 0, 1),
+  ('rule_gym_2',    'gym_pinefit',         'okr_submitted',     'eq',  'true',          'Submit your Q[current] OKR to unlock this benefit.', 1, 1),
+  ('rule_gym_3',    'gym_pinefit',         'attendance',        'lt',  '3',             'Attendance threshold exceeded this month.', 2, 1),
+  ('rule_ins_1',    'private_insurance',   'employment_status', 'eq',  '"active"',      'Not available during probation or leave.', 0, 1),
+  ('rule_ins_2',    'private_insurance',   'okr_submitted',     'eq',  'true',          'Submit your Q[current] OKR to unlock this benefit.', 1, 1),
+  ('rule_ins_3',    'private_insurance',   'attendance',        'lt',  '3',             'Attendance threshold exceeded this month.', 2, 1),
+  ('rule_digital_1','digital_wellness',    'employment_status', 'neq', '"terminated"',  'Not available after termination.', 0, 1),
+  ('rule_mac_1',    'macbook',             'tenure_days',       'gte', '180',           'Available after 6 months of employment.', 0, 1),
+  ('rule_mac_2',    'macbook',             'employment_status', 'eq',  '"active"',      'Not available during probation or leave.', 1, 1),
+  ('rule_mac_3',    'macbook',             'okr_submitted',     'eq',  'true',          'Submit your Q[current] OKR to unlock this benefit.', 2, 1),
+  ('rule_mac_4',    'macbook',             'responsibility_level','gte','1',            'Requires at least Standard level.', 3, 1),
+  ('rule_extra_1',  'extra_responsibility','employment_status', 'eq',  '"active"',      'Not available during probation.', 0, 1),
+  ('rule_extra_2',  'extra_responsibility','okr_submitted',     'eq',  'true',          'Submit your Q[current] OKR to unlock this benefit.', 1, 1),
+  ('rule_extra_3',  'extra_responsibility','attendance',        'lt',  '3',             'Attendance threshold exceeded.', 2, 1),
+  ('rule_extra_4',  'extra_responsibility','responsibility_level','gte','2',            'Requires Senior level (Level 2+).', 3, 1),
+  ('rule_ux_1',     'ux_engineer_tools',   'role',              'eq',  '"ux_engineer"', 'Available to UX/Design role only.', 0, 1),
+  ('rule_ux_2',     'ux_engineer_tools',   'employment_status', 'eq',  '"active"',      'Active employment required.', 1, 1),
+  ('rule_ux_3',     'ux_engineer_tools',   'okr_submitted',     'eq',  'true',          'OKR submission required.', 2, 1),
+  ('rule_down_1',   'down_payment',        'tenure_days',       'gte', '730',           'Available after 2 years of employment.', 0, 1),
+  ('rule_down_2',   'down_payment',        'employment_status', 'eq',  '"active"',      'Active employment required.', 1, 1),
+  ('rule_down_3',   'down_payment',        'responsibility_level','gte','2',            'Requires Senior level (Level 2+).', 2, 1),
+  ('rule_down_4',   'down_payment',        'okr_submitted',     'eq',  'true',          'OKR submission required.', 3, 1),
+  ('rule_shd_1',    'shit_happened_days',  'employment_status', 'neq', '"terminated"',  'Not available after termination.', 0, 1),
+  ('rule_shd_2',    'shit_happened_days',  'okr_submitted',     'eq',  'true',          'Submit OKR for full allocation.', 1, 1),
+  ('rule_remote_1', 'remote_work',         'employment_status', 'eq',  '"active"',      'Not available during probation.', 0, 1),
+  ('rule_remote_2', 'remote_work',         'okr_submitted',     'eq',  'true',          'OKR submission required.', 1, 1),
+  ('rule_remote_3', 'remote_work',         'attendance',        'lt',  '3',             'Attendance threshold exceeded.', 2, 1),
+  ('rule_travel_1', 'travel',              'tenure_days',       'gte', '365',           'Available after 12 months of employment.', 0, 1),
+  ('rule_travel_2', 'travel',              'employment_status', 'eq',  '"active"',      'Not available during probation or leave.', 1, 1),
+  ('rule_travel_3', 'travel',              'responsibility_level','gte','1',            'Requires at least Standard level.', 2, 1),
+  ('rule_travel_4', 'travel',              'okr_submitted',     'eq',  'true',          'OKR submission required.', 3, 1),
+  ('rule_bonus_1',  'bonus_okr',           'employment_status', 'eq',  '"active"',      'Active employment required.', 0, 1),
+  ('rule_bonus_2',  'bonus_okr',           'okr_submitted',     'eq',  'true',          'OKR not submitted or score below threshold.', 1, 1),
+  ('rule_bonus_3',  'bonus_okr',           'attendance',        'lt',  '3',             'Attendance threshold exceeded.', 2, 1);
 
+-- override_status required for active overrides (Phase 3)
 INSERT INTO benefit_eligibility (
-  employee_id,
-  benefit_id,
-  status,
-  rule_evaluation_json,
-  computed_at,
-  override_by,
-  override_reason,
-  override_expires_at
+  employee_id, benefit_id, status, rule_evaluation_json, computed_at,
+  override_by, override_reason, override_expires_at, override_status
 ) VALUES
-  ('emp_ariunbat', 'gym_pinefit', 'active', '[{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"},{"rule_type":"attendance","passed":true,"reason":"Passed: attendance lt 3"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_ariunbat', 'private_insurance', 'pending', '[{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"},{"rule_type":"attendance","passed":true,"reason":"Passed: attendance lt 3"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_ariunbat', 'digital_wellness', 'active', '[{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status neq terminated"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_ariunbat', 'macbook', 'eligible', '[{"rule_type":"tenure_days","passed":true,"reason":"Passed: tenure_days gte 180"},{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"},{"rule_type":"responsibility_level","passed":true,"reason":"Passed: responsibility_level gte 1"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_ariunbat', 'extra_responsibility', 'locked', '[{"rule_type":"responsibility_level","passed":false,"reason":"Requires Senior level (Level 2+)."}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_ariunbat', 'remote_work', 'eligible', '[{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"},{"rule_type":"attendance","passed":true,"reason":"Passed: attendance lt 3"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_hr_saruul', 'travel', 'eligible', '[{"rule_type":"tenure_days","passed":true,"reason":"Passed: tenure_days gte 365"},{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"responsibility_level","passed":true,"reason":"Passed: responsibility_level gte 1"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_hr_saruul', 'extra_responsibility', 'active', '[{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"},{"rule_type":"attendance","passed":true,"reason":"Passed: attendance lt 3"},{"rule_type":"responsibility_level","passed":true,"reason":"Passed: responsibility_level gte 2"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_fin_temuulen', 'down_payment', 'pending', '[{"rule_type":"tenure_days","passed":true,"reason":"Passed: tenure_days gte 730"},{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"responsibility_level","passed":true,"reason":"Passed: responsibility_level gte 2"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_fin_temuulen', 'private_insurance', 'eligible', '[{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"},{"rule_type":"attendance","passed":true,"reason":"Passed: attendance lt 3"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_ux_naraa', 'ux_engineer_tools', 'active', '[{"rule_type":"role","passed":true,"reason":"Passed: role eq ux_engineer"},{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_ux_naraa', 'macbook', 'eligible', '[{"rule_type":"tenure_days","passed":true,"reason":"Passed: tenure_days gte 180"},{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"},{"rule_type":"responsibility_level","passed":true,"reason":"Passed: responsibility_level gte 1"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_eng_erdene', 'remote_work', 'active', '[{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"},{"rule_type":"attendance","passed":true,"reason":"Passed: attendance lt 3"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_eng_erdene', 'travel', 'eligible', '[{"rule_type":"tenure_days","passed":true,"reason":"Passed: tenure_days gte 365"},{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status eq active"},{"rule_type":"responsibility_level","passed":true,"reason":"Passed: responsibility_level gte 1"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed: okr_submitted eq true"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_leave_bolor', 'gym_pinefit', 'locked', '[{"rule_type":"employment_status","passed":false,"reason":"Not available during probation or leave."}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_leave_bolor', 'digital_wellness', 'eligible', '[{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status neq terminated"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_probation_anu', 'gym_pinefit', 'locked', '[{"rule_type":"employment_status","passed":false,"reason":"Not available during probation or leave."}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL),
-  ('emp_probation_anu', 'digital_wellness', 'eligible', '[{"rule_type":"employment_status","passed":true,"reason":"Passed: employment_status neq terminated"}]', '2026-03-12T00:00:00.000Z', 'emp_hr_saruul', 'Manual preview unlock for onboarding review.', '2026-03-31T23:59:59.000Z');
+  ('emp_ariunbat',    'gym_pinefit',         'active',   '[{"rule_type":"employment_status","passed":true,"reason":"Passed"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed"},{"rule_type":"attendance","passed":true,"reason":"Passed"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_ariunbat',    'private_insurance',   'eligible', '[{"rule_type":"employment_status","passed":true,"reason":"Passed"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed"},{"rule_type":"attendance","passed":true,"reason":"Passed"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_ariunbat',    'digital_wellness',    'active',   '[{"rule_type":"employment_status","passed":true,"reason":"Passed"}]',                                                                                                                       '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_ariunbat',    'macbook',             'eligible', '[{"rule_type":"tenure_days","passed":true,"reason":"Passed"},{"rule_type":"employment_status","passed":true,"reason":"Passed"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed"},{"rule_type":"responsibility_level","passed":true,"reason":"Passed"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_ariunbat',    'extra_responsibility','locked',   '[{"rule_type":"responsibility_level","passed":false,"reason":"Requires Senior level (Level 2+)."}]',                                                                                       '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_ariunbat',    'remote_work',         'eligible', '[{"rule_type":"employment_status","passed":true,"reason":"Passed"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed"},{"rule_type":"attendance","passed":true,"reason":"Passed"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_hr_saruul',   'travel',              'eligible', '[{"rule_type":"tenure_days","passed":true,"reason":"Passed"},{"rule_type":"employment_status","passed":true,"reason":"Passed"},{"rule_type":"responsibility_level","passed":true,"reason":"Passed"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_hr_saruul',   'extra_responsibility','active',   '[{"rule_type":"employment_status","passed":true,"reason":"Passed"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed"},{"rule_type":"attendance","passed":true,"reason":"Passed"},{"rule_type":"responsibility_level","passed":true,"reason":"Passed"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_fin_temuulen','down_payment',        'eligible', '[{"rule_type":"tenure_days","passed":true,"reason":"Passed"},{"rule_type":"employment_status","passed":true,"reason":"Passed"},{"rule_type":"responsibility_level","passed":true,"reason":"Passed"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_fin_temuulen','bonus_okr',           'eligible', '[{"rule_type":"employment_status","passed":true,"reason":"Passed"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed"},{"rule_type":"attendance","passed":true,"reason":"Passed"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_fin_temuulen','private_insurance',   'eligible', '[{"rule_type":"employment_status","passed":true,"reason":"Passed"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed"},{"rule_type":"attendance","passed":true,"reason":"Passed"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_ux_naraa',    'ux_engineer_tools',   'active',   '[{"rule_type":"role","passed":true,"reason":"Passed"},{"rule_type":"employment_status","passed":true,"reason":"Passed"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed"}]',    '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_ux_naraa',    'macbook',             'eligible', '[{"rule_type":"tenure_days","passed":true,"reason":"Passed"},{"rule_type":"employment_status","passed":true,"reason":"Passed"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed"},{"rule_type":"responsibility_level","passed":true,"reason":"Passed"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_ux_naraa',    'travel',              'eligible', '[{"rule_type":"tenure_days","passed":true,"reason":"Passed"},{"rule_type":"employment_status","passed":true,"reason":"Passed"},{"rule_type":"responsibility_level","passed":true,"reason":"Passed"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_eng_erdene',  'remote_work',         'active',   '[{"rule_type":"employment_status","passed":true,"reason":"Passed"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed"},{"rule_type":"attendance","passed":true,"reason":"Passed"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_eng_erdene',  'travel',              'eligible', '[{"rule_type":"tenure_days","passed":true,"reason":"Passed"},{"rule_type":"employment_status","passed":true,"reason":"Passed"},{"rule_type":"responsibility_level","passed":true,"reason":"Passed"},{"rule_type":"okr_submitted","passed":true,"reason":"Passed"}]', '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_leave_bolor', 'gym_pinefit',         'locked',   '[{"rule_type":"employment_status","passed":false,"reason":"Not available during probation or leave."}]',                                                                                  '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_leave_bolor', 'digital_wellness',    'eligible', '[{"rule_type":"employment_status","passed":true,"reason":"Passed"}]',                                                                                                                       '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  ('emp_probation_anu','gym_pinefit',        'locked',   '[{"rule_type":"employment_status","passed":false,"reason":"Not available during probation or leave."}]',                                                                                  '2026-03-12T00:00:00.000Z', NULL, NULL, NULL, NULL),
+  -- override_status='eligible' activates the override read-time logic for onboarding preview
+  ('emp_probation_anu','digital_wellness',   'eligible', '[{"rule_type":"employment_status","passed":true,"reason":"Passed"}]',                                                                                                                       '2026-03-12T00:00:00.000Z', 'emp_hr_saruul', 'Manual preview unlock for onboarding review.', '2026-03-31T23:59:59.000Z', 'eligible');
 
+-- Requests showcase the full lifecycle:
+--   approved            → fully done, enrollment created below
+--   awaiting_hr_review  → HR queue (hr policy or contract accepted for dual/hr)
+--   awaiting_finance_review → Finance queue (finance policy)
+--   hr_approved         → dual: HR done, waiting Finance
+--   rejected / cancelled → terminal states
 INSERT INTO benefit_requests (
-  id,
-  employee_id,
-  benefit_id,
-  status,
-  contract_version_accepted,
-  contract_accepted_at,
-  reviewed_by,
-  requested_amount,
-  repayment_months,
-  employee_approved_at,
-  decline_reason,
-  created_at,
-  updated_at
+  id, employee_id, benefit_id, status,
+  contract_version_accepted, contract_accepted_at,
+  reviewed_by, requested_amount, repayment_months, employee_approved_at,
+  decline_reason, created_at, updated_at
 ) VALUES
-  (
-    'req_gym_ariunbat',
-    'emp_ariunbat',
-    'gym_pinefit',
-    'approved',
-    '2026.1',
-    '2026-03-05T09:30:00.000Z',
-    'emp_hr_saruul',
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    '2026-03-05T09:00:00.000Z',
-    '2026-03-05T12:00:00.000Z'
-  ),
-  (
-    'req_insurance_ariunbat',
-    'emp_ariunbat',
-    'private_insurance',
-    'pending',
-    '2026.1',
-    '2026-03-10T10:15:00.000Z',
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    '2026-03-10T10:00:00.000Z',
-    '2026-03-10T10:15:00.000Z'
-  ),
-  (
-    'req_down_fin',
-    'emp_fin_temuulen',
-    'down_payment',
-    'pending',
-    NULL,
-    NULL,
-    NULL,
-    18000000,
-    24,
-    '2026-03-09T11:00:00.000Z',
-    NULL,
-    '2026-03-09T09:00:00.000Z',
-    '2026-03-09T11:00:00.000Z'
-  ),
-  (
-    'req_ux_tools_naraa',
-    'emp_ux_naraa',
-    'ux_engineer_tools',
-    'approved',
-    NULL,
-    NULL,
-    'emp_hr_saruul',
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    '2026-03-08T14:00:00.000Z',
-    '2026-03-08T17:00:00.000Z'
-  ),
-  (
-    'req_travel_hr',
-    'emp_hr_saruul',
-    'travel',
-    'rejected',
-    '2026.1',
-    '2026-03-04T08:30:00.000Z',
-    'emp_fin_temuulen',
-    NULL,
-    NULL,
-    NULL,
-    'Budget cap reached for March.',
-    '2026-03-04T08:00:00.000Z',
-    '2026-03-04T13:00:00.000Z'
-  ),
-  (
-    'req_mac_anu',
-    'emp_probation_anu',
-    'macbook',
-    'cancelled',
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    '2026-03-02T09:00:00.000Z',
-    '2026-03-02T09:30:00.000Z'
-  ),
-  (
-    'req_remote_erdene',
-    'emp_eng_erdene',
-    'remote_work',
-    'approved',
-    NULL,
-    NULL,
-    'emp_hr_saruul',
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    '2026-03-07T08:45:00.000Z',
-    '2026-03-07T11:20:00.000Z'
-  ),
-  (
-    'req_travel_erdene',
-    'emp_eng_erdene',
-    'travel',
-    'pending',
-    '2026.1',
-    '2026-03-11T16:00:00.000Z',
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    '2026-03-11T15:30:00.000Z',
-    '2026-03-11T16:00:00.000Z'
-  );
+  -- ✅ HR approved — gym (hr policy, contract accepted via confirmBenefitRequest)
+  ('req_gym_ariunbat',     'emp_ariunbat',     'gym_pinefit',       'approved',
+   '2026.1:sha256-gym-2026-v1', '2026-03-05T09:30:00.000Z',
+   'emp_hr_saruul',  NULL, NULL, NULL, NULL,
+   '2026-03-05T09:00:00.000Z', '2026-03-05T12:00:00.000Z'),
+
+  -- ⏳ HR Review queue — insurance (hr policy, contract accepted, waiting HR)
+  ('req_insurance_ariunbat','emp_ariunbat',    'private_insurance', 'awaiting_hr_review',
+   '2026.1:sha256-insurance-2026-v1', '2026-03-10T10:15:00.000Z',
+   NULL, NULL, NULL, NULL, NULL,
+   '2026-03-10T10:00:00.000Z', '2026-03-10T10:15:00.000Z'),
+
+  -- ⏳ Finance Review queue — down_payment (finance policy)
+  ('req_down_fin',         'emp_fin_temuulen', 'down_payment',      'awaiting_finance_review',
+   NULL, NULL,
+   NULL, 18000000, 24, '2026-03-09T11:00:00.000Z', NULL,
+   '2026-03-09T09:00:00.000Z', '2026-03-09T11:00:00.000Z'),
+
+  -- ✅ HR approved — ux_engineer_tools (hr policy, no contract)
+  ('req_ux_tools_naraa',   'emp_ux_naraa',     'ux_engineer_tools', 'approved',
+   NULL, NULL,
+   'emp_hr_saruul', NULL, NULL, NULL, NULL,
+   '2026-03-08T14:00:00.000Z', '2026-03-08T17:00:00.000Z'),
+
+  -- ❌ Rejected — travel by Saruul (dual policy, budget cap)
+  ('req_travel_hr',        'emp_hr_saruul',    'travel',            'rejected',
+   '2026.1:sha256-travel-2026-v1', '2026-03-04T08:30:00.000Z',
+   'emp_fin_temuulen', NULL, NULL, NULL, 'Budget cap reached for March.',
+   '2026-03-04T08:00:00.000Z', '2026-03-04T13:00:00.000Z'),
+
+  -- 🚫 Cancelled — macbook by probation Anu
+  ('req_mac_anu',          'emp_probation_anu','macbook',           'cancelled',
+   NULL, NULL,
+   NULL, NULL, NULL, NULL, NULL,
+   '2026-03-02T09:00:00.000Z', '2026-03-02T09:30:00.000Z'),
+
+  -- ✅ HR approved — remote_work (hr policy, no contract)
+  ('req_remote_erdene',    'emp_eng_erdene',   'remote_work',       'approved',
+   NULL, NULL,
+   'emp_hr_saruul', NULL, NULL, NULL, NULL,
+   '2026-03-07T08:45:00.000Z', '2026-03-07T11:20:00.000Z'),
+
+  -- ⏳ HR Review queue — travel by Erdene (dual, contract accepted, waiting HR first leg)
+  ('req_travel_erdene',    'emp_eng_erdene',   'travel',            'awaiting_hr_review',
+   '2026.1:sha256-travel-2026-v1', '2026-03-11T16:00:00.000Z',
+   NULL, NULL, NULL, NULL, NULL,
+   '2026-03-11T15:30:00.000Z', '2026-03-11T16:00:00.000Z'),
+
+  -- 🟡 HR Approved (dual mid-state) — travel by Naraa, HR done, waiting Finance final
+  ('req_travel_naraa',     'emp_ux_naraa',     'travel',            'hr_approved',
+   '2026.1:sha256-travel-2026-v1', '2026-03-12T09:00:00.000Z',
+   'emp_hr_saruul', NULL, NULL, NULL, NULL,
+   '2026-03-12T08:30:00.000Z', '2026-03-12T09:30:00.000Z'),
+
+  -- ⏳ Finance Review queue — bonus_okr by Erdene (finance policy)
+  ('req_bonus_erdene',     'emp_eng_erdene',   'bonus_okr',         'awaiting_finance_review',
+   NULL, NULL,
+   NULL, NULL, NULL, NULL, NULL,
+   '2026-03-12T11:00:00.000Z', '2026-03-12T11:00:00.000Z'),
+
+  -- ⏳ Contract Acceptance pending — macbook by Naraa (contract required, not yet confirmed)
+  ('req_macbook_naraa',    'emp_ux_naraa',     'macbook',           'awaiting_contract_acceptance',
+   NULL, NULL,
+   NULL, NULL, NULL, NULL, NULL,
+   '2026-03-13T09:00:00.000Z', '2026-03-13T09:00:00.000Z');
+
+-- contract_acceptances: one row per confirmed contract acceptance
+INSERT INTO contract_acceptances (
+  id, employee_id, benefit_id, contract_id, contract_version, contract_hash,
+  accepted_at, ip_address, request_id, created_at
+) VALUES
+  ('ca_gym_ariunbat',    'emp_ariunbat',   'gym_pinefit',     'contract_gym_2026_v1',       '2026.1', 'sha256-gym-2026-v1',       '2026-03-05T09:30:00.000Z', NULL, 'req_gym_ariunbat',    '2026-03-05T09:30:00.000Z'),
+  ('ca_ins_ariunbat',    'emp_ariunbat',   'private_insurance','contract_insurance_2026_v1','2026.1', 'sha256-insurance-2026-v1', '2026-03-10T10:15:00.000Z', NULL, 'req_insurance_ariunbat','2026-03-10T10:15:00.000Z'),
+  ('ca_travel_hr',       'emp_hr_saruul',  'travel',          'contract_travel_2026_v1',    '2026.1', 'sha256-travel-2026-v1',    '2026-03-04T08:30:00.000Z', NULL, 'req_travel_hr',       '2026-03-04T08:30:00.000Z'),
+  ('ca_travel_erdene',   'emp_eng_erdene', 'travel',          'contract_travel_2026_v1',    '2026.1', 'sha256-travel-2026-v1',    '2026-03-11T16:00:00.000Z', NULL, 'req_travel_erdene',   '2026-03-11T16:00:00.000Z'),
+  ('ca_travel_naraa',    'emp_ux_naraa',   'travel',          'contract_travel_2026_v1',    '2026.1', 'sha256-travel-2026-v1',    '2026-03-12T09:00:00.000Z', NULL, 'req_travel_naraa',    '2026-03-12T09:00:00.000Z');
+
+-- employee_benefit_enrollments: one active row per approved benefit
+-- Created when approveBenefitRequest reaches final 'approved' status
+INSERT INTO employee_benefit_enrollments (
+  id, employee_id, benefit_id, request_id, status,
+  subsidy_percent_applied, employee_percent_applied, approved_by,
+  started_at, created_at, updated_at
+) VALUES
+  ('enroll_gym_ariunbat',   'emp_ariunbat', 'gym_pinefit',       'req_gym_ariunbat',   'active', 50, 50, 'emp_hr_saruul', '2026-03-05T12:00:00.000Z', '2026-03-05T12:00:00.000Z', '2026-03-05T12:00:00.000Z'),
+  ('enroll_ux_naraa',       'emp_ux_naraa', 'ux_engineer_tools', 'req_ux_tools_naraa', 'active',100,  0, 'emp_hr_saruul', '2026-03-08T17:00:00.000Z', '2026-03-08T17:00:00.000Z', '2026-03-08T17:00:00.000Z'),
+  ('enroll_remote_erdene',  'emp_eng_erdene','remote_work',      'req_remote_erdene',  'active',  0,100, 'emp_hr_saruul', '2026-03-07T11:20:00.000Z', '2026-03-07T11:20:00.000Z', '2026-03-07T11:20:00.000Z');
 
 COMMIT;
