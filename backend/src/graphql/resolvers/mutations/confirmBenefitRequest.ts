@@ -74,20 +74,23 @@ export const confirmBenefitRequest = async (
       .from(schema.contracts)
       .where(eq(schema.contracts.benefitId, req.benefitId));
     const active = contracts.find((c) => c.isActive);
-    if (active) {
-      contractVersionAccepted = `${active.version}:${active.sha256Hash}`;
-
-      // Phase 5: Write contract acceptance record
-      await db.insert(schema.contractAcceptances).values({
-        employeeId: employee.id,
-        benefitId: req.benefitId,
-        contractId: active.id,
-        contractVersion: active.version,
-        contractHash: active.sha256Hash,
-        acceptedAt: contractAcceptedAt,
-        requestId,
-      });
+    if (!active) {
+      throw new Error(
+        "This benefit requires a contract but no active contract is currently available. Please contact HR.",
+      );
     }
+    contractVersionAccepted = `${active.version}:${active.sha256Hash}`;
+
+    // Write contract acceptance record
+    await db.insert(schema.contractAcceptances).values({
+      employeeId: employee.id,
+      benefitId: req.benefitId,
+      contractId: active.id,
+      contractVersion: active.version,
+      contractHash: active.sha256Hash,
+      acceptedAt: contractAcceptedAt,
+      requestId,
+    });
   }
 
   const nextStatus = routeAfterConfirm(approvalPolicy);

@@ -38,7 +38,8 @@ export const getAuditLogs = async (
     conditions.push(gte(schema.auditLogs.createdAt, fromDate));
   }
   if (toDate) {
-    conditions.push(lte(schema.auditLogs.createdAt, toDate));
+    // Append end-of-day so the filter includes all events on the selected date
+    conditions.push(lte(schema.auditLogs.createdAt, `${toDate}T23:59:59.999Z`));
   }
 
   const query = db

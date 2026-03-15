@@ -12,7 +12,7 @@ import {
   GetEligibilityRulesDocument,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
-import { isAdminEmployee } from "@/app/admin-panel/_lib/access";
+import { isHrAdmin } from "@/app/admin-panel/_lib/access";
 
 const RULE_TYPES = [
   "employment_status",
@@ -35,7 +35,7 @@ const defaultForm = {
 
 export default function RuleConfiguration() {
   const { employee: me } = useCurrentEmployee();
-  const isAdmin = isAdminEmployee(me);
+  const isHr = isHrAdmin(me);
 
   const [selectedBenefitId, setSelectedBenefitId] = useState<string>("");
   const [showAddForm, setShowAddForm] = useState(false);
@@ -43,12 +43,12 @@ export default function RuleConfiguration() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const { data: benefitsData, loading: benefitsLoading } = useGetAdminBenefitsQuery({
-    skip: !isAdmin,
+    skip: !isHr,
   });
 
   const { data: rulesData, loading: rulesLoading } = useGetEligibilityRulesQuery({
     variables: { benefitId: selectedBenefitId },
-    skip: !selectedBenefitId || !isAdmin,
+    skip: !selectedBenefitId || !isHr,
   });
 
   const refetchOptions = {
@@ -107,10 +107,13 @@ export default function RuleConfiguration() {
     }
   };
 
-  if (!isAdmin) {
+  if (!isHr) {
     return (
       <main className="flex-1 px-8 py-9">
-        <p className="text-gray-500">Admin access required.</p>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-6 py-8 text-center max-w-md">
+          <p className="text-sm font-semibold text-amber-800">HR access required</p>
+          <p className="mt-1 text-xs text-amber-700">Rule Configuration is restricted to HR administrators.</p>
+        </div>
       </main>
     );
   }

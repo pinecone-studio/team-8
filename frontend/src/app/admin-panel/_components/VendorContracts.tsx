@@ -3,8 +3,10 @@
 import { useState, useCallback } from "react";
 import { gql, useQuery } from "@apollo/client";
 import { useAuth } from "@clerk/nextjs";
-import { Eye, Upload, X } from "lucide-react";
+import { CheckCircle2, ExternalLink, Upload, X } from "lucide-react";
 import PageLoading from "@/app/_components/PageLoading";
+import { useCurrentEmployee } from "@/lib/current-employee-provider";
+import { isHrAdmin } from "@/app/admin-panel/_lib/access";
 
 const GET_CONTRACTS = gql`
   query Contracts {
@@ -53,6 +55,8 @@ function getUploadUrl(): string {
 }
 
 export default function VendorContracts() {
+  const { employee: me } = useCurrentEmployee();
+  const isHr = isHrAdmin(me);
   const { getToken } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -66,8 +70,8 @@ export default function VendorContracts() {
   });
   const [file, setFile] = useState<File | null>(null);
 
-  const { data, loading, error, refetch } = useQuery<{ contracts: ContractRow[] }>(GET_CONTRACTS);
-  const { data: benefitsData, loading: benefitsLoading } = useQuery<{ benefits: { id: string; name: string; vendorName?: string | null }[] }>(GET_BENEFITS);
+  const { data, loading, error, refetch } = useQuery<{ contracts: ContractRow[] }>(GET_CONTRACTS, { skip: !isHr });
+  const { data: benefitsData, loading: benefitsLoading } = useQuery<{ benefits: { id: string; name: string; vendorName?: string | null }[] }>(GET_BENEFITS, { skip: !isHr });
   const contracts = data?.contracts ?? [];
   const benefits = benefitsData?.benefits ?? [];
 
@@ -117,6 +121,17 @@ export default function VendorContracts() {
       setUploading(false);
     }
   }, [closeModal, file, form, getToken, refetch]);
+
+  if (!isHr) {
+    return (
+      <main className="flex-1 px-8 py-9">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-6 py-8 text-center max-w-md">
+          <p className="text-sm font-semibold text-amber-800">HR access required</p>
+          <p className="mt-1 text-xs text-amber-700">Vendor Contracts are restricted to HR administrators.</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex-1 px-8 py-9">
@@ -228,28 +243,27 @@ export default function VendorContracts() {
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
           <div className="overflow-x-auto">
             <table className="min-w-full text-left">
-              <thead className="border-b border-slate-200 bg-white text-sm font-semibold text-slate-700">
+              <thead className="border-b border-slate-200 bg-white text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-5 py-4">Benefit</th>
-                  <th className="px-5 py-4">Vendor</th>
-                  <th className="px-5 py-4">Contract Version</th>
-                  <th className="px-5 py-4">Effective Date</th>
-                  <th className="px-5 py-4">Expiry Date</th>
-                  <th className="px-5 py-4">Actions</th>
-                  <th className="px-5 py-4" />
+                  <th className="px-5 py-3">Benefit</th>
+                  <th className="px-5 py-3">Vendor</th>
+                  <th className="px-5 py-3">Version</th>
+                  <th className="px-5 py-3">Effective</th>
+                  <th className="px-5 py-3">Expires</th>
+                  <th className="px-5 py-3" colSpan={2}>Contract</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-8">
+                    <td colSpan={6} className="px-5 py-8">
                       <PageLoading inline message="Loading contracts..." className="text-slate-500" />
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={6}
                       className="px-5 py-6 text-sm text-rose-600"
                     >
                       Failed to load contracts. Please try again.
@@ -258,7 +272,7 @@ export default function VendorContracts() {
                 ) : contracts.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={6}
                       className="px-5 py-6 text-sm text-slate-500"
                     >
                       No contracts found.
@@ -266,44 +280,65 @@ export default function VendorContracts() {
                   </tr>
                 ) : (
                   contracts.map((row) => (
-                    <tr key={row.id} className="border-b border-slate-200 last:border-b-0">
-                      <td className="px-5 py-5 text-sm font-medium text-slate-900">
-                        {row.benefitName ?? row.benefitId}
+                    <tr
+                      key={row.id}
+                      className={`border-b last:border-b-0 transition-colors ${
+                        row.isActive
+                          ? "border-emerald-100 bg-emerald-50/40 hover:bg-emerald-50/70"
+                          : "border-slate-200 hover:bg-slate-50/60"
+                      }`}
+                    >
+                      <td className="px-5 py-4 text-sm font-medium text-slate-900">
+                        <div className="flex items-center gap-2">
+                          {row.isActive && (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                          )}
+                          {row.benefitName ?? row.benefitId}
+                        </div>
                       </td>
-                      <td className="px-5 py-5 text-sm text-slate-500">
+                      <td className="px-5 py-4 text-sm text-slate-500">
                         {row.vendorName}
                       </td>
-                      <td className="px-5 py-5">
-                        <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                          {row.version}
-                        </span>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                            row.isActive
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-slate-100 text-slate-500"
+                          }`}>
+                            v{row.version}
+                          </span>
+                          {row.isActive && (
+                            <span className="inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-emerald-500 text-white">
+                              Active
+                            </span>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-5 py-5 text-sm text-slate-500">
+                      <td className="px-5 py-4 text-sm text-slate-500">
                         {row.effectiveDate}
                       </td>
-                      <td className="px-5 py-5 text-sm text-slate-500">
+                      <td className="px-5 py-4 text-sm text-slate-500">
                         {row.expiryDate}
                       </td>
-                      <td className="px-5 py-5">
+                      <td className="px-5 py-4" colSpan={2}>
                         {row.viewUrl ? (
                           <a
                             href={row.viewUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-blue-600 transition hover:bg-blue-50 hover:text-blue-700 active:scale-95 active:bg-blue-100 active:text-blue-800"
+                            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition active:scale-95 ${
+                              row.isActive
+                                ? "bg-blue-600 text-white hover:bg-blue-700"
+                                : "text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                            }`}
                           >
-                            <Eye className="h-4 w-4" />
-                            View
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            View Contract
                           </a>
                         ) : (
-                          <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-400">
-                            <Eye className="h-4 w-4" />
-                            View
-                          </span>
+                          <span className="text-xs text-slate-400">No preview</span>
                         )}
-                      </td>
-                      <td className="px-5 py-5 text-sm font-medium text-slate-600">
-                        {row.isActive ? "Active" : "Inactive"}
                       </td>
                     </tr>
                   ))

@@ -121,6 +121,18 @@ query GetEmployeeBenefits($employeeId: String!) {
   }
 }
 
+query GetContractsForBenefit($benefitId: String!) {
+  contracts(benefitId: $benefitId) {
+    id
+    version
+    isActive
+    viewUrl
+    vendorName
+    effectiveDate
+    expiryDate
+  }
+}
+
 query GetEligibilityRules($benefitId: String!) {
   eligibilityRules(benefitId: $benefitId) {
     id

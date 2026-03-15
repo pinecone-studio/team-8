@@ -10,7 +10,7 @@ import {
   GetEmployeeBenefitsDocument,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
-import { isAdminEmployee, isHrAdmin } from "@/app/admin-panel/_lib/access";
+import { isHrAdmin } from "@/app/admin-panel/_lib/access";
 
 function StatusBadge({ passed, label }: { passed: boolean; label: string }) {
   if (passed) {
@@ -36,8 +36,8 @@ interface OverrideFormState {
 
 export default function EligibilityInspector() {
   const { employee: me } = useCurrentEmployee();
-  const isAdmin = isAdminEmployee(me);
-  const canOverride = isHrAdmin(me);
+  const isHr = isHrAdmin(me);
+  const canOverride = isHr;
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [overrideTarget, setOverrideTarget] = useState<OverrideFormState | null>(null);
@@ -48,13 +48,13 @@ export default function EligibilityInspector() {
   const [overrideSuccess, setOverrideSuccess] = useState(false);
 
   const { data: employeesData, loading: employeesLoading } = useGetEmployeesQuery({
-    skip: !isAdmin,
+    skip: !isHr,
   });
 
   const { data: eligibilityData, loading: eligibilityLoading } =
     useGetEmployeeBenefitsQuery({
       variables: { employeeId: selectedEmployeeId },
-      skip: !selectedEmployeeId || !isAdmin,
+      skip: !selectedEmployeeId || !isHr,
     });
 
   const [overrideEligibility, { loading: overriding }] = useOverrideEligibilityMutation({
@@ -78,10 +78,13 @@ export default function EligibilityInspector() {
   const selectedEmployee = employees.find((e) => e.id === selectedEmployeeId);
   const eligibilities = eligibilityData?.getEmployeeBenefits ?? [];
 
-  if (!isAdmin) {
+  if (!isHr) {
     return (
       <main className="flex-1 px-8 py-9">
-        <p className="text-gray-500">Admin access required.</p>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-6 py-8 text-center max-w-md">
+          <p className="text-sm font-semibold text-amber-800">HR access required</p>
+          <p className="mt-1 text-xs text-amber-700">The Eligibility Inspector is restricted to HR administrators.</p>
+        </div>
       </main>
     );
   }

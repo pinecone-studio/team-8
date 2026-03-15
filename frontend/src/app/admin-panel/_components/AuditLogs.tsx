@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { X } from "lucide-react";
 import { useGetAuditLogsQuery } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
-import { isAdminEmployee } from "@/app/admin-panel/_lib/access";
+import { isHrAdmin } from "@/app/admin-panel/_lib/access";
 import PageLoading from "@/app/_components/PageLoading";
 
 const ACTION_TYPE_OPTIONS = [
@@ -41,19 +42,204 @@ const ACTION_TONE: Record<string, string> = {
 
 function formatDate(iso: string) {
   try {
-    return new Date(iso).toLocaleString();
+    return new Date(iso).toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
   } catch {
     return iso;
   }
 }
 
+function formatRole(role: string) {
+  return role
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function tryParseJson(raw: string | null | undefined): unknown {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+}
+
+function JsonBlock({ label, value }: { label: string; value: unknown }) {
+  if (!value) return null;
+  const text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+  return (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+      <pre className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap break-all rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] leading-relaxed text-slate-600">
+        {text}
+      </pre>
+    </div>
+  );
+}
+
+function IdRow({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null;
+  return (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-0.5 break-all font-mono text-xs text-slate-600">{value}</p>
+    </div>
+  );
+}
+
+type AuditLog = {
+  id: string;
+  actorEmployeeId?: string | null;
+  actorRole: string;
+  actionType: string;
+  entityType: string;
+  entityId: string;
+  targetEmployeeId?: string | null;
+  benefitId?: string | null;
+  requestId?: string | null;
+  contractId?: string | null;
+  reason?: string | null;
+  beforeJson?: string | null;
+  afterJson?: string | null;
+  metadataJson?: string | null;
+  ipAddress?: string | null;
+  createdAt: string;
+};
+
+function DetailPanel({ log, onClose }: { log: AuditLog; onClose: () => void }) {
+  const before = useMemo(() => tryParseJson(log.beforeJson), [log.beforeJson]);
+  const after = useMemo(() => tryParseJson(log.afterJson), [log.afterJson]);
+  const meta = useMemo(() => tryParseJson(log.metadataJson), [log.metadataJson]);
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/20"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      {/* Panel */}
+      <div className="fixed inset-y-0 right-0 z-50 flex w-[420px] flex-col border-l border-slate-200 bg-white shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">Audit Log Detail</h2>
+            <p className="mt-0.5 text-xs text-slate-400">{formatDate(log.createdAt)}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+          {/* Action */}
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Action</p>
+            <span
+              className={`mt-1.5 inline-flex rounded px-2.5 py-1 text-xs font-semibold ${
+                ACTION_TONE[log.actionType] ?? "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {log.actionType}
+            </span>
+          </div>
+
+          {/* Actor */}
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Actor</p>
+            <p className="mt-0.5 text-sm font-medium text-slate-700">{formatRole(log.actorRole)}</p>
+            {log.actorEmployeeId && (
+              <p className="mt-0.5 break-all font-mono text-[11px] text-slate-400">{log.actorEmployeeId}</p>
+            )}
+          </div>
+
+          {/* Entity */}
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Entity</p>
+            <p className="mt-0.5 text-sm font-medium text-slate-700">{log.entityType}</p>
+            <p className="mt-0.5 break-all font-mono text-[11px] text-slate-400">{log.entityId}</p>
+          </div>
+
+          <IdRow label="Target Employee" value={log.targetEmployeeId} />
+          <IdRow label="Benefit" value={log.benefitId} />
+          <IdRow label="Request" value={log.requestId} />
+          <IdRow label="Contract" value={log.contractId} />
+
+          {/* Reason */}
+          {log.reason && (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Reason</p>
+              <p className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                {log.reason}
+              </p>
+            </div>
+          )}
+
+          {/* Before / After */}
+          {!!(before || after) && (
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Changes</p>
+              {!!before && (
+                <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2">
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-red-500">Before</p>
+                  <pre className="max-h-32 overflow-y-auto whitespace-pre-wrap break-all text-[11px] text-red-700">
+                    {typeof before === "string" ? before : JSON.stringify(before, null, 2)}
+                  </pre>
+                </div>
+              )}
+              {!!after && (
+                <div className="rounded-lg border border-green-100 bg-green-50 px-3 py-2">
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-green-600">After</p>
+                  <pre className="max-h-32 overflow-y-auto whitespace-pre-wrap break-all text-[11px] text-green-700">
+                    {typeof after === "string" ? after : JSON.stringify(after, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
+
+          <JsonBlock label="Metadata" value={meta} />
+
+          {/* IP */}
+          {log.ipAddress && (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">IP Address</p>
+              <p className="mt-0.5 font-mono text-xs text-slate-500">{log.ipAddress}</p>
+            </div>
+          )}
+
+          {/* Raw ID */}
+          <div className="border-t border-slate-100 pt-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Log ID</p>
+            <p className="mt-0.5 break-all font-mono text-[11px] text-slate-400">{log.id}</p>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function AuditLogs() {
   const { employee: me } = useCurrentEmployee();
-  const isAdmin = isAdminEmployee(me);
+  const isHr = isHrAdmin(me);
 
   const [actionType, setActionType] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
   const { data, loading } = useGetAuditLogsQuery({
     variables: {
@@ -62,109 +248,147 @@ export default function AuditLogs() {
       toDate: toDate || null,
       limit: 200,
     },
-    skip: !isAdmin,
+    skip: !isHr,
   });
 
-  if (!isAdmin) {
+  if (!isHr) {
     return (
       <main className="flex-1 px-8 py-9">
-        <p className="text-gray-500">Admin access required.</p>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-6 py-8 text-center max-w-md">
+          <p className="text-sm font-semibold text-amber-800">HR access required</p>
+          <p className="mt-1 text-xs text-amber-700">Audit Logs are restricted to HR administrators.</p>
+        </div>
       </main>
     );
   }
 
-  const logs = data?.auditLogs ?? [];
+  const logs = (data?.auditLogs ?? []) as AuditLog[];
 
   return (
-    <main className="flex-1 px-8 py-9">
-      <section className="mx-auto max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-xl font-semibold text-gray-900">Audit Logs</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            System activity and change history
-          </p>
-        </div>
+    <>
+      {selectedLog && (
+        <DetailPanel log={selectedLog} onClose={() => setSelectedLog(null)} />
+      )}
 
-        {/* Filters */}
-        <div className="mb-6 flex flex-wrap gap-3">
-          <select
-            value={actionType}
-            onChange={(e) => setActionType(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700"
-          >
-            {ACTION_TYPE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <input
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            placeholder="From date"
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700"
-          />
-          <input
-            type="date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            placeholder="To date"
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700"
-          />
-        </div>
-
-        {loading ? (
-          <PageLoading inline message="Loading audit logs…" />
-        ) : logs.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white px-8 py-16 text-center text-sm text-slate-500">
-            No audit log entries found.
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="px-5 py-3">Time</th>
-                    <th className="px-5 py-3">Action</th>
-                    <th className="px-5 py-3">Actor Role</th>
-                    <th className="px-5 py-3">Entity</th>
-                    <th className="px-5 py-3">Reason</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map((log) => (
-                    <tr
-                      key={log.id}
-                      className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50"
-                    >
-                      <td className="whitespace-nowrap px-5 py-3 text-slate-500">
-                        {formatDate(log.createdAt)}
-                      </td>
-                      <td className="px-5 py-3">
-                        <span
-                          className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
-                            ACTION_TONE[log.actionType] ?? "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {log.actionType}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-slate-700">{log.actorRole}</td>
-                      <td className="px-5 py-3 text-slate-700">
-                        <span className="font-mono text-xs">{log.entityType}</span>
-                        <span className="ml-1 text-slate-400">{log.entityId.slice(0, 8)}…</span>
-                      </td>
-                      <td className="px-5 py-3 text-slate-500">{log.reason ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      <main className="flex-1 px-8 py-9">
+        <section className="mx-auto max-w-7xl">
+          <div className="mb-8 flex items-end justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">Audit Logs</h1>
+              <p className="mt-1 text-sm text-gray-500">System activity and change history</p>
             </div>
+            {logs.length > 0 && (
+              <p className="text-xs text-slate-400">{logs.length} entries</p>
+            )}
           </div>
-        )}
-      </section>
-    </main>
+
+          {/* Filters */}
+          <div className="mb-6 flex flex-wrap gap-3">
+            <select
+              value={actionType}
+              onChange={(e) => setActionType(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm"
+            >
+              {ACTION_TYPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm"
+            />
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm"
+            />
+            {(actionType || fromDate || toDate) && (
+              <button
+                type="button"
+                onClick={() => { setActionType(""); setFromDate(""); setToDate(""); }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-500 shadow-sm transition hover:bg-slate-50"
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear
+              </button>
+            )}
+          </div>
+
+          {loading ? (
+            <PageLoading inline message="Loading audit logs…" />
+          ) : logs.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white px-8 py-16 text-center">
+              <p className="text-sm font-medium text-slate-600">No audit log entries found</p>
+              <p className="mt-1 text-xs text-slate-400">
+                {actionType || fromDate || toDate
+                  ? "Try adjusting the filters above."
+                  : "System activity will appear here as actions are taken."}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-5 py-3">Time</th>
+                      <th className="px-5 py-3">Action</th>
+                      <th className="px-5 py-3">Actor</th>
+                      <th className="px-5 py-3">Entity</th>
+                      <th className="px-5 py-3">Reason</th>
+                      <th className="px-5 py-3 w-20" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logs.map((log) => (
+                      <tr
+                        key={log.id}
+                        className={`border-b border-slate-100 last:border-b-0 cursor-pointer transition-colors hover:bg-slate-50 ${
+                          selectedLog?.id === log.id ? "bg-blue-50/40" : ""
+                        }`}
+                        onClick={() => setSelectedLog(log)}
+                      >
+                        <td className="whitespace-nowrap px-5 py-3 text-slate-500">
+                          {formatDate(log.createdAt)}
+                        </td>
+                        <td className="px-5 py-3">
+                          <span
+                            className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
+                              ACTION_TONE[log.actionType] ?? "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            {log.actionType}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-slate-700">{formatRole(log.actorRole)}</td>
+                        <td className="px-5 py-3 text-slate-700">
+                          <span className="font-medium">{log.entityType}</span>
+                          <span className="ml-1.5 font-mono text-xs text-slate-400">
+                            {log.entityId.slice(0, 8)}…
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 max-w-[180px] truncate text-slate-500">
+                          {log.reason ?? "—"}
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <span className="text-xs font-medium text-blue-500 hover:underline">
+                            Details →
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
+      </main>
+    </>
   );
 }

@@ -625,6 +625,13 @@ export type GetEmployeeBenefitsQueryVariables = Exact<{
 
 export type GetEmployeeBenefitsQuery = { __typename?: 'Query', getEmployeeBenefits: Array<{ __typename?: 'BenefitEligibility', benefitId: string, status: BenefitEligibilityStatus, overrideStatus?: string | null, overrideBy?: string | null, overrideReason?: string | null, overrideExpiresAt?: string | null, benefit: { __typename?: 'Benefit', id: string, name: string, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string }, ruleEvaluation: Array<{ __typename?: 'RuleEvaluation', ruleType: string, passed: boolean, reason: string }>, failedRule?: { __typename?: 'FailedRule', ruleType: string, errorMessage: string } | null }> };
 
+export type GetContractsForBenefitQueryVariables = Exact<{
+  benefitId: Scalars['String']['input'];
+}>;
+
+
+export type GetContractsForBenefitQuery = { __typename?: 'Query', contracts: Array<{ __typename?: 'Contract', id: string, version: string, isActive: boolean, viewUrl?: string | null, vendorName: string, effectiveDate: string, expiryDate: string }> };
+
 export type GetEligibilityRulesQueryVariables = Exact<{
   benefitId: Scalars['String']['input'];
 }>;
@@ -1791,6 +1798,55 @@ export type GetEmployeeBenefitsQueryHookResult = ReturnType<typeof useGetEmploye
 export type GetEmployeeBenefitsLazyQueryHookResult = ReturnType<typeof useGetEmployeeBenefitsLazyQuery>;
 export type GetEmployeeBenefitsSuspenseQueryHookResult = ReturnType<typeof useGetEmployeeBenefitsSuspenseQuery>;
 export type GetEmployeeBenefitsQueryResult = Apollo.QueryResult<GetEmployeeBenefitsQuery, GetEmployeeBenefitsQueryVariables>;
+export const GetContractsForBenefitDocument = gql`
+    query GetContractsForBenefit($benefitId: String!) {
+  contracts(benefitId: $benefitId) {
+    id
+    version
+    isActive
+    viewUrl
+    vendorName
+    effectiveDate
+    expiryDate
+  }
+}
+    `;
+
+/**
+ * __useGetContractsForBenefitQuery__
+ *
+ * To run a query within a React component, call `useGetContractsForBenefitQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetContractsForBenefitQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetContractsForBenefitQuery({
+ *   variables: {
+ *      benefitId: // value for 'benefitId'
+ *   },
+ * });
+ */
+export function useGetContractsForBenefitQuery(baseOptions: Apollo.QueryHookOptions<GetContractsForBenefitQuery, GetContractsForBenefitQueryVariables> & ({ variables: GetContractsForBenefitQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetContractsForBenefitQuery, GetContractsForBenefitQueryVariables>(GetContractsForBenefitDocument, options);
+      }
+export function useGetContractsForBenefitLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetContractsForBenefitQuery, GetContractsForBenefitQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetContractsForBenefitQuery, GetContractsForBenefitQueryVariables>(GetContractsForBenefitDocument, options);
+        }
+// @ts-ignore
+export function useGetContractsForBenefitSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetContractsForBenefitQuery, GetContractsForBenefitQueryVariables>): Apollo.UseSuspenseQueryResult<GetContractsForBenefitQuery, GetContractsForBenefitQueryVariables>;
+export function useGetContractsForBenefitSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetContractsForBenefitQuery, GetContractsForBenefitQueryVariables>): Apollo.UseSuspenseQueryResult<GetContractsForBenefitQuery | undefined, GetContractsForBenefitQueryVariables>;
+export function useGetContractsForBenefitSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetContractsForBenefitQuery, GetContractsForBenefitQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetContractsForBenefitQuery, GetContractsForBenefitQueryVariables>(GetContractsForBenefitDocument, options);
+        }
+export type GetContractsForBenefitQueryHookResult = ReturnType<typeof useGetContractsForBenefitQuery>;
+export type GetContractsForBenefitLazyQueryHookResult = ReturnType<typeof useGetContractsForBenefitLazyQuery>;
+export type GetContractsForBenefitSuspenseQueryHookResult = ReturnType<typeof useGetContractsForBenefitSuspenseQuery>;
+export type GetContractsForBenefitQueryResult = Apollo.QueryResult<GetContractsForBenefitQuery, GetContractsForBenefitQueryVariables>;
 export const GetEligibilityRulesDocument = gql`
     query GetEligibilityRules($benefitId: String!) {
   eligibilityRules(benefitId: $benefitId) {
