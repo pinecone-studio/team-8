@@ -3,6 +3,7 @@ import { schema } from "../../../db";
 import type { GraphQLContext } from "../../context";
 import { requireHrAdmin } from "../../../auth";
 import { writeAuditLog } from "../helpers/audit";
+import { suspendActiveEnrollments, reactivateSuspendedEnrollments } from "../helpers/suspendEnrollments";
 import { getBenefitsForEmployee } from "../helpers/employeeBenefits";
 
 const VALID_OVERRIDE_STATUSES = new Set(["eligible", "active", "locked"]);
@@ -133,6 +134,15 @@ export const overrideEligibility = async (
       overrideExpiresAt: expiresAt ?? null,
     },
   });
+
+  // When overriding to locked → suspend any active enrollments for this employee+benefit.
+  // When overriding to eligible/active → reactivate any previously suspended enrollments.
+  // This gives HR a clear and symmetric recovery path via the same Eligibility Inspector action.
+  if (normalizedStatus === "locked") {
+    await suspendActiveEnrollments(db, admin, employeeId, benefitId, reason.trim());
+  } else if (normalizedStatus === "eligible" || normalizedStatus === "active") {
+    await reactivateSuspendedEnrollments(db, admin, employeeId, benefitId, reason.trim());
+  }
 
   // Return the updated eligibility in BenefitEligibility shape
   const eligibilities = await getBenefitsForEmployee(db, employeeId);

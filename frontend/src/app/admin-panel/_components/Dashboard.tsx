@@ -199,6 +199,41 @@ export default function Dashboard() {
               <StatCard label="Locked Benefits"   value={summary?.lockedBenefits ?? 0}  icon={Lock}       iconColor="text-slate-400"   loading={isLoading} />
             </div>
 
+            {/* Contract health + suspension alerts (HR only) */}
+            {isHr && (
+              <div className="mt-6">
+                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                  Contract Health &amp; Enrollment Alerts
+                </h2>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <QueueCard
+                    label="Contracts Expiring Soon"
+                    count={summary?.contractsExpiringSoon ?? 0}
+                    href="/admin-panel/vendor-contracts"
+                    tone="amber"
+                    hint="Active contracts expiring within 30 days"
+                    loading={isLoading}
+                  />
+                  <QueueCard
+                    label="Missing Active Contracts"
+                    count={summary?.benefitsMissingContracts ?? 0}
+                    href="/admin-panel/vendor-contracts"
+                    tone="amber"
+                    hint="Benefits that need a contract uploaded"
+                    loading={isLoading}
+                  />
+                  <QueueCard
+                    label="Suspended Enrollments"
+                    count={summary?.suspendedEnrollments ?? 0}
+                    href="/admin-panel/eligibility-inspector"
+                    tone="amber"
+                    hint="Enrollments suspended pending re-evaluation"
+                    loading={isLoading}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Action queue cards */}
             <div className="mt-6">
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">

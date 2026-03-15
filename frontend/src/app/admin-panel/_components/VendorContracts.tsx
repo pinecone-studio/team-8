@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { gql, useQuery } from "@apollo/client";
 import { useAuth } from "@clerk/nextjs";
-import { CheckCircle2, ExternalLink, Upload, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, ExternalLink, Upload, X } from "lucide-react";
 import PageLoading from "@/app/_components/PageLoading";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
@@ -29,6 +29,7 @@ const GET_BENEFITS = gql`
     benefits {
       id
       name
+      requiresContract
       vendorName
     }
   }
@@ -46,12 +47,70 @@ type ContractRow = {
   viewUrl?: string | null;
 };
 
+type Benefit = {
+  id: string;
+  name: string;
+  requiresContract: boolean;
+  vendorName?: string | null;
+};
+
 function getUploadUrl(): string {
   const base =
     typeof process !== "undefined" && process.env?.NEXT_PUBLIC_GRAPHQL_URL
       ? process.env.NEXT_PUBLIC_GRAPHQL_URL
       : "https://team8-api.team8pinequest.workers.dev/";
   return base.replace(/\/$/, "") + "/api/contracts/upload";
+}
+
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+function getExpiryStatus(contract: ContractRow): "active" | "expiring_soon" | "expired" | "inactive" {
+  if (!contract.isActive) return "inactive";
+  const expiryMs = new Date(contract.expiryDate).getTime();
+  const now = Date.now();
+  if (expiryMs < now) return "expired";
+  if (expiryMs - now <= THIRTY_DAYS_MS) return "expiring_soon";
+  return "active";
+}
+
+function daysUntil(dateStr: string): number {
+  return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+}
+
+function ExpiryBadge({ contract }: { contract: ContractRow }) {
+  const status = getExpiryStatus(contract);
+  if (status === "inactive") return null;
+
+  if (status === "expired") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-red-100 text-red-700">
+        <Clock className="h-2.5 w-2.5" />
+        Expired
+      </span>
+    );
+  }
+  if (status === "expiring_soon") {
+    const days = daysUntil(contract.expiryDate);
+    return (
+      <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700">
+        <AlertTriangle className="h-2.5 w-2.5" />
+        Expires in {days}d
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-700">
+      Active
+    </span>
+  );
+}
+
+function rowStyle(contract: ContractRow) {
+  const status = getExpiryStatus(contract);
+  if (status === "expired") return "border-red-100 bg-red-50/30 hover:bg-red-50/60";
+  if (status === "expiring_soon") return "border-amber-100 bg-amber-50/30 hover:bg-amber-50/60";
+  if (status === "active") return "border-emerald-100 bg-emerald-50/40 hover:bg-emerald-50/70";
+  return "border-slate-200 hover:bg-slate-50/60";
 }
 
 export default function VendorContracts() {
@@ -71,9 +130,9 @@ export default function VendorContracts() {
   const [file, setFile] = useState<File | null>(null);
 
   const { data, loading, error, refetch } = useQuery<{ contracts: ContractRow[] }>(GET_CONTRACTS, { skip: !isHr });
-  const { data: benefitsData, loading: benefitsLoading } = useQuery<{ benefits: { id: string; name: string; vendorName?: string | null }[] }>(GET_BENEFITS, { skip: !isHr });
+  const { data: benefitsData, loading: benefitsLoading } = useQuery<{ benefits: Benefit[] }>(GET_BENEFITS, { skip: !isHr });
   const contracts = data?.contracts ?? [];
-  const benefits = benefitsData?.benefits ?? [];
+  const allBenefits = benefitsData?.benefits ?? [];
 
   const openModal = useCallback(() => {
     setModalOpen(true);
@@ -133,6 +192,12 @@ export default function VendorContracts() {
     );
   }
 
+  // Compute missing contracts: requiresContract benefits with no active contract
+  const activeContractBenefitIds = new Set(contracts.filter((c) => c.isActive).map((c) => c.benefitId));
+  const missingContractBenefits = allBenefits.filter(
+    (b) => b.requiresContract && !activeContractBenefitIds.has(b.id)
+  );
+
   return (
     <main className="flex-1 px-8 py-9">
       <section className="mx-auto max-w-7xl">
@@ -156,6 +221,30 @@ export default function VendorContracts() {
           </button>
         </div>
 
+        {/* Missing contracts warning */}
+        {!benefitsLoading && missingContractBenefits.length > 0 && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">
+                  {missingContractBenefits.length} benefit{missingContractBenefits.length > 1 ? "s" : ""} missing active contracts
+                </p>
+                <p className="mt-0.5 text-xs text-amber-700">
+                  These benefits require a vendor contract but have none active. Employee requests will be blocked until a contract is uploaded.
+                </p>
+                <ul className="mt-2 space-y-0.5">
+                  {missingContractBenefits.map((b) => (
+                    <li key={b.id} className="text-xs font-medium text-amber-800">
+                      · {b.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Upload modal */}
         {modalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -176,7 +265,7 @@ export default function VendorContracts() {
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-70"
                   >
                     <option value="">{benefitsLoading ? "Loading benefits..." : "Select benefit"}</option>
-                    {benefits.map((b) => (
+                    {allBenefits.map((b) => (
                       <option key={b.id} value={b.id}>{b.name}</option>
                     ))}
                   </select>
@@ -250,31 +339,26 @@ export default function VendorContracts() {
                   <th className="px-5 py-3">Version</th>
                   <th className="px-5 py-3">Effective</th>
                   <th className="px-5 py-3">Expires</th>
-                  <th className="px-5 py-3" colSpan={2}>Contract</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3" />
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-8">
+                    <td colSpan={7} className="px-5 py-8">
                       <PageLoading inline message="Loading contracts..." className="text-slate-500" />
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td
-                      colSpan={6}
-                      className="px-5 py-6 text-sm text-rose-600"
-                    >
+                    <td colSpan={7} className="px-5 py-6 text-sm text-rose-600">
                       Failed to load contracts. Please try again.
                     </td>
                   </tr>
                 ) : contracts.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={6}
-                      className="px-5 py-6 text-sm text-slate-500"
-                    >
+                    <td colSpan={7} className="px-5 py-6 text-sm text-slate-500">
                       No contracts found.
                     </td>
                   </tr>
@@ -282,11 +366,7 @@ export default function VendorContracts() {
                   contracts.map((row) => (
                     <tr
                       key={row.id}
-                      className={`border-b last:border-b-0 transition-colors ${
-                        row.isActive
-                          ? "border-emerald-100 bg-emerald-50/40 hover:bg-emerald-50/70"
-                          : "border-slate-200 hover:bg-slate-50/60"
-                      }`}
+                      className={`border-b last:border-b-0 transition-colors ${rowStyle(row)}`}
                     >
                       <td className="px-5 py-4 text-sm font-medium text-slate-900">
                         <div className="flex items-center gap-2">
@@ -300,20 +380,13 @@ export default function VendorContracts() {
                         {row.vendorName}
                       </td>
                       <td className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                            row.isActive
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-slate-100 text-slate-500"
-                          }`}>
-                            v{row.version}
-                          </span>
-                          {row.isActive && (
-                            <span className="inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-emerald-500 text-white">
-                              Active
-                            </span>
-                          )}
-                        </div>
+                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                          row.isActive
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-slate-100 text-slate-500"
+                        }`}>
+                          v{row.version}
+                        </span>
                       </td>
                       <td className="px-5 py-4 text-sm text-slate-500">
                         {row.effectiveDate}
@@ -321,7 +394,10 @@ export default function VendorContracts() {
                       <td className="px-5 py-4 text-sm text-slate-500">
                         {row.expiryDate}
                       </td>
-                      <td className="px-5 py-4" colSpan={2}>
+                      <td className="px-5 py-4">
+                        <ExpiryBadge contract={row} />
+                      </td>
+                      <td className="px-5 py-4">
                         {row.viewUrl ? (
                           <a
                             href={row.viewUrl}
@@ -334,7 +410,7 @@ export default function VendorContracts() {
                             }`}
                           >
                             <ExternalLink className="h-3.5 w-3.5" />
-                            View Contract
+                            View
                           </a>
                         ) : (
                           <span className="text-xs text-slate-400">No preview</span>

@@ -122,3 +122,37 @@ mutation OverrideEligibility($input: OverrideEligibilityInput!) {
     overrideExpiresAt
   }
 }
+
+mutation ProposeRuleChange($input: ProposeRuleChangeInput!) {
+  proposeRuleChange(input: $input) {
+    id
+    benefitId
+    ruleId
+    changeType
+    proposedData
+    summary
+    status
+    proposedByEmployeeId
+    proposedAt
+  }
+}
+
+mutation ApproveRuleProposal($id: String!, $reason: String) {
+  approveRuleProposal(id: $id, reason: $reason) {
+    id
+    status
+    reviewedByEmployeeId
+    reviewedAt
+    reason
+  }
+}
+
+mutation RejectRuleProposal($id: String!, $reason: String!) {
+  rejectRuleProposal(id: $id, reason: $reason) {
+    id
+    status
+    reviewedByEmployeeId
+    reviewedAt
+    reason
+  }
+}

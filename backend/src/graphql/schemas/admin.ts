@@ -17,6 +17,19 @@ export const adminTypeDefs = gql`
     financeQueueCount: Int!
     awaitingContractCount: Int!
     approvedThisWeekCount: Int!
+    contractsExpiringSoon: Int!
+    benefitsMissingContracts: Int!
+    suspendedEnrollments: Int!
+  }
+
+  type Notification {
+    id: String!
+    type: String!
+    title: String!
+    body: String!
+    linkPath: String
+    createdAt: String!
+    isRead: Boolean!
   }
 
   type AuditLog {
@@ -66,8 +79,13 @@ export const adminTypeDefs = gql`
     updatedAt: String!
   }
 
+  extend type Mutation {
+    markNotificationsRead(keys: [String!]!): Boolean!
+  }
+
   extend type Query {
     adminDashboardSummary: AdminDashboardSummary!
+    notifications: [Notification!]!
     auditLogs(
       employeeId: String
       benefitId: String

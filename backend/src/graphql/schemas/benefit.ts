@@ -93,6 +93,21 @@ export const benefitTypeDefs = gql`
     isActive: Boolean!
   }
 
+  type RuleProposal {
+    id: String!
+    benefitId: String!
+    ruleId: String
+    changeType: String!
+    proposedData: String!
+    summary: String!
+    status: String!
+    proposedByEmployeeId: String!
+    reviewedByEmployeeId: String
+    proposedAt: String!
+    reviewedAt: String
+    reason: String
+  }
+
   extend type Query {
     benefits(category: String): [Benefit!]!
     adminBenefits: [Benefit!]!
@@ -102,6 +117,7 @@ export const benefitTypeDefs = gql`
     allBenefitRequests(status: String, queue: String): [BenefitRequest!]!
     contracts(benefitId: String): [Contract!]!
     eligibilityRules(benefitId: String!): [EligibilityRule!]!
+    ruleProposals(benefitId: String, status: String): [RuleProposal!]!
   }
 
   input CreateBenefitInput {
@@ -145,6 +161,14 @@ export const benefitTypeDefs = gql`
     expiresAt: String
   }
 
+  input ProposeRuleChangeInput {
+    benefitId: String!
+    ruleId: String
+    changeType: String!
+    proposedData: String!
+    summary: String!
+  }
+
   extend type Mutation {
     createBenefit(input: CreateBenefitInput!): Benefit!
     deleteBenefit(id: String!): Boolean!
@@ -157,5 +181,8 @@ export const benefitTypeDefs = gql`
     createEligibilityRule(input: CreateEligibilityRuleInput!): EligibilityRule!
     updateEligibilityRule(id: String!, input: UpdateEligibilityRuleInput!): EligibilityRule!
     deleteEligibilityRule(id: String!): Boolean!
+    proposeRuleChange(input: ProposeRuleChangeInput!): RuleProposal!
+    approveRuleProposal(id: String!, reason: String): RuleProposal!
+    rejectRuleProposal(id: String!, reason: String!): RuleProposal!
   }
 `;

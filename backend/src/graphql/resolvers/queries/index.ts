@@ -15,6 +15,8 @@ import { getAuditLogs } from "./getAuditLogs";
 import { getContractAcceptances } from "./getContractAcceptances";
 import { getEnrollments } from "./getEnrollments";
 import { getDepartments } from "./getDepartments";
+import { getNotifications } from "./getNotifications";
+import { getRuleProposals } from "./getRuleProposals";
 
 export const queries = {
   adminDashboardSummary: getAdminDashboardSummary,
@@ -34,4 +36,6 @@ export const queries = {
   contractAcceptances: getContractAcceptances,
   enrollments: getEnrollments,
   getDepartments,
+  notifications: getNotifications,
+  ruleProposals: getRuleProposals,
 };

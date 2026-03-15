@@ -75,12 +75,12 @@ export const getAdminDashboardSummary = async (
     throw new Error("Not authorized to view admin dashboard.");
   }
 
-  const [employees, benefits, enrollmentRows, eligibilityRows, requestRows] = await Promise.all([
+  const [employees, benefits, enrollmentRows, eligibilityRows, requestRows, contractRows] = await Promise.all([
     db
       .select({ employmentStatus: schema.employees.employmentStatus })
       .from(schema.employees),
     db
-      .select({ id: schema.benefits.id, category: schema.benefits.category })
+      .select({ id: schema.benefits.id, category: schema.benefits.category, requiresContract: schema.benefits.requiresContract })
       .from(schema.benefits)
       .where(eq(schema.benefits.isActive, true)),
     // Canonical source for active enrollments (activeBenefits + usageByCategory)
@@ -107,13 +107,40 @@ export const getAdminDashboardSummary = async (
         updatedAt: schema.benefitRequests.updatedAt,
       })
       .from(schema.benefitRequests),
+    db
+      .select({
+        id: schema.contracts.id,
+        benefitId: schema.contracts.benefitId,
+        isActive: schema.contracts.isActive,
+        expiryDate: schema.contracts.expiryDate,
+      })
+      .from(schema.contracts),
   ]);
 
   const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const benefitCategoryById = new Map(
     benefits.map((benefit) => [benefit.id, formatCategoryLabel(benefit.category)])
   );
+
+  // ── Contract health metrics ────────────────────────────────────────────────
+  const activeContracts = contractRows.filter((c) => c.isActive);
+  const activeContractBenefitIds = new Set(activeContracts.map((c) => c.benefitId));
+
+  const contractsExpiringSoon = activeContracts.filter((c) => {
+    if (!c.expiryDate) return false;
+    return c.expiryDate >= new Date().toISOString() && c.expiryDate <= thirtyDaysFromNow;
+  }).length;
+
+  const benefitsMissingContracts = benefits.filter(
+    (b) => b.requiresContract && !activeContractBenefitIds.has(b.id)
+  ).length;
+
+  // ── Suspended enrollments ─────────────────────────────────────────────────
+  const suspendedEnrollments = enrollmentRows.filter(
+    (row) => normalizeStatus(row.status) === "suspended"
+  ).length;
 
   // ── Active enrollments (canonical) ────────────────────────────────────────
   const usageByCategory = new Map<string, number>();
@@ -180,5 +207,8 @@ export const getAdminDashboardSummary = async (
         !!row.updatedAt &&
         row.updatedAt >= oneWeekAgo
     ).length,
+    contractsExpiringSoon,
+    benefitsMissingContracts,
+    suspendedEnrollments,
   };
 };

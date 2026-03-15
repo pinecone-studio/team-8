@@ -30,11 +30,14 @@ export type AdminDashboardSummary = {
   activeBenefits: Scalars['Int']['output'];
   approvedThisWeekCount: Scalars['Int']['output'];
   awaitingContractCount: Scalars['Int']['output'];
+  benefitsMissingContracts: Scalars['Int']['output'];
+  contractsExpiringSoon: Scalars['Int']['output'];
   financeQueueCount: Scalars['Int']['output'];
   hrQueueCount: Scalars['Int']['output'];
   lockReasons: Array<AdminDashboardBucket>;
   lockedBenefits: Scalars['Int']['output'];
   pendingRequests: Scalars['Int']['output'];
+  suspendedEnrollments: Scalars['Int']['output'];
   totalEmployees: Scalars['Int']['output'];
   usageByCategory: Array<AdminDashboardBucket>;
 };
@@ -242,6 +245,7 @@ export type FailedRule = {
 export type Mutation = {
   __typename?: 'Mutation';
   approveBenefitRequest: BenefitRequest;
+  approveRuleProposal: RuleProposal;
   cancelBenefitRequest: BenefitRequest;
   confirmBenefitRequest: BenefitRequest;
   createBenefit: Benefit;
@@ -251,7 +255,10 @@ export type Mutation = {
   deleteBenefit: Scalars['Boolean']['output'];
   deleteEligibilityRule: Scalars['Boolean']['output'];
   deleteEmployee: Scalars['Boolean']['output'];
+  markNotificationsRead: Scalars['Boolean']['output'];
   overrideEligibility: BenefitEligibility;
+  proposeRuleChange: RuleProposal;
+  rejectRuleProposal: RuleProposal;
   requestBenefit: BenefitRequest;
   updateEligibilityRule: EligibilityRule;
   updateEmployee?: Maybe<Employee>;
@@ -260,6 +267,12 @@ export type Mutation = {
 
 export type MutationApproveBenefitRequestArgs = {
   requestId: Scalars['String']['input'];
+};
+
+
+export type MutationApproveRuleProposalArgs = {
+  id: Scalars['String']['input'];
+  reason?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -310,8 +323,24 @@ export type MutationDeleteEmployeeArgs = {
 };
 
 
+export type MutationMarkNotificationsReadArgs = {
+  keys: Array<Scalars['String']['input']>;
+};
+
+
 export type MutationOverrideEligibilityArgs = {
   input: OverrideEligibilityInput;
+};
+
+
+export type MutationProposeRuleChangeArgs = {
+  input: ProposeRuleChangeInput;
+};
+
+
+export type MutationRejectRuleProposalArgs = {
+  id: Scalars['String']['input'];
+  reason: Scalars['String']['input'];
 };
 
 
@@ -331,12 +360,31 @@ export type MutationUpdateEmployeeArgs = {
   input: UpdateEmployeeInput;
 };
 
+export type Notification = {
+  __typename?: 'Notification';
+  body: Scalars['String']['output'];
+  createdAt: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  isRead: Scalars['Boolean']['output'];
+  linkPath?: Maybe<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+};
+
 export type OverrideEligibilityInput = {
   benefitId: Scalars['String']['input'];
   employeeId: Scalars['String']['input'];
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   overrideStatus: Scalars['String']['input'];
   reason: Scalars['String']['input'];
+};
+
+export type ProposeRuleChangeInput = {
+  benefitId: Scalars['String']['input'];
+  changeType: Scalars['String']['input'];
+  proposedData: Scalars['String']['input'];
+  ruleId?: InputMaybe<Scalars['String']['input']>;
+  summary: Scalars['String']['input'];
 };
 
 export type Query = {
@@ -357,6 +405,8 @@ export type Query = {
   getEmployeeByEmail?: Maybe<Employee>;
   getEmployees: Array<Employee>;
   myBenefits: Array<BenefitEligibility>;
+  notifications: Array<Notification>;
+  ruleProposals: Array<RuleProposal>;
   session?: Maybe<Employee>;
 };
 
@@ -426,6 +476,12 @@ export type QueryGetEmployeesArgs = {
   search?: InputMaybe<Scalars['String']['input']>;
 };
 
+
+export type QueryRuleProposalsArgs = {
+  benefitId?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type RequestBenefitInput = {
   benefitId: Scalars['String']['input'];
   repaymentMonths?: InputMaybe<Scalars['Int']['input']>;
@@ -437,6 +493,22 @@ export type RuleEvaluation = {
   passed: Scalars['Boolean']['output'];
   reason: Scalars['String']['output'];
   ruleType: Scalars['String']['output'];
+};
+
+export type RuleProposal = {
+  __typename?: 'RuleProposal';
+  benefitId: Scalars['String']['output'];
+  changeType: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  proposedAt: Scalars['String']['output'];
+  proposedByEmployeeId: Scalars['String']['output'];
+  proposedData: Scalars['String']['output'];
+  reason?: Maybe<Scalars['String']['output']>;
+  reviewedAt?: Maybe<Scalars['String']['output']>;
+  reviewedByEmployeeId?: Maybe<Scalars['String']['output']>;
+  ruleId?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  summary: Scalars['String']['output'];
 };
 
 export type UpdateEligibilityRuleInput = {
@@ -556,10 +628,13 @@ export type ResolversTypes = ResolversObject<{
   FailedRule: ResolverTypeWrapper<FailedRule>;
   Int: ResolverTypeWrapper<Scalars['Int']['output']>;
   Mutation: ResolverTypeWrapper<{}>;
+  Notification: ResolverTypeWrapper<Notification>;
   OverrideEligibilityInput: OverrideEligibilityInput;
+  ProposeRuleChangeInput: ProposeRuleChangeInput;
   Query: ResolverTypeWrapper<{}>;
   RequestBenefitInput: RequestBenefitInput;
   RuleEvaluation: ResolverTypeWrapper<RuleEvaluation>;
+  RuleProposal: ResolverTypeWrapper<RuleProposal>;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
   UpdateEligibilityRuleInput: UpdateEligibilityRuleInput;
   UpdateEmployeeInput: UpdateEmployeeInput;
@@ -586,10 +661,13 @@ export type ResolversParentTypes = ResolversObject<{
   FailedRule: FailedRule;
   Int: Scalars['Int']['output'];
   Mutation: {};
+  Notification: Notification;
   OverrideEligibilityInput: OverrideEligibilityInput;
+  ProposeRuleChangeInput: ProposeRuleChangeInput;
   Query: {};
   RequestBenefitInput: RequestBenefitInput;
   RuleEvaluation: RuleEvaluation;
+  RuleProposal: RuleProposal;
   String: Scalars['String']['output'];
   UpdateEligibilityRuleInput: UpdateEligibilityRuleInput;
   UpdateEmployeeInput: UpdateEmployeeInput;
@@ -605,11 +683,14 @@ export type AdminDashboardSummaryResolvers<ContextType = GraphQLContext, ParentT
   activeBenefits?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   approvedThisWeekCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   awaitingContractCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  benefitsMissingContracts?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  contractsExpiringSoon?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   financeQueueCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   hrQueueCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   lockReasons?: Resolver<Array<ResolversTypes['AdminDashboardBucket']>, ParentType, ContextType>;
   lockedBenefits?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   pendingRequests?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  suspendedEnrollments?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   totalEmployees?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   usageByCategory?: Resolver<Array<ResolversTypes['AdminDashboardBucket']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
@@ -768,6 +849,7 @@ export type FailedRuleResolvers<ContextType = GraphQLContext, ParentType extends
 
 export type MutationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = ResolversObject<{
   approveBenefitRequest?: Resolver<ResolversTypes['BenefitRequest'], ParentType, ContextType, RequireFields<MutationApproveBenefitRequestArgs, 'requestId'>>;
+  approveRuleProposal?: Resolver<ResolversTypes['RuleProposal'], ParentType, ContextType, RequireFields<MutationApproveRuleProposalArgs, 'id'>>;
   cancelBenefitRequest?: Resolver<ResolversTypes['BenefitRequest'], ParentType, ContextType, RequireFields<MutationCancelBenefitRequestArgs, 'requestId'>>;
   confirmBenefitRequest?: Resolver<ResolversTypes['BenefitRequest'], ParentType, ContextType, RequireFields<MutationConfirmBenefitRequestArgs, 'contractAccepted' | 'requestId'>>;
   createBenefit?: Resolver<ResolversTypes['Benefit'], ParentType, ContextType, RequireFields<MutationCreateBenefitArgs, 'input'>>;
@@ -777,10 +859,24 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   deleteBenefit?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteBenefitArgs, 'id'>>;
   deleteEligibilityRule?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteEligibilityRuleArgs, 'id'>>;
   deleteEmployee?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteEmployeeArgs, 'id'>>;
+  markNotificationsRead?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationMarkNotificationsReadArgs, 'keys'>>;
   overrideEligibility?: Resolver<ResolversTypes['BenefitEligibility'], ParentType, ContextType, RequireFields<MutationOverrideEligibilityArgs, 'input'>>;
+  proposeRuleChange?: Resolver<ResolversTypes['RuleProposal'], ParentType, ContextType, RequireFields<MutationProposeRuleChangeArgs, 'input'>>;
+  rejectRuleProposal?: Resolver<ResolversTypes['RuleProposal'], ParentType, ContextType, RequireFields<MutationRejectRuleProposalArgs, 'id' | 'reason'>>;
   requestBenefit?: Resolver<ResolversTypes['BenefitRequest'], ParentType, ContextType, RequireFields<MutationRequestBenefitArgs, 'input'>>;
   updateEligibilityRule?: Resolver<ResolversTypes['EligibilityRule'], ParentType, ContextType, RequireFields<MutationUpdateEligibilityRuleArgs, 'id' | 'input'>>;
   updateEmployee?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<MutationUpdateEmployeeArgs, 'id' | 'input'>>;
+}>;
+
+export type NotificationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Notification'] = ResolversParentTypes['Notification']> = ResolversObject<{
+  body?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  isRead?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  linkPath?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  type?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = ResolversObject<{
@@ -800,6 +896,8 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   getEmployeeByEmail?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<QueryGetEmployeeByEmailArgs, 'email'>>;
   getEmployees?: Resolver<Array<ResolversTypes['Employee']>, ParentType, ContextType, Partial<QueryGetEmployeesArgs>>;
   myBenefits?: Resolver<Array<ResolversTypes['BenefitEligibility']>, ParentType, ContextType>;
+  notifications?: Resolver<Array<ResolversTypes['Notification']>, ParentType, ContextType>;
+  ruleProposals?: Resolver<Array<ResolversTypes['RuleProposal']>, ParentType, ContextType, Partial<QueryRuleProposalsArgs>>;
   session?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType>;
 }>;
 
@@ -807,6 +905,22 @@ export type RuleEvaluationResolvers<ContextType = GraphQLContext, ParentType ext
   passed?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   reason?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   ruleType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type RuleProposalResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['RuleProposal'] = ResolversParentTypes['RuleProposal']> = ResolversObject<{
+  benefitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  changeType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  proposedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  proposedByEmployeeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  proposedData?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  reason?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  reviewedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  reviewedByEmployeeId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  ruleId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  summary?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -825,7 +939,9 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   EmployeeBenefitEnrollment?: EmployeeBenefitEnrollmentResolvers<ContextType>;
   FailedRule?: FailedRuleResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
+  Notification?: NotificationResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   RuleEvaluation?: RuleEvaluationResolvers<ContextType>;
+  RuleProposal?: RuleProposalResolvers<ContextType>;
 }>;
 

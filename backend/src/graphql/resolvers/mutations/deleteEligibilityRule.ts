@@ -1,34 +1,19 @@
-import { eq } from "drizzle-orm";
-import { schema } from "../../../db";
 import type { GraphQLContext } from "../../context";
 import { requireHrAdmin } from "../../../auth";
-import { writeAuditLog } from "../helpers/audit";
 
+/**
+ * GOVERNANCE GATE — direct rule deletion is intentionally disabled.
+ *
+ * All eligibility rule changes require a formal proposal (proposeRuleChange)
+ * followed by a second HR admin's approval (approveRuleProposal).
+ */
 export const deleteEligibilityRule = async (
   _: unknown,
-  { id }: { id: string },
-  { db, currentEmployee }: GraphQLContext,
-) => {
+  __: unknown,
+  { currentEmployee }: GraphQLContext,
+): Promise<never> => {
   requireHrAdmin(currentEmployee);
-
-  const existing = await db
-    .select()
-    .from(schema.eligibilityRules)
-    .where(eq(schema.eligibilityRules.id, id));
-  const before = existing[0];
-  if (!before) return false;
-
-  await db.delete(schema.eligibilityRules).where(eq(schema.eligibilityRules.id, id));
-
-  await writeAuditLog({
-    db,
-    actor: currentEmployee,
-    actionType: "ELIGIBILITY_RULE_DELETED",
-    entityType: "eligibility_rule",
-    entityId: id,
-    benefitId: before.benefitId,
-    before,
-  });
-
-  return true;
+  throw new Error(
+    "Direct rule deletion is disabled. Submit a rule proposal via proposeRuleChange; a second HR admin must approve it before it takes effect.",
+  );
 };

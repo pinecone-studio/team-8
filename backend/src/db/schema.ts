@@ -7,6 +7,8 @@ import * as benefitRequestsSchema from "./benefit-requests";
 import * as auditLogsSchema from "./audit-logs";
 import * as contractAcceptancesSchema from "./contract-acceptances";
 import * as enrollmentsSchema from "./enrollments";
+import * as ruleProposalsSchema from "./rule-proposals";
+import * as notificationReadsSchema from "./notification-reads";
 
 // Combine schema pieces — benefits, contracts, eligibility_rules, benefit_eligibility, benefit_requests (TDD §10)
 export const schema = {
@@ -19,6 +21,8 @@ export const schema = {
   ...auditLogsSchema,
   ...contractAcceptancesSchema,
   ...enrollmentsSchema,
+  ...ruleProposalsSchema,
+  ...notificationReadsSchema,
 };
 
 // Re-export tables and types for consumers and GraphQL codegen
@@ -31,3 +35,5 @@ export * from "./benefit-requests";
 export * from "./audit-logs";
 export * from "./contract-acceptances";
 export * from "./enrollments";
+export * from "./rule-proposals";
+export * from "./notification-reads";

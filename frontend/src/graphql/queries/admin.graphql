@@ -16,6 +16,9 @@ query GetAdminDashboardSummary {
     financeQueueCount
     awaitingContractCount
     approvedThisWeekCount
+    contractsExpiringSoon
+    benefitsMissingContracts
+    suspendedEnrollments
   }
 }
 
@@ -100,5 +103,34 @@ query GetEnrollments($employeeId: String, $benefitId: String) {
     endedAt
     createdAt
     updatedAt
+  }
+}
+
+query GetNotifications {
+  notifications {
+    id
+    type
+    title
+    body
+    linkPath
+    createdAt
+    isRead
+  }
+}
+
+query GetRuleProposals($benefitId: String, $status: String) {
+  ruleProposals(benefitId: $benefitId, status: $status) {
+    id
+    benefitId
+    ruleId
+    changeType
+    proposedData
+    summary
+    status
+    proposedByEmployeeId
+    reviewedByEmployeeId
+    proposedAt
+    reviewedAt
+    reason
   }
 }

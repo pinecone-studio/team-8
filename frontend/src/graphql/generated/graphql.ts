@@ -29,11 +29,14 @@ export type AdminDashboardSummary = {
   activeBenefits: Scalars['Int']['output'];
   approvedThisWeekCount: Scalars['Int']['output'];
   awaitingContractCount: Scalars['Int']['output'];
+  benefitsMissingContracts: Scalars['Int']['output'];
+  contractsExpiringSoon: Scalars['Int']['output'];
   financeQueueCount: Scalars['Int']['output'];
   hrQueueCount: Scalars['Int']['output'];
   lockReasons: Array<AdminDashboardBucket>;
   lockedBenefits: Scalars['Int']['output'];
   pendingRequests: Scalars['Int']['output'];
+  suspendedEnrollments: Scalars['Int']['output'];
   totalEmployees: Scalars['Int']['output'];
   usageByCategory: Array<AdminDashboardBucket>;
 };
@@ -245,6 +248,7 @@ export type FailedRule = {
 export type Mutation = {
   __typename?: 'Mutation';
   approveBenefitRequest: BenefitRequest;
+  approveRuleProposal: RuleProposal;
   cancelBenefitRequest: BenefitRequest;
   confirmBenefitRequest: BenefitRequest;
   createBenefit: Benefit;
@@ -254,7 +258,10 @@ export type Mutation = {
   deleteBenefit: Scalars['Boolean']['output'];
   deleteEligibilityRule: Scalars['Boolean']['output'];
   deleteEmployee: Scalars['Boolean']['output'];
+  markNotificationsRead: Scalars['Boolean']['output'];
   overrideEligibility: BenefitEligibility;
+  proposeRuleChange: RuleProposal;
+  rejectRuleProposal: RuleProposal;
   requestBenefit: BenefitRequest;
   updateEligibilityRule: EligibilityRule;
   updateEmployee?: Maybe<Employee>;
@@ -263,6 +270,12 @@ export type Mutation = {
 
 export type MutationApproveBenefitRequestArgs = {
   requestId: Scalars['String']['input'];
+};
+
+
+export type MutationApproveRuleProposalArgs = {
+  id: Scalars['String']['input'];
+  reason?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -313,8 +326,24 @@ export type MutationDeleteEmployeeArgs = {
 };
 
 
+export type MutationMarkNotificationsReadArgs = {
+  keys: Array<Scalars['String']['input']>;
+};
+
+
 export type MutationOverrideEligibilityArgs = {
   input: OverrideEligibilityInput;
+};
+
+
+export type MutationProposeRuleChangeArgs = {
+  input: ProposeRuleChangeInput;
+};
+
+
+export type MutationRejectRuleProposalArgs = {
+  id: Scalars['String']['input'];
+  reason: Scalars['String']['input'];
 };
 
 
@@ -334,12 +363,31 @@ export type MutationUpdateEmployeeArgs = {
   input: UpdateEmployeeInput;
 };
 
+export type Notification = {
+  __typename?: 'Notification';
+  body: Scalars['String']['output'];
+  createdAt: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  isRead: Scalars['Boolean']['output'];
+  linkPath?: Maybe<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+};
+
 export type OverrideEligibilityInput = {
   benefitId: Scalars['String']['input'];
   employeeId: Scalars['String']['input'];
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   overrideStatus: Scalars['String']['input'];
   reason: Scalars['String']['input'];
+};
+
+export type ProposeRuleChangeInput = {
+  benefitId: Scalars['String']['input'];
+  changeType: Scalars['String']['input'];
+  proposedData: Scalars['String']['input'];
+  ruleId?: InputMaybe<Scalars['String']['input']>;
+  summary: Scalars['String']['input'];
 };
 
 export type Query = {
@@ -360,6 +408,8 @@ export type Query = {
   getEmployeeByEmail?: Maybe<Employee>;
   getEmployees: Array<Employee>;
   myBenefits: Array<BenefitEligibility>;
+  notifications: Array<Notification>;
+  ruleProposals: Array<RuleProposal>;
   session?: Maybe<Employee>;
 };
 
@@ -429,6 +479,12 @@ export type QueryGetEmployeesArgs = {
   search?: InputMaybe<Scalars['String']['input']>;
 };
 
+
+export type QueryRuleProposalsArgs = {
+  benefitId?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type RequestBenefitInput = {
   benefitId: Scalars['String']['input'];
   repaymentMonths?: InputMaybe<Scalars['Int']['input']>;
@@ -440,6 +496,22 @@ export type RuleEvaluation = {
   passed: Scalars['Boolean']['output'];
   reason: Scalars['String']['output'];
   ruleType: Scalars['String']['output'];
+};
+
+export type RuleProposal = {
+  __typename?: 'RuleProposal';
+  benefitId: Scalars['String']['output'];
+  changeType: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  proposedAt: Scalars['String']['output'];
+  proposedByEmployeeId: Scalars['String']['output'];
+  proposedData: Scalars['String']['output'];
+  reason?: Maybe<Scalars['String']['output']>;
+  reviewedAt?: Maybe<Scalars['String']['output']>;
+  reviewedByEmployeeId?: Maybe<Scalars['String']['output']>;
+  ruleId?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  summary: Scalars['String']['output'];
 };
 
 export type UpdateEligibilityRuleInput = {
@@ -463,6 +535,13 @@ export type UpdateEmployeeInput = {
   responsibilityLevel?: InputMaybe<Scalars['Int']['input']>;
   role?: InputMaybe<EmployeeRole>;
 };
+
+export type MarkNotificationsReadMutationVariables = Exact<{
+  keys: Array<Scalars['String']['input']> | Scalars['String']['input'];
+}>;
+
+
+export type MarkNotificationsReadMutation = { __typename?: 'Mutation', markNotificationsRead: boolean };
 
 export type RequestBenefitMutationVariables = Exact<{
   input: RequestBenefitInput;
@@ -544,6 +623,29 @@ export type OverrideEligibilityMutationVariables = Exact<{
 
 export type OverrideEligibilityMutation = { __typename?: 'Mutation', overrideEligibility: { __typename?: 'BenefitEligibility', benefitId: string, status: BenefitEligibilityStatus, overrideStatus?: string | null, overrideBy?: string | null, overrideReason?: string | null, overrideExpiresAt?: string | null } };
 
+export type ProposeRuleChangeMutationVariables = Exact<{
+  input: ProposeRuleChangeInput;
+}>;
+
+
+export type ProposeRuleChangeMutation = { __typename?: 'Mutation', proposeRuleChange: { __typename?: 'RuleProposal', id: string, benefitId: string, ruleId?: string | null, changeType: string, proposedData: string, summary: string, status: string, proposedByEmployeeId: string, proposedAt: string } };
+
+export type ApproveRuleProposalMutationVariables = Exact<{
+  id: Scalars['String']['input'];
+  reason?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type ApproveRuleProposalMutation = { __typename?: 'Mutation', approveRuleProposal: { __typename?: 'RuleProposal', id: string, status: string, reviewedByEmployeeId?: string | null, reviewedAt?: string | null, reason?: string | null } };
+
+export type RejectRuleProposalMutationVariables = Exact<{
+  id: Scalars['String']['input'];
+  reason: Scalars['String']['input'];
+}>;
+
+
+export type RejectRuleProposalMutation = { __typename?: 'Mutation', rejectRuleProposal: { __typename?: 'RuleProposal', id: string, status: string, reviewedByEmployeeId?: string | null, reviewedAt?: string | null, reason?: string | null } };
+
 export type CreateEmployeeMutationVariables = Exact<{
   input: CreateEmployeeInput;
 }>;
@@ -569,7 +671,7 @@ export type DeleteEmployeeMutation = { __typename?: 'Mutation', deleteEmployee: 
 export type GetAdminDashboardSummaryQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetAdminDashboardSummaryQuery = { __typename?: 'Query', adminDashboardSummary: { __typename?: 'AdminDashboardSummary', totalEmployees: number, activeBenefits: number, pendingRequests: number, lockedBenefits: number, hrQueueCount: number, financeQueueCount: number, awaitingContractCount: number, approvedThisWeekCount: number, usageByCategory: Array<{ __typename?: 'AdminDashboardBucket', label: string, value: number }>, lockReasons: Array<{ __typename?: 'AdminDashboardBucket', label: string, value: number }> } };
+export type GetAdminDashboardSummaryQuery = { __typename?: 'Query', adminDashboardSummary: { __typename?: 'AdminDashboardSummary', totalEmployees: number, activeBenefits: number, pendingRequests: number, lockedBenefits: number, hrQueueCount: number, financeQueueCount: number, awaitingContractCount: number, approvedThisWeekCount: number, contractsExpiringSoon: number, benefitsMissingContracts: number, suspendedEnrollments: number, usageByCategory: Array<{ __typename?: 'AdminDashboardBucket', label: string, value: number }>, lockReasons: Array<{ __typename?: 'AdminDashboardBucket', label: string, value: number }> } };
 
 export type GetAdminBenefitsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -604,6 +706,19 @@ export type GetEnrollmentsQueryVariables = Exact<{
 
 
 export type GetEnrollmentsQuery = { __typename?: 'Query', enrollments: Array<{ __typename?: 'EmployeeBenefitEnrollment', id: string, employeeId: string, benefitId: string, requestId?: string | null, status: string, subsidyPercentApplied?: number | null, employeePercentApplied?: number | null, approvedBy?: string | null, startedAt: string, endedAt?: string | null, createdAt: string, updatedAt: string }> };
+
+export type GetNotificationsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetNotificationsQuery = { __typename?: 'Query', notifications: Array<{ __typename?: 'Notification', id: string, type: string, title: string, body: string, linkPath?: string | null, createdAt: string, isRead: boolean }> };
+
+export type GetRuleProposalsQueryVariables = Exact<{
+  benefitId?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type GetRuleProposalsQuery = { __typename?: 'Query', ruleProposals: Array<{ __typename?: 'RuleProposal', id: string, benefitId: string, ruleId?: string | null, changeType: string, proposedData: string, summary: string, status: string, proposedByEmployeeId: string, reviewedByEmployeeId?: string | null, proposedAt: string, reviewedAt?: string | null, reason?: string | null }> };
 
 export type GetBenefitsQueryVariables = Exact<{
   category?: InputMaybe<Scalars['String']['input']>;
@@ -680,6 +795,37 @@ export type GetEmployeeByEmailQueryVariables = Exact<{
 export type GetEmployeeByEmailQuery = { __typename?: 'Query', getEmployeeByEmail?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
 
 
+export const MarkNotificationsReadDocument = gql`
+    mutation MarkNotificationsRead($keys: [String!]!) {
+  markNotificationsRead(keys: $keys)
+}
+    `;
+export type MarkNotificationsReadMutationFn = Apollo.MutationFunction<MarkNotificationsReadMutation, MarkNotificationsReadMutationVariables>;
+
+/**
+ * __useMarkNotificationsReadMutation__
+ *
+ * To run a mutation, you first call `useMarkNotificationsReadMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useMarkNotificationsReadMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [markNotificationsReadMutation, { data, loading, error }] = useMarkNotificationsReadMutation({
+ *   variables: {
+ *      keys: // value for 'keys'
+ *   },
+ * });
+ */
+export function useMarkNotificationsReadMutation(baseOptions?: Apollo.MutationHookOptions<MarkNotificationsReadMutation, MarkNotificationsReadMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<MarkNotificationsReadMutation, MarkNotificationsReadMutationVariables>(MarkNotificationsReadDocument, options);
+      }
+export type MarkNotificationsReadMutationHookResult = ReturnType<typeof useMarkNotificationsReadMutation>;
+export type MarkNotificationsReadMutationResult = Apollo.MutationResult<MarkNotificationsReadMutation>;
+export type MarkNotificationsReadMutationOptions = Apollo.BaseMutationOptions<MarkNotificationsReadMutation, MarkNotificationsReadMutationVariables>;
 export const RequestBenefitDocument = gql`
     mutation RequestBenefit($input: RequestBenefitInput!) {
   requestBenefit(input: $input) {
@@ -1108,6 +1254,123 @@ export function useOverrideEligibilityMutation(baseOptions?: Apollo.MutationHook
 export type OverrideEligibilityMutationHookResult = ReturnType<typeof useOverrideEligibilityMutation>;
 export type OverrideEligibilityMutationResult = Apollo.MutationResult<OverrideEligibilityMutation>;
 export type OverrideEligibilityMutationOptions = Apollo.BaseMutationOptions<OverrideEligibilityMutation, OverrideEligibilityMutationVariables>;
+export const ProposeRuleChangeDocument = gql`
+    mutation ProposeRuleChange($input: ProposeRuleChangeInput!) {
+  proposeRuleChange(input: $input) {
+    id
+    benefitId
+    ruleId
+    changeType
+    proposedData
+    summary
+    status
+    proposedByEmployeeId
+    proposedAt
+  }
+}
+    `;
+export type ProposeRuleChangeMutationFn = Apollo.MutationFunction<ProposeRuleChangeMutation, ProposeRuleChangeMutationVariables>;
+
+/**
+ * __useProposeRuleChangeMutation__
+ *
+ * To run a mutation, you first call `useProposeRuleChangeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useProposeRuleChangeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [proposeRuleChangeMutation, { data, loading, error }] = useProposeRuleChangeMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useProposeRuleChangeMutation(baseOptions?: Apollo.MutationHookOptions<ProposeRuleChangeMutation, ProposeRuleChangeMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ProposeRuleChangeMutation, ProposeRuleChangeMutationVariables>(ProposeRuleChangeDocument, options);
+      }
+export type ProposeRuleChangeMutationHookResult = ReturnType<typeof useProposeRuleChangeMutation>;
+export type ProposeRuleChangeMutationResult = Apollo.MutationResult<ProposeRuleChangeMutation>;
+export type ProposeRuleChangeMutationOptions = Apollo.BaseMutationOptions<ProposeRuleChangeMutation, ProposeRuleChangeMutationVariables>;
+export const ApproveRuleProposalDocument = gql`
+    mutation ApproveRuleProposal($id: String!, $reason: String) {
+  approveRuleProposal(id: $id, reason: $reason) {
+    id
+    status
+    reviewedByEmployeeId
+    reviewedAt
+    reason
+  }
+}
+    `;
+export type ApproveRuleProposalMutationFn = Apollo.MutationFunction<ApproveRuleProposalMutation, ApproveRuleProposalMutationVariables>;
+
+/**
+ * __useApproveRuleProposalMutation__
+ *
+ * To run a mutation, you first call `useApproveRuleProposalMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useApproveRuleProposalMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [approveRuleProposalMutation, { data, loading, error }] = useApproveRuleProposalMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      reason: // value for 'reason'
+ *   },
+ * });
+ */
+export function useApproveRuleProposalMutation(baseOptions?: Apollo.MutationHookOptions<ApproveRuleProposalMutation, ApproveRuleProposalMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ApproveRuleProposalMutation, ApproveRuleProposalMutationVariables>(ApproveRuleProposalDocument, options);
+      }
+export type ApproveRuleProposalMutationHookResult = ReturnType<typeof useApproveRuleProposalMutation>;
+export type ApproveRuleProposalMutationResult = Apollo.MutationResult<ApproveRuleProposalMutation>;
+export type ApproveRuleProposalMutationOptions = Apollo.BaseMutationOptions<ApproveRuleProposalMutation, ApproveRuleProposalMutationVariables>;
+export const RejectRuleProposalDocument = gql`
+    mutation RejectRuleProposal($id: String!, $reason: String!) {
+  rejectRuleProposal(id: $id, reason: $reason) {
+    id
+    status
+    reviewedByEmployeeId
+    reviewedAt
+    reason
+  }
+}
+    `;
+export type RejectRuleProposalMutationFn = Apollo.MutationFunction<RejectRuleProposalMutation, RejectRuleProposalMutationVariables>;
+
+/**
+ * __useRejectRuleProposalMutation__
+ *
+ * To run a mutation, you first call `useRejectRuleProposalMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRejectRuleProposalMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [rejectRuleProposalMutation, { data, loading, error }] = useRejectRuleProposalMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      reason: // value for 'reason'
+ *   },
+ * });
+ */
+export function useRejectRuleProposalMutation(baseOptions?: Apollo.MutationHookOptions<RejectRuleProposalMutation, RejectRuleProposalMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RejectRuleProposalMutation, RejectRuleProposalMutationVariables>(RejectRuleProposalDocument, options);
+      }
+export type RejectRuleProposalMutationHookResult = ReturnType<typeof useRejectRuleProposalMutation>;
+export type RejectRuleProposalMutationResult = Apollo.MutationResult<RejectRuleProposalMutation>;
+export type RejectRuleProposalMutationOptions = Apollo.BaseMutationOptions<RejectRuleProposalMutation, RejectRuleProposalMutationVariables>;
 export const CreateEmployeeDocument = gql`
     mutation CreateEmployee($input: CreateEmployeeInput!) {
   createEmployee(input: $input) {
@@ -1242,6 +1505,9 @@ export const GetAdminDashboardSummaryDocument = gql`
     financeQueueCount
     awaitingContractCount
     approvedThisWeekCount
+    contractsExpiringSoon
+    benefitsMissingContracts
+    suspendedEnrollments
   }
 }
     `;
@@ -1516,6 +1782,109 @@ export type GetEnrollmentsQueryHookResult = ReturnType<typeof useGetEnrollmentsQ
 export type GetEnrollmentsLazyQueryHookResult = ReturnType<typeof useGetEnrollmentsLazyQuery>;
 export type GetEnrollmentsSuspenseQueryHookResult = ReturnType<typeof useGetEnrollmentsSuspenseQuery>;
 export type GetEnrollmentsQueryResult = Apollo.QueryResult<GetEnrollmentsQuery, GetEnrollmentsQueryVariables>;
+export const GetNotificationsDocument = gql`
+    query GetNotifications {
+  notifications {
+    id
+    type
+    title
+    body
+    linkPath
+    createdAt
+    isRead
+  }
+}
+    `;
+
+/**
+ * __useGetNotificationsQuery__
+ *
+ * To run a query within a React component, call `useGetNotificationsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetNotificationsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetNotificationsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetNotificationsQuery(baseOptions?: Apollo.QueryHookOptions<GetNotificationsQuery, GetNotificationsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetNotificationsQuery, GetNotificationsQueryVariables>(GetNotificationsDocument, options);
+      }
+export function useGetNotificationsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetNotificationsQuery, GetNotificationsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetNotificationsQuery, GetNotificationsQueryVariables>(GetNotificationsDocument, options);
+        }
+// @ts-ignore
+export function useGetNotificationsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetNotificationsQuery, GetNotificationsQueryVariables>): Apollo.UseSuspenseQueryResult<GetNotificationsQuery, GetNotificationsQueryVariables>;
+export function useGetNotificationsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetNotificationsQuery, GetNotificationsQueryVariables>): Apollo.UseSuspenseQueryResult<GetNotificationsQuery | undefined, GetNotificationsQueryVariables>;
+export function useGetNotificationsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetNotificationsQuery, GetNotificationsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetNotificationsQuery, GetNotificationsQueryVariables>(GetNotificationsDocument, options);
+        }
+export type GetNotificationsQueryHookResult = ReturnType<typeof useGetNotificationsQuery>;
+export type GetNotificationsLazyQueryHookResult = ReturnType<typeof useGetNotificationsLazyQuery>;
+export type GetNotificationsSuspenseQueryHookResult = ReturnType<typeof useGetNotificationsSuspenseQuery>;
+export type GetNotificationsQueryResult = Apollo.QueryResult<GetNotificationsQuery, GetNotificationsQueryVariables>;
+export const GetRuleProposalsDocument = gql`
+    query GetRuleProposals($benefitId: String, $status: String) {
+  ruleProposals(benefitId: $benefitId, status: $status) {
+    id
+    benefitId
+    ruleId
+    changeType
+    proposedData
+    summary
+    status
+    proposedByEmployeeId
+    reviewedByEmployeeId
+    proposedAt
+    reviewedAt
+    reason
+  }
+}
+    `;
+
+/**
+ * __useGetRuleProposalsQuery__
+ *
+ * To run a query within a React component, call `useGetRuleProposalsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetRuleProposalsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetRuleProposalsQuery({
+ *   variables: {
+ *      benefitId: // value for 'benefitId'
+ *      status: // value for 'status'
+ *   },
+ * });
+ */
+export function useGetRuleProposalsQuery(baseOptions?: Apollo.QueryHookOptions<GetRuleProposalsQuery, GetRuleProposalsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetRuleProposalsQuery, GetRuleProposalsQueryVariables>(GetRuleProposalsDocument, options);
+      }
+export function useGetRuleProposalsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetRuleProposalsQuery, GetRuleProposalsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetRuleProposalsQuery, GetRuleProposalsQueryVariables>(GetRuleProposalsDocument, options);
+        }
+// @ts-ignore
+export function useGetRuleProposalsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetRuleProposalsQuery, GetRuleProposalsQueryVariables>): Apollo.UseSuspenseQueryResult<GetRuleProposalsQuery, GetRuleProposalsQueryVariables>;
+export function useGetRuleProposalsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetRuleProposalsQuery, GetRuleProposalsQueryVariables>): Apollo.UseSuspenseQueryResult<GetRuleProposalsQuery | undefined, GetRuleProposalsQueryVariables>;
+export function useGetRuleProposalsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetRuleProposalsQuery, GetRuleProposalsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetRuleProposalsQuery, GetRuleProposalsQueryVariables>(GetRuleProposalsDocument, options);
+        }
+export type GetRuleProposalsQueryHookResult = ReturnType<typeof useGetRuleProposalsQuery>;
+export type GetRuleProposalsLazyQueryHookResult = ReturnType<typeof useGetRuleProposalsLazyQuery>;
+export type GetRuleProposalsSuspenseQueryHookResult = ReturnType<typeof useGetRuleProposalsSuspenseQuery>;
+export type GetRuleProposalsQueryResult = Apollo.QueryResult<GetRuleProposalsQuery, GetRuleProposalsQueryVariables>;
 export const GetBenefitsDocument = gql`
     query GetBenefits($category: String) {
   benefits(category: $category) {

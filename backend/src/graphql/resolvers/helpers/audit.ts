@@ -16,14 +16,20 @@ export type AuditActionType =
   | "ELIGIBILITY_RULE_UPDATED"
   | "ELIGIBILITY_RULE_DELETED"
   | "CONTRACT_UPLOADED"
-  | "ENROLLMENT_CREATED";
+  | "ENROLLMENT_CREATED"
+  | "ENROLLMENT_SUSPENDED"
+  | "ENROLLMENT_REACTIVATED"
+  | "RULE_PROPOSAL_SUBMITTED"
+  | "RULE_PROPOSAL_APPROVED"
+  | "RULE_PROPOSAL_REJECTED";
 
 export type AuditEntityType =
   | "benefit_request"
   | "benefit_eligibility"
   | "eligibility_rule"
   | "contract"
-  | "enrollment";
+  | "enrollment"
+  | "rule_proposal";
 
 export interface WriteAuditLogParams {
   db: Database;

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { Download, X } from "lucide-react";
 import { useGetAuditLogsQuery } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
@@ -22,6 +22,11 @@ const ACTION_TYPE_OPTIONS = [
   { value: "ELIGIBILITY_RULE_UPDATED", label: "Rule Updated" },
   { value: "ELIGIBILITY_RULE_DELETED", label: "Rule Deleted" },
   { value: "ENROLLMENT_CREATED", label: "Enrollment Created" },
+  { value: "ENROLLMENT_SUSPENDED", label: "Enrollment Suspended" },
+  { value: "ENROLLMENT_REACTIVATED", label: "Enrollment Reactivated" },
+  { value: "RULE_PROPOSAL_SUBMITTED", label: "Rule Proposal Submitted" },
+  { value: "RULE_PROPOSAL_APPROVED", label: "Rule Proposal Approved" },
+  { value: "RULE_PROPOSAL_REJECTED", label: "Rule Proposal Rejected" },
 ];
 
 const ACTION_TONE: Record<string, string> = {
@@ -38,6 +43,11 @@ const ACTION_TONE: Record<string, string> = {
   ELIGIBILITY_RULE_UPDATED: "bg-indigo-50 text-indigo-700",
   ELIGIBILITY_RULE_DELETED: "bg-red-50 text-red-700",
   ENROLLMENT_CREATED: "bg-green-50 text-green-700",
+  ENROLLMENT_SUSPENDED: "bg-orange-50 text-orange-700",
+  ENROLLMENT_REACTIVATED: "bg-emerald-50 text-emerald-700",
+  RULE_PROPOSAL_SUBMITTED: "bg-violet-50 text-violet-700",
+  RULE_PROPOSAL_APPROVED: "bg-green-50 text-green-700",
+  RULE_PROPOSAL_REJECTED: "bg-red-50 text-red-700",
 };
 
 function formatDate(iso: string) {
@@ -232,6 +242,46 @@ function DetailPanel({ log, onClose }: { log: AuditLog; onClose: () => void }) {
   );
 }
 
+function exportCsv(logs: AuditLog[], filters: { actionType: string; fromDate: string; toDate: string }) {
+  const headers = [
+    "Time", "Action", "Actor Role", "Actor ID", "Entity Type", "Entity ID",
+    "Target Employee", "Benefit", "Request", "Contract", "Reason", "IP Address",
+  ];
+
+  const escape = (val: string | null | undefined) => {
+    const str = val ?? "";
+    return `"${str.replace(/"/g, '""')}"`;
+  };
+
+  const rows = logs.map((log) => [
+    escape(formatDate(log.createdAt)),
+    escape(log.actionType),
+    escape(formatRole(log.actorRole)),
+    escape(log.actorEmployeeId),
+    escape(log.entityType),
+    escape(log.entityId),
+    escape(log.targetEmployeeId),
+    escape(log.benefitId),
+    escape(log.requestId),
+    escape(log.contractId),
+    escape(log.reason),
+    escape(log.ipAddress),
+  ]);
+
+  const csv = [headers.map((h) => `"${h}"`).join(","), ...rows.map((r) => r.join(","))].join("\n");
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const filterTag = filters.actionType ? `-${filters.actionType.toLowerCase()}` : "";
+  const filename = `audit-log${filterTag}-${dateStr}.csv`;
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function AuditLogs() {
   const { employee: me } = useCurrentEmployee();
   const isHr = isHrAdmin(me);
@@ -251,6 +301,14 @@ export default function AuditLogs() {
     skip: !isHr,
   });
 
+  const logs = useMemo(() => (data?.auditLogs ?? []) as AuditLog[], [data]);
+
+  const handleExport = useCallback(() => {
+    // logs is memoized — direct dep is fine for export
+    exportCsv(logs, { actionType, fromDate, toDate });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, actionType, fromDate, toDate]);
+
   if (!isHr) {
     return (
       <main className="flex-1 px-8 py-9">
@@ -261,8 +319,6 @@ export default function AuditLogs() {
       </main>
     );
   }
-
-  const logs = (data?.auditLogs ?? []) as AuditLog[];
 
   return (
     <>
@@ -277,9 +333,21 @@ export default function AuditLogs() {
               <h1 className="text-xl font-semibold text-gray-900">Audit Logs</h1>
               <p className="mt-1 text-sm text-gray-500">System activity and change history</p>
             </div>
-            {logs.length > 0 && (
-              <p className="text-xs text-slate-400">{logs.length} entries</p>
-            )}
+            <div className="flex items-center gap-3">
+              {logs.length > 0 && (
+                <p className="text-xs text-slate-400">{logs.length} entries</p>
+              )}
+              {logs.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition hover:bg-slate-50"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Export CSV
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Filters */}
