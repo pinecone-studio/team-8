@@ -195,6 +195,21 @@ async function handleContractUpload(
     );
   }
 
+  const benefitRows = await db
+    .select()
+    .from(schema.benefits)
+    .where(eq(schema.benefits.id, benefitId));
+  const benefit = benefitRows[0];
+  if (!benefit) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Benefit not found." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
   const filename = file.name || "contract.pdf";
   const r2Key = getContractObjectKey(benefitId, version, filename);
   const fileBuffer = await file.arrayBuffer();
@@ -227,6 +242,17 @@ async function handleContractUpload(
       isActive: true,
     })
     .returning();
+
+  if (inserted) {
+    await db
+      .update(schema.benefits)
+      .set({
+        requiresContract: true,
+        activeContractId: inserted.id,
+        vendorName: benefit.vendorName ?? vendorName,
+      })
+      .where(eq(schema.benefits.id, benefitId));
+  }
 
   // Phase 4: Audit log on contract upload
   if (inserted) {
