@@ -1,5 +1,9 @@
-query GetEmployees {
-  getEmployees {
+query GetDepartments {
+  getDepartments
+}
+
+query GetEmployees($search: String, $department: String, $limit: Int) {
+  getEmployees(search: $search, department: $department, limit: $limit) {
     id
     name
     nameEng

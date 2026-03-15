@@ -12,6 +12,10 @@ query GetAdminDashboardSummary {
       label
       value
     }
+    hrQueueCount
+    financeQueueCount
+    awaitingContractCount
+    approvedThisWeekCount
   }
 }
 

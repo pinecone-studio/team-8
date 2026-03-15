@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { CheckCircle2, ChevronDown, XCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { CheckCircle2, ChevronDown, Search, X, XCircle } from "lucide-react";
 import PageLoading from "@/app/_components/PageLoading";
 import {
   useGetEmployeesQuery,
+  useGetDepartmentsQuery,
   useGetEmployeeBenefitsQuery,
   useOverrideEligibilityMutation,
   GetEmployeeBenefitsDocument,
@@ -12,34 +13,259 @@ import {
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
 
-function StatusBadge({ passed, label }: { passed: boolean; label: string }) {
+// ── Status badge ─────────────────────────────────────────────────────────────
+
+function EligibilityBadge({ passed, label }: { passed: boolean; label: string }) {
   if (passed) {
     return (
-      <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-600">
+      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600">
         <CheckCircle2 className="h-4 w-4" />
         {label}
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-2 text-sm font-medium text-red-600">
+    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-red-600">
       <XCircle className="h-4 w-4" />
       {label}
     </span>
   );
 }
 
+// ── Employee picker ───────────────────────────────────────────────────────────
+
+type EmployeeOption = {
+  id: string;
+  name: string;
+  nameEng?: string | null;
+  email?: string | null;
+  department?: string | null;
+  role?: string | null;
+  employmentStatus?: string | null;
+};
+
+function EmployeePicker({
+  selectedEmployee,
+  onSelect,
+  departments,
+}: {
+  selectedEmployee: EmployeeOption | null;
+  onSelect: (emp: EmployeeOption | null) => void;
+  departments: string[];
+}) {
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [deptFilter, setDeptFilter] = useState("");
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Debounce text search 300 ms
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const minChars = 2;
+  const hasSearch = debouncedSearch.length >= minChars;
+  const hasDept = !!deptFilter;
+  const shouldQuery = hasSearch || hasDept;
+
+  const { data, loading } = useGetEmployeesQuery({
+    variables: {
+      search: hasSearch ? debouncedSearch : undefined,
+      department: hasDept ? deptFilter : undefined,
+      limit: 30,
+    },
+    skip: !shouldQuery,
+    fetchPolicy: "cache-and-network",
+  });
+
+  const results = data?.getEmployees ?? [];
+
+  // Group results by department for structured display
+  const grouped = results.reduce<Record<string, EmployeeOption[]>>((acc, emp) => {
+    const key = emp.department ?? "Other";
+    (acc[key] ??= []).push(emp);
+    return acc;
+  }, {});
+  const groupKeys = Object.keys(grouped).sort();
+
+  function formatStatus(s: string | null | undefined) {
+    if (!s) return "";
+    return s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ");
+  }
+
+  const handleSelect = (emp: EmployeeOption) => {
+    onSelect(emp);
+    setSearchInput("");
+    setDebouncedSearch("");
+    setOpen(false);
+  };
+
+  const handleClear = () => {
+    onSelect(null);
+    setSearchInput("");
+    setDebouncedSearch("");
+    setDeptFilter("");
+    setOpen(false);
+  };
+
+  // ── Selected state: show chip ─────────────────────────────────────────────
+  if (selectedEmployee) {
+    return (
+      <div className="max-w-2xl">
+        <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700">
+            {selectedEmployee.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-blue-900">{selectedEmployee.name}</p>
+            <p className="text-xs text-blue-600">
+              {selectedEmployee.email ?? ""}
+              {selectedEmployee.department ? ` · ${selectedEmployee.department}` : ""}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleClear}
+            className="rounded p-0.5 text-blue-400 hover:bg-blue-100 hover:text-blue-600"
+            aria-label="Clear selection"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Search state ──────────────────────────────────────────────────────────
+  return (
+    <div className="max-w-2xl" ref={containerRef}>
+      <div className="flex gap-2">
+        {/* Name / email search */}
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => {
+              setSearchInput(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            placeholder="Search by name or email…"
+            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-300"
+          />
+        </div>
+
+        {/* Department filter */}
+        <div className="relative">
+          <select
+            value={deptFilter}
+            onChange={(e) => {
+              setDeptFilter(e.target.value);
+              setOpen(true);
+            }}
+            className="appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-3 pr-8 text-sm text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-300"
+          >
+            <option value="">All departments</option>
+            {departments.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+        </div>
+      </div>
+
+      {/* Results dropdown */}
+      {open && (
+        <div className="mt-1 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+          {!shouldQuery ? (
+            <div className="px-4 py-6 text-center text-sm text-slate-400">
+              Type a name or pick a department to search employees…
+            </div>
+          ) : loading ? (
+            <div className="px-4 py-6">
+              <PageLoading inline message="Searching…" />
+            </div>
+          ) : results.length === 0 ? (
+            <div className="px-4 py-6 text-center text-sm text-slate-400">
+              No employees match your search.
+            </div>
+          ) : (
+            groupKeys.map((dept) => (
+              <div key={dept}>
+                {/* Department group header */}
+                <div className="sticky top-0 border-b border-slate-100 bg-slate-50 px-4 py-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                    {dept}
+                  </span>
+                </div>
+                {grouped[dept].map((emp) => (
+                  <button
+                    key={emp.id}
+                    type="button"
+                    onClick={() => handleSelect(emp)}
+                    className="flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-blue-50 transition"
+                  >
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
+                      {emp.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-slate-900 truncate">{emp.name}</p>
+                      <p className="text-xs text-slate-500 truncate">{emp.email ?? ""}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      {emp.role && (
+                        <span className="inline-flex rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+                          {emp.role}
+                        </span>
+                      )}
+                      {emp.employmentStatus && emp.employmentStatus !== "active" && (
+                        <span className="inline-flex rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-orange-600">
+                          {formatStatus(emp.employmentStatus)}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Override form state ───────────────────────────────────────────────────────
+
 interface OverrideFormState {
   benefitId: string;
   benefitName: string;
 }
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function EligibilityInspector() {
   const { employee: me } = useCurrentEmployee();
   const isHr = isHrAdmin(me);
   const canOverride = isHr;
 
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeOption | null>(null);
+  const selectedEmployeeId = selectedEmployee?.id ?? "";
+
   const [overrideTarget, setOverrideTarget] = useState<OverrideFormState | null>(null);
   const [overrideStatus, setOverrideStatus] = useState("eligible");
   const [overrideReason, setOverrideReason] = useState("");
@@ -47,15 +273,12 @@ export default function EligibilityInspector() {
   const [overrideError, setOverrideError] = useState<string | null>(null);
   const [overrideSuccess, setOverrideSuccess] = useState(false);
 
-  const { data: employeesData, loading: employeesLoading } = useGetEmployeesQuery({
-    skip: !isHr,
-  });
+  const { data: departmentsData } = useGetDepartmentsQuery({ skip: !isHr });
 
-  const { data: eligibilityData, loading: eligibilityLoading } =
-    useGetEmployeeBenefitsQuery({
-      variables: { employeeId: selectedEmployeeId },
-      skip: !selectedEmployeeId || !isHr,
-    });
+  const { data: eligibilityData, loading: eligibilityLoading } = useGetEmployeeBenefitsQuery({
+    variables: { employeeId: selectedEmployeeId },
+    skip: !selectedEmployeeId || !isHr,
+  });
 
   const [overrideEligibility, { loading: overriding }] = useOverrideEligibilityMutation({
     refetchQueries: [
@@ -69,13 +292,10 @@ export default function EligibilityInspector() {
       setOverrideSuccess(true);
       setTimeout(() => setOverrideSuccess(false), 4000);
     },
-    onError: (err) => {
-      setOverrideError(err.message);
-    },
+    onError: (err) => setOverrideError(err.message),
   });
 
-  const employees = employeesData?.getEmployees ?? [];
-  const selectedEmployee = employees.find((e) => e.id === selectedEmployeeId);
+  const departments = departmentsData?.getDepartments ?? [];
   const eligibilities = eligibilityData?.getEmployeeBenefits ?? [];
 
   if (!isHr) {
@@ -83,7 +303,9 @@ export default function EligibilityInspector() {
       <main className="flex-1 px-8 py-9">
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-6 py-8 text-center max-w-md">
           <p className="text-sm font-semibold text-amber-800">HR access required</p>
-          <p className="mt-1 text-xs text-amber-700">The Eligibility Inspector is restricted to HR administrators.</p>
+          <p className="mt-1 text-xs text-amber-700">
+            The Eligibility Inspector is restricted to HR administrators.
+          </p>
         </div>
       </main>
     );
@@ -113,36 +335,20 @@ export default function EligibilityInspector() {
     <main className="flex-1 px-8 py-9">
       <section className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-xl font-semibold text-gray-900">
-            Employee Eligibility Inspector
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Review employee benefit eligibility in real time
+          <h1 className="text-xl font-semibold text-gray-900">Employee Eligibility Inspector</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Search by name, email, or department to review an employee&apos;s benefit eligibility.
           </p>
         </div>
 
-        <div className="mb-6 max-w-md">
-          <label className="mb-2 block text-sm font-medium text-slate-700">
-            Select Employee
-          </label>
-          <div className="relative">
-            <select
-              value={selectedEmployeeId}
-              onChange={(e) => setSelectedEmployeeId(e.target.value)}
-              disabled={employeesLoading}
-              className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3 pr-10 text-sm text-slate-700 disabled:opacity-70"
-            >
-              <option value="">
-                {employeesLoading ? "Loading employees…" : "Select an employee"}
-              </option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name} – {emp.role}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          </div>
+        {/* Employee picker */}
+        <div className="mb-6">
+          <label className="mb-2 block text-sm font-medium text-slate-700">Find Employee</label>
+          <EmployeePicker
+            selectedEmployee={selectedEmployee}
+            onSelect={setSelectedEmployee}
+            departments={departments}
+          />
         </div>
 
         {overrideSuccess && (
@@ -151,61 +357,42 @@ export default function EligibilityInspector() {
           </div>
         )}
 
+        {/* Employee profile */}
         {selectedEmployee && (
           <div className="rounded-2xl border border-slate-200 bg-white p-5 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Employee Profile
-            </h2>
-            <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <h2 className="text-sm font-semibold text-gray-900">Employee Profile</h2>
+            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {[
-                { label: "Name", value: selectedEmployee.name },
-                { label: "Role", value: selectedEmployee.role },
-                { label: "Department", value: selectedEmployee.department },
-                {
-                  label: "Responsibility Level",
-                  value: `Level ${selectedEmployee.responsibilityLevel}`,
-                },
-                {
-                  label: "Status",
-                  value: selectedEmployee.employmentStatus,
-                },
-                {
-                  label: "OKR Submitted",
-                  value: selectedEmployee.okrSubmitted ? "Yes" : "No",
-                },
-                {
-                  label: "Late Arrivals",
-                  value: String(selectedEmployee.lateArrivalCount),
-                },
+                { label: "Name",       value: selectedEmployee.name },
+                { label: "Role",       value: selectedEmployee.role ?? "—" },
+                { label: "Department", value: selectedEmployee.department ?? "—" },
+                { label: "Status",     value: selectedEmployee.employmentStatus ?? "—" },
               ].map((item) => (
                 <div key={item.label}>
-                  <p className="text-sm text-slate-500">{item.label}</p>
-                  <p className="mt-1 text-sm font-medium text-slate-900">
-                    {item.value}
-                  </p>
+                  <p className="text-xs text-slate-400">{item.label}</p>
+                  <p className="mt-0.5 text-sm font-medium text-slate-900">{item.value}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
+        {/* Benefits table */}
         {selectedEmployeeId && (
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
             <div className="border-b border-slate-200 px-5 py-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Benefits Eligibility
-              </h2>
+              <h2 className="text-sm font-semibold text-gray-900">Benefits Eligibility</h2>
             </div>
 
             <div className="overflow-x-auto">
               <table className="min-w-full text-left">
-                <thead className="border-b border-slate-200 bg-white text-sm font-semibold text-slate-700">
+                <thead className="border-b border-slate-200 bg-slate-50">
                   <tr>
-                    <th className="px-5 py-4">Benefit</th>
-                    <th className="px-5 py-4">Status</th>
-                    <th className="px-5 py-4">Override</th>
-                    <th className="px-5 py-4">Blocking Rule</th>
-                    {canOverride && <th className="px-5 py-4" />}
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Benefit</th>
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Override</th>
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Blocking Rule</th>
+                    {canOverride && <th className="px-5 py-3" />}
                   </tr>
                 </thead>
                 <tbody>
@@ -217,13 +404,14 @@ export default function EligibilityInspector() {
                     </tr>
                   ) : eligibilities.length === 0 ? (
                     <tr>
-                      <td colSpan={canOverride ? 5 : 4} className="px-5 py-6 text-sm text-slate-500">
-                        No benefits found.
+                      <td colSpan={canOverride ? 5 : 4} className="px-5 py-6 text-sm text-slate-400">
+                        No benefits found for this employee.
                       </td>
                     </tr>
                   ) : (
                     eligibilities.map((row) => {
-                      const eligible = row.status === "ELIGIBLE" || row.status === "ACTIVE" || row.status === "PENDING";
+                      const eligible =
+                        row.status === "ELIGIBLE" || row.status === "ACTIVE" || row.status === "PENDING";
                       const statusLabel =
                         row.status === "ACTIVE"
                           ? "Active"
@@ -234,17 +422,14 @@ export default function EligibilityInspector() {
                               : "Not Eligible";
                       const hasOverride = !!row.overrideStatus;
                       return (
-                        <tr
-                          key={row.benefitId}
-                          className="border-b border-slate-200 last:border-b-0"
-                        >
-                          <td className="px-5 py-5 text-sm font-medium text-slate-900">
+                        <tr key={row.benefitId} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
+                          <td className="px-5 py-4 text-sm font-medium text-slate-900">
                             {row.benefit.name}
                           </td>
-                          <td className="px-5 py-5">
-                            <StatusBadge passed={eligible} label={statusLabel} />
+                          <td className="px-5 py-4">
+                            <EligibilityBadge passed={eligible} label={statusLabel} />
                           </td>
-                          <td className="px-5 py-5 text-sm text-slate-500">
+                          <td className="px-5 py-4 text-sm text-slate-500">
                             {hasOverride ? (
                               <span className="inline-flex flex-col gap-0.5">
                                 <span className="inline-flex rounded bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700">
@@ -260,11 +445,11 @@ export default function EligibilityInspector() {
                               "—"
                             )}
                           </td>
-                          <td className="px-5 py-5 text-sm text-slate-500">
+                          <td className="px-5 py-4 text-sm text-slate-500">
                             {row.failedRule?.errorMessage ?? "—"}
                           </td>
                           {canOverride && (
-                            <td className="px-5 py-5">
+                            <td className="px-5 py-4">
                               <button
                                 type="button"
                                 onClick={() =>
@@ -289,9 +474,10 @@ export default function EligibilityInspector() {
           </div>
         )}
 
-        {!selectedEmployeeId && !employeesLoading && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-            Select an employee above to inspect their benefit eligibility.
+        {!selectedEmployeeId && (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center text-sm text-slate-400">
+            <Search className="mx-auto mb-3 h-6 w-6 text-slate-300" />
+            Search for an employee above to inspect their benefit eligibility.
           </div>
         )}
 
@@ -308,9 +494,7 @@ export default function EligibilityInspector() {
 
               <div className="mt-5 space-y-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">
-                    Override Status
-                  </label>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Override Status</label>
                   <select
                     value={overrideStatus}
                     onChange={(e) => setOverrideStatus(e.target.value)}
@@ -347,9 +531,7 @@ export default function EligibilityInspector() {
                   />
                 </div>
 
-                {overrideError && (
-                  <p className="text-sm text-red-600">{overrideError}</p>
-                )}
+                {overrideError && <p className="text-sm text-red-600">{overrideError}</p>}
               </div>
 
               <div className="mt-6 flex justify-end gap-3">

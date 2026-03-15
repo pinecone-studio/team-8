@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { schema } from "../../../db";
 import { getBenefitConfig } from "../../../eligibility";
 import { createContractViewToken, getContractViewUrl } from "../../../contracts";
@@ -6,6 +6,17 @@ import type { GraphQLContext } from "../../context";
 import { requireAuth, isAdminEmployee } from "../../../auth";
 
 type ContractsArgs = { benefitId?: string | null };
+
+// Statuses where seeing the contract is relevant for the employee
+const CONTRACT_RELEVANT_STATUSES = new Set([
+  "pending",
+  "awaiting_contract_acceptance",
+  "awaiting_hr_review",
+  "awaiting_finance_review",
+  "hr_approved",
+  "finance_approved",
+  "approved",
+]);
 
 export const getContracts = async (
   _: unknown,
@@ -27,7 +38,37 @@ export const getContracts = async (
         .orderBy(desc(schema.contracts.effectiveDate));
 
   if (!canViewAllContracts) {
-    rows = rows.filter((row) => row.isActive);
+    // Scope to contracts for benefits the employee is actively enrolled in
+    // or has a relevant in-flight / historical request for
+    const [enrollmentRows, requestRows] = await Promise.all([
+      db
+        .select({ benefitId: schema.employeeBenefitEnrollments.benefitId })
+        .from(schema.employeeBenefitEnrollments)
+        .where(
+          and(
+            eq(schema.employeeBenefitEnrollments.employeeId, employee.id),
+            eq(schema.employeeBenefitEnrollments.status, "active"),
+          ),
+        ),
+      db
+        .select({ benefitId: schema.benefitRequests.benefitId, status: schema.benefitRequests.status })
+        .from(schema.benefitRequests)
+        .where(eq(schema.benefitRequests.employeeId, employee.id)),
+    ]);
+
+    const allowedBenefitIds = new Set<string>();
+    for (const row of enrollmentRows) {
+      allowedBenefitIds.add(row.benefitId);
+    }
+    for (const row of requestRows) {
+      if (CONTRACT_RELEVANT_STATUSES.has(row.status)) {
+        allowedBenefitIds.add(row.benefitId);
+      }
+    }
+
+    rows = rows.filter(
+      (row) => row.isActive && allowedBenefitIds.has(row.benefitId),
+    );
   }
 
   // Preload benefit names from D1 for all benefitIds

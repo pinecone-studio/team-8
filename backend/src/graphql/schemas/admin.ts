@@ -13,6 +13,10 @@ export const adminTypeDefs = gql`
     lockedBenefits: Int!
     usageByCategory: [AdminDashboardBucket!]!
     lockReasons: [AdminDashboardBucket!]!
+    hrQueueCount: Int!
+    financeQueueCount: Int!
+    awaitingContractCount: Int!
+    approvedThisWeekCount: Int!
   }
 
   type AuditLog {

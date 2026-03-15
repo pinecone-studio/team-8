@@ -14,6 +14,7 @@ import { getEligibilityRules } from "./getEligibilityRules";
 import { getAuditLogs } from "./getAuditLogs";
 import { getContractAcceptances } from "./getContractAcceptances";
 import { getEnrollments } from "./getEnrollments";
+import { getDepartments } from "./getDepartments";
 
 export const queries = {
   adminDashboardSummary: getAdminDashboardSummary,
@@ -32,4 +33,5 @@ export const queries = {
   auditLogs: getAuditLogs,
   contractAcceptances: getContractAcceptances,
   enrollments: getEnrollments,
+  getDepartments,
 };

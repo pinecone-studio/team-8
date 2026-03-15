@@ -28,6 +28,10 @@ export type AdminDashboardBucket = {
 export type AdminDashboardSummary = {
   __typename?: 'AdminDashboardSummary';
   activeBenefits: Scalars['Int']['output'];
+  approvedThisWeekCount: Scalars['Int']['output'];
+  awaitingContractCount: Scalars['Int']['output'];
+  financeQueueCount: Scalars['Int']['output'];
+  hrQueueCount: Scalars['Int']['output'];
   lockReasons: Array<AdminDashboardBucket>;
   lockedBenefits: Scalars['Int']['output'];
   pendingRequests: Scalars['Int']['output'];
@@ -347,6 +351,7 @@ export type Query = {
   contracts: Array<Contract>;
   eligibilityRules: Array<EligibilityRule>;
   enrollments: Array<EmployeeBenefitEnrollment>;
+  getDepartments: Array<Scalars['String']['output']>;
   getEmployee?: Maybe<Employee>;
   getEmployeeBenefits: Array<BenefitEligibility>;
   getEmployeeByEmail?: Maybe<Employee>;
@@ -412,6 +417,13 @@ export type QueryGetEmployeeBenefitsArgs = {
 
 export type QueryGetEmployeeByEmailArgs = {
   email: Scalars['String']['input'];
+};
+
+
+export type QueryGetEmployeesArgs = {
+  department?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type RequestBenefitInput = {
@@ -591,6 +603,10 @@ export type AdminDashboardBucketResolvers<ContextType = GraphQLContext, ParentTy
 
 export type AdminDashboardSummaryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AdminDashboardSummary'] = ResolversParentTypes['AdminDashboardSummary']> = ResolversObject<{
   activeBenefits?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  approvedThisWeekCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  awaitingContractCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  financeQueueCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  hrQueueCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   lockReasons?: Resolver<Array<ResolversTypes['AdminDashboardBucket']>, ParentType, ContextType>;
   lockedBenefits?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   pendingRequests?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
@@ -778,10 +794,11 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   contracts?: Resolver<Array<ResolversTypes['Contract']>, ParentType, ContextType, Partial<QueryContractsArgs>>;
   eligibilityRules?: Resolver<Array<ResolversTypes['EligibilityRule']>, ParentType, ContextType, RequireFields<QueryEligibilityRulesArgs, 'benefitId'>>;
   enrollments?: Resolver<Array<ResolversTypes['EmployeeBenefitEnrollment']>, ParentType, ContextType, Partial<QueryEnrollmentsArgs>>;
+  getDepartments?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
   getEmployee?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<QueryGetEmployeeArgs, 'id'>>;
   getEmployeeBenefits?: Resolver<Array<ResolversTypes['BenefitEligibility']>, ParentType, ContextType, RequireFields<QueryGetEmployeeBenefitsArgs, 'employeeId'>>;
   getEmployeeByEmail?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<QueryGetEmployeeByEmailArgs, 'email'>>;
-  getEmployees?: Resolver<Array<ResolversTypes['Employee']>, ParentType, ContextType>;
+  getEmployees?: Resolver<Array<ResolversTypes['Employee']>, ParentType, ContextType, Partial<QueryGetEmployeesArgs>>;
   myBenefits?: Resolver<Array<ResolversTypes['BenefitEligibility']>, ParentType, ContextType>;
   session?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType>;
 }>;

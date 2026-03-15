@@ -375,6 +375,7 @@ function RequestsContent() {
       benefitLabel: vendor ? `${name} · ${vendor}` : name,
       status: req.status,
       requestDate: req.createdAt?.split("T")[0] ?? "—",
+      updatedDate: req.updatedAt?.split("T")[0] ?? null,
       reviewer: req.reviewedBy,
       declineReason: req.declineReason,
       viewContractUrl: req.viewContractUrl,
@@ -454,7 +455,12 @@ function RequestsContent() {
                       <div className="flex items-start justify-between gap-4 px-5 pt-4 pb-3">
                         <div className="min-w-0">
                           <p className="font-medium text-gray-900 truncate">{req.benefitLabel}</p>
-                          <p className="mt-0.5 text-xs text-gray-400">Requested {req.requestDate}</p>
+                          <p className="mt-0.5 text-xs text-gray-400">
+                            Submitted {req.requestDate}
+                            {req.updatedDate && req.updatedDate !== req.requestDate && (
+                              <span className="ml-2 text-gray-300">· Updated {req.updatedDate}</span>
+                            )}
+                          </p>
                         </div>
                         <span className={`inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium shrink-0 ${getStatusTone(req.status)}`}>
                           {formatStatusLabel(req.status)}
@@ -469,6 +475,33 @@ function RequestsContent() {
                           requiresContract={req.requiresContract}
                         />
                       </div>
+
+                      {/* In-progress status context */}
+                      {req.status === "awaiting_hr_review" && (
+                        <div className="mx-5 mb-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                          Your request is in the <span className="font-medium">HR review queue</span>. The HR team will process it shortly — no action needed from you.
+                        </div>
+                      )}
+                      {req.status === "awaiting_finance_review" && (
+                        <div className="mx-5 mb-3 rounded-lg border border-teal-100 bg-teal-50 px-3 py-2 text-xs text-teal-700">
+                          Your request is in the <span className="font-medium">Finance review queue</span>. The Finance team will process it — no action needed from you.
+                        </div>
+                      )}
+                      {req.status === "hr_approved" && (
+                        <div className="mx-5 mb-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                          HR has approved your request. It is now awaiting <span className="font-medium">Finance review</span>.
+                        </div>
+                      )}
+                      {req.status === "finance_approved" && (
+                        <div className="mx-5 mb-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                          Finance has approved your request. It is being <span className="font-medium">finalised</span>.
+                        </div>
+                      )}
+                      {req.status === "cancelled" && (
+                        <div className="mx-5 mb-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-500">
+                          This request was cancelled. You can submit a new request at any time.
+                        </div>
+                      )}
 
                       {/* Decline reason */}
                       {isDeclined && req.declineReason && (

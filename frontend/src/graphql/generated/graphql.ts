@@ -27,6 +27,10 @@ export type AdminDashboardBucket = {
 export type AdminDashboardSummary = {
   __typename?: 'AdminDashboardSummary';
   activeBenefits: Scalars['Int']['output'];
+  approvedThisWeekCount: Scalars['Int']['output'];
+  awaitingContractCount: Scalars['Int']['output'];
+  financeQueueCount: Scalars['Int']['output'];
+  hrQueueCount: Scalars['Int']['output'];
   lockReasons: Array<AdminDashboardBucket>;
   lockedBenefits: Scalars['Int']['output'];
   pendingRequests: Scalars['Int']['output'];
@@ -350,6 +354,7 @@ export type Query = {
   contracts: Array<Contract>;
   eligibilityRules: Array<EligibilityRule>;
   enrollments: Array<EmployeeBenefitEnrollment>;
+  getDepartments: Array<Scalars['String']['output']>;
   getEmployee?: Maybe<Employee>;
   getEmployeeBenefits: Array<BenefitEligibility>;
   getEmployeeByEmail?: Maybe<Employee>;
@@ -415,6 +420,13 @@ export type QueryGetEmployeeBenefitsArgs = {
 
 export type QueryGetEmployeeByEmailArgs = {
   email: Scalars['String']['input'];
+};
+
+
+export type QueryGetEmployeesArgs = {
+  department?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type RequestBenefitInput = {
@@ -557,7 +569,7 @@ export type DeleteEmployeeMutation = { __typename?: 'Mutation', deleteEmployee: 
 export type GetAdminDashboardSummaryQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetAdminDashboardSummaryQuery = { __typename?: 'Query', adminDashboardSummary: { __typename?: 'AdminDashboardSummary', totalEmployees: number, activeBenefits: number, pendingRequests: number, lockedBenefits: number, usageByCategory: Array<{ __typename?: 'AdminDashboardBucket', label: string, value: number }>, lockReasons: Array<{ __typename?: 'AdminDashboardBucket', label: string, value: number }> } };
+export type GetAdminDashboardSummaryQuery = { __typename?: 'Query', adminDashboardSummary: { __typename?: 'AdminDashboardSummary', totalEmployees: number, activeBenefits: number, pendingRequests: number, lockedBenefits: number, hrQueueCount: number, financeQueueCount: number, awaitingContractCount: number, approvedThisWeekCount: number, usageByCategory: Array<{ __typename?: 'AdminDashboardBucket', label: string, value: number }>, lockReasons: Array<{ __typename?: 'AdminDashboardBucket', label: string, value: number }> } };
 
 export type GetAdminBenefitsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -639,7 +651,16 @@ export type GetEligibilityRulesQueryVariables = Exact<{
 
 export type GetEligibilityRulesQuery = { __typename?: 'Query', eligibilityRules: Array<{ __typename?: 'EligibilityRule', id: string, benefitId: string, ruleType: string, operator: string, value: string, errorMessage: string, priority: number, isActive: boolean }> };
 
-export type GetEmployeesQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetDepartmentsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetDepartmentsQuery = { __typename?: 'Query', getDepartments: Array<string> };
+
+export type GetEmployeesQueryVariables = Exact<{
+  search?: InputMaybe<Scalars['String']['input']>;
+  department?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
 
 
 export type GetEmployeesQuery = { __typename?: 'Query', getEmployees: Array<{ __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, createdAt: any, updatedAt: any }> };
@@ -1217,6 +1238,10 @@ export const GetAdminDashboardSummaryDocument = gql`
       label
       value
     }
+    hrQueueCount
+    financeQueueCount
+    awaitingContractCount
+    approvedThisWeekCount
   }
 }
     `;
@@ -1897,9 +1922,49 @@ export type GetEligibilityRulesQueryHookResult = ReturnType<typeof useGetEligibi
 export type GetEligibilityRulesLazyQueryHookResult = ReturnType<typeof useGetEligibilityRulesLazyQuery>;
 export type GetEligibilityRulesSuspenseQueryHookResult = ReturnType<typeof useGetEligibilityRulesSuspenseQuery>;
 export type GetEligibilityRulesQueryResult = Apollo.QueryResult<GetEligibilityRulesQuery, GetEligibilityRulesQueryVariables>;
+export const GetDepartmentsDocument = gql`
+    query GetDepartments {
+  getDepartments
+}
+    `;
+
+/**
+ * __useGetDepartmentsQuery__
+ *
+ * To run a query within a React component, call `useGetDepartmentsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetDepartmentsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetDepartmentsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetDepartmentsQuery(baseOptions?: Apollo.QueryHookOptions<GetDepartmentsQuery, GetDepartmentsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetDepartmentsQuery, GetDepartmentsQueryVariables>(GetDepartmentsDocument, options);
+      }
+export function useGetDepartmentsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetDepartmentsQuery, GetDepartmentsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetDepartmentsQuery, GetDepartmentsQueryVariables>(GetDepartmentsDocument, options);
+        }
+// @ts-ignore
+export function useGetDepartmentsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetDepartmentsQuery, GetDepartmentsQueryVariables>): Apollo.UseSuspenseQueryResult<GetDepartmentsQuery, GetDepartmentsQueryVariables>;
+export function useGetDepartmentsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetDepartmentsQuery, GetDepartmentsQueryVariables>): Apollo.UseSuspenseQueryResult<GetDepartmentsQuery | undefined, GetDepartmentsQueryVariables>;
+export function useGetDepartmentsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetDepartmentsQuery, GetDepartmentsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetDepartmentsQuery, GetDepartmentsQueryVariables>(GetDepartmentsDocument, options);
+        }
+export type GetDepartmentsQueryHookResult = ReturnType<typeof useGetDepartmentsQuery>;
+export type GetDepartmentsLazyQueryHookResult = ReturnType<typeof useGetDepartmentsLazyQuery>;
+export type GetDepartmentsSuspenseQueryHookResult = ReturnType<typeof useGetDepartmentsSuspenseQuery>;
+export type GetDepartmentsQueryResult = Apollo.QueryResult<GetDepartmentsQuery, GetDepartmentsQueryVariables>;
 export const GetEmployeesDocument = gql`
-    query GetEmployees {
-  getEmployees {
+    query GetEmployees($search: String, $department: String, $limit: Int) {
+  getEmployees(search: $search, department: $department, limit: $limit) {
     id
     name
     nameEng
@@ -1929,6 +1994,9 @@ export const GetEmployeesDocument = gql`
  * @example
  * const { data, loading, error } = useGetEmployeesQuery({
  *   variables: {
+ *      search: // value for 'search'
+ *      department: // value for 'department'
+ *      limit: // value for 'limit'
  *   },
  * });
  */
