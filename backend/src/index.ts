@@ -21,6 +21,10 @@ export interface Env {
   ENVIRONMENT: string;
   CLERK_SECRET_KEY?: string;
   CLERK_JWT_KEY?: string;
+  GMAIL_CLIENT_ID?: string;
+  GMAIL_CLIENT_SECRET?: string;
+  GMAIL_REFRESH_TOKEN?: string;
+  GMAIL_SENDER_EMAIL?: string;
 }
 
 function getCorsHeaders(request: Request): HeadersInit {
@@ -30,7 +34,7 @@ function getCorsHeaders(request: Request): HeadersInit {
     "Access-Control-Allow-Origin": origin ?? "*",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Access-Control-Allow-Headers":
-      "Content-Type, Authorization, Apollo-Require-Preflight",
+      "Content-Type, Authorization, Apollo-Require-Preflight, x-dev-employee-email, x-dev-employee-id",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };

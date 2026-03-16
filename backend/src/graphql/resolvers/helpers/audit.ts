@@ -21,7 +21,10 @@ export type AuditActionType =
   | "ENROLLMENT_REACTIVATED"
   | "RULE_PROPOSAL_SUBMITTED"
   | "RULE_PROPOSAL_APPROVED"
-  | "RULE_PROPOSAL_REJECTED";
+  | "RULE_PROPOSAL_REJECTED"
+  | "ATTENDANCE_IMPORT"
+  | "ELIGIBILITY_RECOMPUTED"
+  | "OKR_SYNC";
 
 export type AuditEntityType =
   | "benefit_request"

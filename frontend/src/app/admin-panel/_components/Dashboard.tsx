@@ -296,7 +296,7 @@ export default function Dashboard() {
                     count={summary?.contractsExpiringSoon ?? 0}
                     href="/admin-panel/vendor-contracts"
                     tone="amber"
-                    hint="Active contracts expiring within 30 days"
+                    hint="Active contracts expiring within 60 days"
                     loading={isLoading}
                   />
                   <QueueCard

@@ -222,10 +222,10 @@ export const getNotifications = async (
 
       const activeContracts = contractRows.filter((c) => c.isActive);
       const now = new Date().toISOString();
-      const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const sixtyDaysFromNow = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
 
       for (const contract of activeContracts) {
-        if (contract.expiryDate && contract.expiryDate >= now && contract.expiryDate <= thirtyDaysFromNow) {
+        if (contract.expiryDate && contract.expiryDate >= now && contract.expiryDate <= sixtyDaysFromNow) {
           const days = daysUntil(contract.expiryDate);
           if (days !== null) {
             raw.push({

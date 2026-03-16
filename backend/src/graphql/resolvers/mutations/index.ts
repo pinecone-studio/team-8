@@ -16,6 +16,8 @@ import { proposeRuleChange } from "./proposeRuleChange";
 import { approveRuleProposal } from "./approveRuleProposal";
 import { rejectRuleProposal } from "./rejectRuleProposal";
 import { markNotificationsRead } from "./markNotificationsRead";
+import { importAttendance } from "./importAttendance";
+import { syncOkrStatus } from "./syncOkrStatus";
 
 export const mutations = {
   createBenefit,
@@ -36,4 +38,6 @@ export const mutations = {
   approveRuleProposal,
   rejectRuleProposal,
   markNotificationsRead,
+  importAttendance,
+  syncOkrStatus,
 };
