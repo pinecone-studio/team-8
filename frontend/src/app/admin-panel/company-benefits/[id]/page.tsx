@@ -88,21 +88,20 @@ type ContractRow = {
   viewUrl?: string | null;
 };
 
-function getExpiryStatus(c: ContractRow): "active" | "expiring_soon" | "expired" | "inactive" {
+function getExpiryStatus(c: ContractRow, now: number): "active" | "expiring_soon" | "expired" | "inactive" {
   if (!c.isActive) return "inactive";
   const exp = new Date(c.expiryDate).getTime();
-  const now = Date.now();
   if (exp < now) return "expired";
   if (exp - now <= SIXTY_DAYS_MS) return "expiring_soon";
   return "active";
 }
 
-function ExpiryBadge({ contract }: { contract: ContractRow }) {
-  const s = getExpiryStatus(contract);
+function ExpiryBadge({ contract, now }: { contract: ContractRow; now: number }) {
+  const s = getExpiryStatus(contract, now);
   if (s === "inactive") return <span className="text-xs text-slate-400">Inactive</span>;
   if (s === "expired") return <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-red-100 text-red-700"><Clock className="h-2.5 w-2.5" />Expired</span>;
   if (s === "expiring_soon") {
-    const days = Math.ceil((new Date(contract.expiryDate).getTime() - Date.now()) / 86400000);
+    const days = Math.ceil((new Date(contract.expiryDate).getTime() - now) / 86400000);
     return <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-amber-100 text-amber-700"><AlertTriangle className="h-2.5 w-2.5" />Expires in {days}d</span>;
   }
   return <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700">Active</span>;
@@ -513,6 +512,7 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
   const { getToken } = useAuth();
   const { data, loading, error, refetch } = useGetContractsForBenefitQuery({ variables: { benefitId } });
   const contracts = (data?.contracts ?? []) as ContractRow[];
+  const [now] = useState(Date.now);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -598,7 +598,7 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-500">{row.effectiveDate}</td>
                   <td className="px-4 py-3 text-sm text-slate-500">{row.expiryDate}</td>
-                  <td className="px-4 py-3"><ExpiryBadge contract={row} /></td>
+                  <td className="px-4 py-3"><ExpiryBadge contract={row} now={now} /></td>
                   <td className="px-4 py-3">
                     {row.viewUrl ? (
                       <a href={row.viewUrl} target="_blank" rel="noreferrer"
