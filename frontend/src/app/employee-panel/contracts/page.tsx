@@ -57,8 +57,13 @@ function ContractPreviewModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex w-full max-w-3xl flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden max-h-[92vh]">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div className="flex w-full max-w-3xl flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-4">
           <div>

@@ -4,6 +4,7 @@ import StatusBadge from "./StatusBadge";
 
 type Props = {
   benefit: BenefitEligibility;
+  onClick?: (benefit: BenefitEligibility) => void;
 };
 
 function buildDescription(benefit: BenefitEligibility) {
@@ -16,15 +17,12 @@ function buildDescription(benefit: BenefitEligibility) {
   return `Company covers ${benefit.benefit.subsidyPercent}%. Employee share ${benefit.benefit.employeePercent}%.`;
 }
 
-export default function BenefitCard({ benefit }: Props) {
+export default function BenefitCard({ benefit, onClick }: Props) {
   const subsidyLabel = `${benefit.benefit.subsidyPercent}%`;
   const vendor = benefit.benefit.vendorName ?? "Internal Benefit";
 
-  return (
-    <Link
-      href={`/employee-panel/benefits/${benefit.benefitId}`}
-      className="block h-full w-full min-w-0 rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary/30 hover:bg-accent/50"
-    >
+  const content = (
+    <>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="text-base font-semibold text-card-foreground">
@@ -44,6 +42,27 @@ export default function BenefitCard({ benefit }: Props) {
       </p>
 
       <p className="mt-3 text-sm font-medium text-foreground">{subsidyLabel} subsidy</p>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={() => onClick(benefit)}
+        className="block h-full w-full min-w-0 rounded-lg border border-border bg-card p-5 text-left transition-colors hover:border-primary/30 hover:bg-accent/50"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <Link
+      href={`/employee-panel/benefits/${benefit.benefitId}`}
+      className="block h-full w-full min-w-0 rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary/30 hover:bg-accent/50"
+    >
+      {content}
     </Link>
   );
 }

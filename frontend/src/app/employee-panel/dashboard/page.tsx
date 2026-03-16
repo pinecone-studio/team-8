@@ -1,14 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "../_components/SideBar";
 import SummaryCard from "../_components/benefits/SummaryCard";
 import BenefitCard from "../_components/benefits/BenefitCard";
+import BenefitDetailModal from "../_components/benefits/BenefitDetailModal";
+import BenefitRequestModal from "../_components/benefits/BenefitRequestModal";
 import PageHeader from "../_components/layout/PageHeader";
 import PageLoading from "@/app/_components/PageLoading";
 import {
   BenefitEligibilityStatus,
   useGetMyBenefitsQuery,
+  type BenefitEligibility,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 
@@ -23,7 +27,10 @@ const FILTERS = [
 type FilterValue = (typeof FILTERS)[number]["value"];
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<FilterValue>("ALL");
+  const [selectedBenefit, setSelectedBenefit] = useState<BenefitEligibility | null>(null);
+  const [requestModalBenefitId, setRequestModalBenefitId] = useState<string | null>(null);
 
   const { employee, error, loading: employeeLoading } = useCurrentEmployee();
 
@@ -119,12 +126,36 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 filteredBenefits.map((benefit) => (
-                  <BenefitCard key={benefit.benefitId} benefit={benefit} />
+                  <BenefitCard
+                    key={benefit.benefitId}
+                    benefit={benefit}
+                    onClick={setSelectedBenefit}
+                  />
                 ))
               )}
             </div>
           </section>
         </main>
+        {selectedBenefit && (
+          <BenefitDetailModal
+            benefit={selectedBenefit}
+            onClose={() => setSelectedBenefit(null)}
+            onRequestBenefit={(benefitId) => {
+              setSelectedBenefit(null);
+              setRequestModalBenefitId(benefitId);
+            }}
+          />
+        )}
+        {requestModalBenefitId && (
+          <BenefitRequestModal
+            benefitId={requestModalBenefitId}
+            onClose={() => setRequestModalBenefitId(null)}
+            onSuccess={() => {
+              setRequestModalBenefitId(null);
+              router.push("/employee-panel/requests?submitted=true");
+            }}
+          />
+        )}
       </div>
     </div>
   );
