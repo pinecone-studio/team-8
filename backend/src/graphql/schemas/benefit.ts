@@ -129,6 +129,15 @@ export const benefitTypeDefs = gql`
     approvalPolicy: String
   }
 
+  input UpdateBenefitInput {
+    name: String
+    category: String
+    subsidyPercent: Int
+    vendorName: String
+    requiresContract: Boolean
+    approvalPolicy: String
+  }
+
   input RequestBenefitInput {
     benefitId: String!
     requestedAmount: Int
@@ -171,6 +180,7 @@ export const benefitTypeDefs = gql`
 
   extend type Mutation {
     createBenefit(input: CreateBenefitInput!): Benefit!
+    updateBenefit(id: String!, input: UpdateBenefitInput!): Benefit!
     deleteBenefit(id: String!): Boolean!
     requestBenefit(input: RequestBenefitInput!): BenefitRequest!
     confirmBenefitRequest(requestId: String!, contractAccepted: Boolean!): BenefitRequest!

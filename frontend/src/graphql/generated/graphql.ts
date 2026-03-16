@@ -287,6 +287,7 @@ export type Mutation = {
   rejectRuleProposal: RuleProposal;
   requestBenefit: BenefitRequest;
   syncOkrStatus: OkrSyncResult;
+  updateBenefit: Benefit;
   updateEligibilityRule: EligibilityRule;
   updateEmployee?: Maybe<Employee>;
 };
@@ -383,6 +384,12 @@ export type MutationRequestBenefitArgs = {
 
 export type MutationSyncOkrStatusArgs = {
   rows: Array<OkrSyncRowInput>;
+};
+
+
+export type MutationUpdateBenefitArgs = {
+  id: Scalars['String']['input'];
+  input: UpdateBenefitInput;
 };
 
 
@@ -570,6 +577,15 @@ export type RuleProposal = {
   summary: Scalars['String']['output'];
 };
 
+export type UpdateBenefitInput = {
+  approvalPolicy?: InputMaybe<Scalars['String']['input']>;
+  category?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  requiresContract?: InputMaybe<Scalars['Boolean']['input']>;
+  subsidyPercent?: InputMaybe<Scalars['Int']['input']>;
+  vendorName?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type UpdateEligibilityRuleInput = {
   errorMessage?: InputMaybe<Scalars['String']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
@@ -642,6 +658,14 @@ export type CreateBenefitMutationVariables = Exact<{
 
 
 export type CreateBenefitMutation = { __typename?: 'Mutation', createBenefit: { __typename?: 'Benefit', id: string, name: string, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null } };
+
+export type UpdateBenefitMutationVariables = Exact<{
+  id: Scalars['String']['input'];
+  input: UpdateBenefitInput;
+}>;
+
+
+export type UpdateBenefitMutation = { __typename?: 'Mutation', updateBenefit: { __typename?: 'Benefit', id: string, name: string, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string } };
 
 export type DeleteBenefitMutationVariables = Exact<{
   id: Scalars['String']['input'];
@@ -1129,6 +1153,51 @@ export function useCreateBenefitMutation(baseOptions?: Apollo.MutationHookOption
 export type CreateBenefitMutationHookResult = ReturnType<typeof useCreateBenefitMutation>;
 export type CreateBenefitMutationResult = Apollo.MutationResult<CreateBenefitMutation>;
 export type CreateBenefitMutationOptions = Apollo.BaseMutationOptions<CreateBenefitMutation, CreateBenefitMutationVariables>;
+export const UpdateBenefitDocument = gql`
+    mutation UpdateBenefit($id: String!, $input: UpdateBenefitInput!) {
+  updateBenefit(id: $id, input: $input) {
+    id
+    name
+    nameEng
+    category
+    subsidyPercent
+    employeePercent
+    unitPrice
+    vendorName
+    requiresContract
+    flowType
+    optionsDescription
+    approvalPolicy
+  }
+}
+    `;
+export type UpdateBenefitMutationFn = Apollo.MutationFunction<UpdateBenefitMutation, UpdateBenefitMutationVariables>;
+
+/**
+ * __useUpdateBenefitMutation__
+ *
+ * To run a mutation, you first call `useUpdateBenefitMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateBenefitMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateBenefitMutation, { data, loading, error }] = useUpdateBenefitMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateBenefitMutation(baseOptions?: Apollo.MutationHookOptions<UpdateBenefitMutation, UpdateBenefitMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateBenefitMutation, UpdateBenefitMutationVariables>(UpdateBenefitDocument, options);
+      }
+export type UpdateBenefitMutationHookResult = ReturnType<typeof useUpdateBenefitMutation>;
+export type UpdateBenefitMutationResult = Apollo.MutationResult<UpdateBenefitMutation>;
+export type UpdateBenefitMutationOptions = Apollo.BaseMutationOptions<UpdateBenefitMutation, UpdateBenefitMutationVariables>;
 export const DeleteBenefitDocument = gql`
     mutation DeleteBenefit($id: String!) {
   deleteBenefit(id: $id)

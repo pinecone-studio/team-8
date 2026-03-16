@@ -188,7 +188,7 @@ export default function PendingRequestsPage() {
 
   if (!isAdmin) {
     return (
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-gray-50">
         <Sidebar />
         <div className="flex flex-1 flex-col items-center justify-center">
           <p className="text-muted-foreground">Admin access required.</p>
@@ -219,7 +219,7 @@ export default function PendingRequestsPage() {
   const emptyMsg = emptyMessages[activeQueue];
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
       <div className="flex flex-1 flex-col items-center">
         <main className="w-full max-w-7xl p-8">

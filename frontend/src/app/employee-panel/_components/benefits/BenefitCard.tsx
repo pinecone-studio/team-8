@@ -13,7 +13,6 @@ function buildDescription(benefit: BenefitEligibility) {
   if (benefit.benefit.requiresContract) {
     return `Requires contract acceptance. Employee share ${benefit.benefit.employeePercent}%.`;
   }
-
   return `Company covers ${benefit.benefit.subsidyPercent}%. Employee share ${benefit.benefit.employeePercent}%.`;
 }
 
@@ -22,27 +21,36 @@ export default function BenefitCard({ benefit, onClick }: Props) {
   const vendor = benefit.benefit.vendorName ?? "Internal Benefit";
 
   const content = (
-    <>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="text-base font-semibold text-card-foreground">
-            {benefit.benefit.name}
-          </h3>
-          <p className="mt-0.5 text-sm text-muted-foreground">{vendor}</p>
-        </div>
+    <div className="flex h-full flex-col">
+      {/* Top */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900 leading-snug">
+          {benefit.benefit.name}
+        </h3>
+        <p className="mt-0.5 text-xs text-gray-400">{vendor}</p>
       </div>
 
+      {/* Badges */}
       <div className="mt-3 flex items-center gap-2">
         <StatusBadge status={benefit.status} />
-        <span className="text-sm text-muted-foreground">{benefit.benefit.category}</span>
+        <span className="text-[11px] font-medium capitalize text-gray-400">
+          {benefit.benefit.category}
+        </span>
       </div>
 
-      <p className="mt-3 text-sm leading-relaxed text-muted-foreground line-clamp-2">
+      {/* Description */}
+      <p className="mt-3 text-xs leading-relaxed text-gray-500 line-clamp-2 flex-1">
         {buildDescription(benefit)}
       </p>
 
-      <p className="mt-3 text-sm font-medium text-foreground">{subsidyLabel} subsidy</p>
-    </>
+      {/* Footer */}
+      <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+          Subsidy
+        </span>
+        <span className="text-sm font-bold text-gray-900">{subsidyLabel}</span>
+      </div>
+    </div>
   );
 
   if (onClick) {
@@ -50,7 +58,7 @@ export default function BenefitCard({ benefit, onClick }: Props) {
       <button
         type="button"
         onClick={() => onClick(benefit)}
-        className="block h-full w-full min-w-0 rounded-lg border border-border bg-card p-5 text-left transition-colors hover:border-primary/30 hover:bg-accent/50"
+        className="block h-full w-full min-w-0 rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-sm transition hover:border-gray-200 hover:shadow-md"
       >
         {content}
       </button>
@@ -60,7 +68,7 @@ export default function BenefitCard({ benefit, onClick }: Props) {
   return (
     <Link
       href={`/employee-panel/benefits/${benefit.benefitId}`}
-      className="block h-full w-full min-w-0 rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary/30 hover:bg-accent/50"
+      className="block h-full w-full min-w-0 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:border-gray-200 hover:shadow-md"
     >
       {content}
     </Link>
