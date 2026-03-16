@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, Clock, FileText, Lock, ShieldCheck, Users, XCircle } from "lucide-react";
 import StatusBadge from "../../_components/benefits/StatusBadge";
 import Sidebar from "../../_components/SideBar";
+import BenefitRequestModal from "../../_components/benefits/BenefitRequestModal";
 import PageLoading from "@/app/_components/PageLoading";
 import { useGetMyBenefitsQuery, useGetBenefitRequestsQuery } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
@@ -70,6 +72,7 @@ function NextStepsBox({
   approvalPolicy,
   requiresContract,
   awaitingContract,
+  onRequestBenefit,
 }: {
   status: string;
   benefitId: string;
@@ -77,6 +80,7 @@ function NextStepsBox({
   approvalPolicy?: string | null;
   requiresContract: boolean;
   awaitingContract?: boolean;
+  onRequestBenefit?: () => void;
 }) {
   const p = (approvalPolicy ?? "hr").toLowerCase();
 
@@ -112,12 +116,22 @@ function NextStepsBox({
             ? "You will be asked to accept a vendor contract as part of the request."
             : "Your request will go through an approval process."}
         </p>
-        <Link
-          href={`/employee-panel/benefits/${benefitId}/request`}
-          className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98]"
-        >
-          Request Benefit
-        </Link>
+        {onRequestBenefit ? (
+          <button
+            type="button"
+            onClick={onRequestBenefit}
+            className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98]"
+          >
+            Request Benefit
+          </button>
+        ) : (
+          <Link
+            href={`/employee-panel/benefits/${benefitId}/request`}
+            className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98]"
+          >
+            Request Benefit
+          </Link>
+        )}
       </div>
     );
   }
@@ -171,8 +185,10 @@ function NextStepsBox({
 }
 
 export default function BenefitDetailPage() {
+  const router = useRouter();
   const params = useParams();
   const id = params.id as string;
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
   const { loading: employeeLoading } = useCurrentEmployee();
   const { data, error, loading } = useGetMyBenefitsQuery();
   const { data: requestsData } = useGetBenefitRequestsQuery();
@@ -316,6 +332,7 @@ export default function BenefitDetailPage() {
                   approvalPolicy={policy}
                   requiresContract={benefit.requiresContract}
                   awaitingContract={awaitingContract}
+                  onRequestBenefit={() => setRequestModalOpen(true)}
                 />
               </div>
 
@@ -334,6 +351,16 @@ export default function BenefitDetailPage() {
           </div>
         </main>
       </div>
+      {requestModalOpen && (
+        <BenefitRequestModal
+          benefitId={id}
+          onClose={() => setRequestModalOpen(false)}
+          onSuccess={() => {
+            setRequestModalOpen(false);
+            router.push("/employee-panel/requests?submitted=true");
+          }}
+        />
+      )}
     </div>
   );
 }

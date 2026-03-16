@@ -181,7 +181,7 @@ export default function BenefitRequestPage() {
           </Link>
 
           <div className="mt-8">
-            <Stepper currentStep={step} />
+            <Stepper currentStep={step} requiresContract={requiresContract} />
           </div>
 
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-8">
