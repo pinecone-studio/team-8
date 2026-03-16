@@ -79,8 +79,50 @@ export const adminTypeDefs = gql`
     updatedAt: String!
   }
 
+  input AttendanceRowInput {
+    employeeId: String
+    email: String
+    date: String!
+    checkInTime: String!
+  }
+
+  type AttendanceImportError {
+    row: Int!
+    identifier: String!
+    reason: String!
+  }
+
+  type AttendanceImportResult {
+    processed: Int!
+    updated: Int!
+    invalid: Int!
+    errors: [AttendanceImportError!]!
+  }
+
+  input OkrSyncRowInput {
+    employeeId: String
+    email: String
+    okrSubmitted: Boolean!
+    quarter: String
+  }
+
+  type OkrSyncError {
+    row: Int!
+    identifier: String!
+    reason: String!
+  }
+
+  type OkrSyncResult {
+    processed: Int!
+    updated: Int!
+    invalid: Int!
+    errors: [OkrSyncError!]!
+  }
+
   extend type Mutation {
     markNotificationsRead(keys: [String!]!): Boolean!
+    importAttendance(rows: [AttendanceRowInput!]!): AttendanceImportResult!
+    syncOkrStatus(rows: [OkrSyncRowInput!]!): OkrSyncResult!
   }
 
   extend type Query {

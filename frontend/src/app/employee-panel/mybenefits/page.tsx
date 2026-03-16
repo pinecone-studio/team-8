@@ -13,7 +13,7 @@ import {
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 
-const STATUS_ORDER: Record<string, number> = { ACTIVE: 0, ELIGIBLE: 1, PENDING: 2, LOCKED: 3 };
+const STATUS_ORDER: Record<string, number> = { ACTIVE: 0, PENDING: 1 };
 const CATEGORY_ORDER = ["Wellness", "Equipment", "Financial"];
 
 type PageProps = { params?: Promise<Record<string, string | string[]>> };
@@ -25,13 +25,23 @@ export default function Mybenefits({ params }: PageProps) {
     data,
     error: benefitsError,
     loading: benefitsLoading,
-  } = useGetMyBenefitsQuery();
-  const { data: requestsData } = useGetBenefitRequestsQuery();
-  const { data: benefitsData } = useGetBenefitsQuery();
+  } = useGetMyBenefitsQuery({
+    fetchPolicy: "cache-and-network",
+  });
+  const { data: requestsData, loading: requestsLoading } = useGetBenefitRequestsQuery({
+    fetchPolicy: "cache-and-network",
+  });
+  const { data: benefitsData, loading: benefitsCatalogLoading } = useGetBenefitsQuery({
+    fetchPolicy: "cache-and-network",
+  });
 
   const myBenefitsRaw = useMemo(() => data?.myBenefits ?? [], [data?.myBenefits]);
   const myBenefits = useMemo(
-    () => myBenefitsRaw.filter((b) => b.status !== BenefitEligibilityStatus.Locked),
+    () =>
+      myBenefitsRaw.filter((b) => {
+        const s = String(b.status).toUpperCase();
+        return s === "ACTIVE" || s === "PENDING";
+      }),
     [myBenefitsRaw]
   );
   const benefitRequests = useMemo(() => requestsData?.benefitRequests ?? [], [requestsData?.benefitRequests]);
@@ -93,7 +103,11 @@ export default function Mybenefits({ params }: PageProps) {
     });
   }, [myBenefitsExcludingRequested]);
 
-  const isLoading = employeeLoading || benefitsLoading;
+  const isLoading =
+    employeeLoading ||
+    benefitsLoading ||
+    requestsLoading ||
+    benefitsCatalogLoading;
   const hasError = benefitsError ?? null;
 
   return (
@@ -102,11 +116,9 @@ export default function Mybenefits({ params }: PageProps) {
 
       <div className="flex flex-1 flex-col items-center">
         <main className="w-full max-w-7xl p-8">
-          <h1 className="text-xl font-semibold text-gray-900">
-            Benefits Catalog
-          </h1>
+          <h1 className="text-xl font-semibold text-gray-900">My Benefits</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Explore all company benefits grouped by category.
+            Benefits you are currently enrolled in.
           </p>
 
           {isLoading ? (
@@ -115,16 +127,27 @@ export default function Mybenefits({ params }: PageProps) {
             <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-8 text-red-700">
               Failed to load benefit data.
             </div>
-          ) : myBenefits.length === 0 && requestedBenefits.length === 0 ? (
+          ) : myBenefitsExcludingRequested.length === 0 ? (
             <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-8 text-center text-gray-500">
-              No benefits found for your account.
+              You do not have any active or pending benefits yet.
             </div>
           ) : (
             <div className="mt-10 space-y-10">
+              <section>
+                <h2 className="mb-4 text-lg font-semibold text-gray-900">
+                  My benefits
+                </h2>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  {myBenefitsExcludingRequested.map((benefit) => (
+                    <BenefitCard key={benefit.benefitId} benefit={benefit} />
+                  ))}
+                </div>
+              </section>
+
               {requestedBenefits.length > 0 && (
                 <section>
                   <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                    Your requested benefits
+                    Benefit requests
                   </h2>
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                     {requestedBenefits.map(({ requestId, benefit, requestStatus }) => (
@@ -138,21 +161,6 @@ export default function Mybenefits({ params }: PageProps) {
                   </div>
                 </section>
               )}
-              {byCategory.map(([category, benefits]) => (
-                <section key={category}>
-                  <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                    {category}
-                  </h2>
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                    {benefits.map((benefit) => (
-                      <BenefitCard
-                        key={benefit.benefitId}
-                        benefit={benefit}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))}
             </div>
           )}
         </main>

@@ -374,8 +374,13 @@ export default function PendingRequestsPage() {
 
       {/* Decline confirmation modal */}
       {declineModalId && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setDeclineModalId(null)}
+        >
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-base font-semibold text-gray-900">Decline Request</h2>
             <p className="mt-1 text-sm text-gray-500">
               Optionally provide a reason. The employee will see this reason.

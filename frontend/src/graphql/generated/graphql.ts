@@ -41,6 +41,28 @@ export type AdminDashboardSummary = {
   usageByCategory: Array<AdminDashboardBucket>;
 };
 
+export type AttendanceImportError = {
+  __typename?: 'AttendanceImportError';
+  identifier: Scalars['String']['output'];
+  reason: Scalars['String']['output'];
+  row: Scalars['Int']['output'];
+};
+
+export type AttendanceImportResult = {
+  __typename?: 'AttendanceImportResult';
+  errors: Array<AttendanceImportError>;
+  invalid: Scalars['Int']['output'];
+  processed: Scalars['Int']['output'];
+  updated: Scalars['Int']['output'];
+};
+
+export type AttendanceRowInput = {
+  checkInTime: Scalars['String']['input'];
+  date: Scalars['String']['input'];
+  email?: InputMaybe<Scalars['String']['input']>;
+  employeeId?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type AuditLog = {
   __typename?: 'AuditLog';
   actionType: Scalars['String']['output'];
@@ -258,11 +280,13 @@ export type Mutation = {
   deleteBenefit: Scalars['Boolean']['output'];
   deleteEligibilityRule: Scalars['Boolean']['output'];
   deleteEmployee: Scalars['Boolean']['output'];
+  importAttendance: AttendanceImportResult;
   markNotificationsRead: Scalars['Boolean']['output'];
   overrideEligibility: BenefitEligibility;
   proposeRuleChange: RuleProposal;
   rejectRuleProposal: RuleProposal;
   requestBenefit: BenefitRequest;
+  syncOkrStatus: OkrSyncResult;
   updateEligibilityRule: EligibilityRule;
   updateEmployee?: Maybe<Employee>;
 };
@@ -326,6 +350,11 @@ export type MutationDeleteEmployeeArgs = {
 };
 
 
+export type MutationImportAttendanceArgs = {
+  rows: Array<AttendanceRowInput>;
+};
+
+
 export type MutationMarkNotificationsReadArgs = {
   keys: Array<Scalars['String']['input']>;
 };
@@ -352,6 +381,11 @@ export type MutationRequestBenefitArgs = {
 };
 
 
+export type MutationSyncOkrStatusArgs = {
+  rows: Array<OkrSyncRowInput>;
+};
+
+
 export type MutationUpdateEligibilityRuleArgs = {
   id: Scalars['String']['input'];
   input: UpdateEligibilityRuleInput;
@@ -372,6 +406,28 @@ export type Notification = {
   linkPath?: Maybe<Scalars['String']['output']>;
   title: Scalars['String']['output'];
   type: Scalars['String']['output'];
+};
+
+export type OkrSyncError = {
+  __typename?: 'OkrSyncError';
+  identifier: Scalars['String']['output'];
+  reason: Scalars['String']['output'];
+  row: Scalars['Int']['output'];
+};
+
+export type OkrSyncResult = {
+  __typename?: 'OkrSyncResult';
+  errors: Array<OkrSyncError>;
+  invalid: Scalars['Int']['output'];
+  processed: Scalars['Int']['output'];
+  updated: Scalars['Int']['output'];
+};
+
+export type OkrSyncRowInput = {
+  email?: InputMaybe<Scalars['String']['input']>;
+  employeeId?: InputMaybe<Scalars['String']['input']>;
+  okrSubmitted: Scalars['Boolean']['input'];
+  quarter?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type OverrideEligibilityInput = {

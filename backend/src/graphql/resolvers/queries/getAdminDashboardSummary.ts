@@ -118,7 +118,7 @@ export const getAdminDashboardSummary = async (
   ]);
 
   const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const sixtyDaysFromNow = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
 
   const benefitCategoryById = new Map(
     benefits.map((benefit) => [benefit.id, formatCategoryLabel(benefit.category)])
@@ -130,7 +130,7 @@ export const getAdminDashboardSummary = async (
 
   const contractsExpiringSoon = activeContracts.filter((c) => {
     if (!c.expiryDate) return false;
-    return c.expiryDate >= new Date().toISOString() && c.expiryDate <= thirtyDaysFromNow;
+    return c.expiryDate >= new Date().toISOString() && c.expiryDate <= sixtyDaysFromNow;
   }).length;
 
   const benefitsMissingContracts = benefits.filter(

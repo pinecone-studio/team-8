@@ -325,8 +325,13 @@ export default function RuleConfiguration() {
 
             {/* Reject reason modal */}
             {rejectTarget && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                role="dialog"
+                aria-modal="true"
+                onClick={() => setRejectTarget(null)}
+              >
+                <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
                   <h3 className="text-sm font-semibold text-slate-900 mb-3">Reject Proposal</h3>
                   <textarea
                     value={rejectReason}

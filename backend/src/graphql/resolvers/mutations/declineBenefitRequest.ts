@@ -7,6 +7,7 @@ import {
   canReviewFinanceBenefit,
   getInternalRole,
 } from "../../../auth";
+import { sendBenefitRequestRejectedEmail } from "../../../email/sendTransactionalEmail";
 import { writeAuditLog } from "../helpers/audit";
 
 const DECLINABLE_STATUSES = new Set([
@@ -36,7 +37,7 @@ const FINANCE_PHASE_STATUSES = new Set([
 export const declineBenefitRequest = async (
   _: unknown,
   { requestId, reason }: { requestId: string; reason?: string | null },
-  { db, currentEmployee }: GraphQLContext,
+  { db, env, currentEmployee }: GraphQLContext,
 ) => {
   const admin = requireAdmin(currentEmployee);
 
@@ -99,6 +100,17 @@ export const declineBenefitRequest = async (
     after: { status: "rejected" },
     metadata: { approvalPolicy, reviewerRole },
   });
+
+  const employeeRows = await db
+    .select()
+    .from(schema.employees)
+    .where(eq(schema.employees.id, req.employeeId));
+  const targetEmployee = employeeRows[0];
+  const benefit = benefitRows[0];
+
+  if (targetEmployee && benefit) {
+    await sendBenefitRequestRejectedEmail(env, targetEmployee, benefit, reason);
+  }
 
   return updated;
 };

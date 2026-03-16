@@ -20,6 +20,56 @@ export interface CurrentUser {
   isAdmin: boolean;
 }
 
+function isLocalDevRequest(request: Request): boolean {
+  const hostname = new URL(request.url).hostname;
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
+async function resolveDevUserFromHeaders(
+  request: Request,
+  db: Database,
+): Promise<CurrentUser | null> {
+  if (!isLocalDevRequest(request)) {
+    return null;
+  }
+
+  const devEmail = normalizeEmail(request.headers.get("x-dev-employee-email"));
+  const devEmployeeId = request.headers.get("x-dev-employee-id")?.trim() || null;
+
+  if (!devEmail && !devEmployeeId) {
+    return null;
+  }
+
+  const rows = await db.select().from(schema.employees);
+  const employee = rows.find((row) => {
+    if (devEmail && row.email.toLowerCase() === devEmail) {
+      return true;
+    }
+    if (devEmployeeId && row.id === devEmployeeId) {
+      return true;
+    }
+    return false;
+  }) ?? null;
+
+  if (!employee) {
+    return {
+      email: devEmail,
+      employee: null,
+      accessLevel: "anonymous",
+      isAdmin: false,
+    };
+  }
+
+  const accessLevel = deriveAccessLevel(employee);
+
+  return {
+    email: employee.email,
+    employee,
+    accessLevel,
+    isAdmin: accessLevel === "admin",
+  };
+}
+
 function normalizeEmail(email: string | null | undefined): string | null {
   const normalized = email?.trim().toLowerCase();
   return normalized ? normalized : null;
@@ -191,6 +241,13 @@ export async function getCurrentUserFromRequest(
   const authHeader = request.headers.get("Authorization") ?? "";
   const tokenMatch = authHeader.match(/^Bearer (.+)$/i);
   const token = tokenMatch?.[1];
+
+  if (!token) {
+    const devUser = await resolveDevUserFromHeaders(request, db);
+    if (devUser) {
+      return devUser;
+    }
+  }
 
   if (!token || !env.CLERK_SECRET_KEY) {
     return {

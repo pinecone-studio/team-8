@@ -483,8 +483,13 @@ export default function EligibilityInspector() {
 
         {/* Override Modal */}
         {overrideTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+            role="dialog"
+            aria-modal="true"
+            onClick={() => setOverrideTarget(null)}
+          >
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-base font-semibold text-slate-900">
                 Override Eligibility — {overrideTarget.benefitName}
               </h3>
