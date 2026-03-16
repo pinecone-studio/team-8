@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   useGetAdminBenefitsQuery,
   useCreateBenefitMutation,
@@ -8,7 +9,7 @@ import {
   GetAdminBenefitsDocument,
 } from "@/graphql/generated/graphql";
 import PageLoading from "@/app/_components/PageLoading";
-import { Plus, Trash2 } from "lucide-react";
+import { ArrowRight, Plus, Trash2 } from "lucide-react";
 import { isAdminEmployee, isHrAdmin } from "../_lib/access";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 
@@ -118,8 +119,8 @@ export default function CompanyBenefits() {
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Company Benefits</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-gray-900">Company Benefits</h1>
+            <p className="mt-1 text-sm text-gray-400">
               Add and view benefits offered by the company.
             </p>
           </div>
@@ -273,7 +274,7 @@ export default function CompanyBenefits() {
                     <th className="px-4 py-3">Vendor</th>
                     <th className="px-4 py-3">Contract</th>
                     <th className="px-4 py-3">Approval</th>
-                    {canCreate && <th className="px-4 py-3 w-20">Actions</th>}
+                    <th className="px-4 py-3 w-24" />
                   </tr>
                 </thead>
                 <tbody>
@@ -300,19 +301,28 @@ export default function CompanyBenefits() {
                           {APPROVAL_POLICY_LABELS[b.approvalPolicy ?? "hr"] ?? b.approvalPolicy}
                         </span>
                       </td>
-                      {canCreate && (
-                        <td className="px-4 py-3">
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(b.id, b.name)}
-                            disabled={deleting || deletingId !== null}
-                            className="inline-flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                            title="Remove benefit"
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <Link
+                            href={`/admin-panel/company-benefits/${b.id}`}
+                            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </td>
-                      )}
+                            <ArrowRight className="h-3.5 w-3.5" />
+                            View
+                          </Link>
+                          {canCreate && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(b.id, b.name)}
+                              disabled={deleting || deletingId !== null}
+                              className="inline-flex items-center justify-center rounded-lg p-1.5 text-gray-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                              title="Remove benefit"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -149,7 +149,7 @@ export default function PendingRequestsPage() {
 
   if (!isAdmin) {
     return (
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-gray-50">
         <Sidebar />
         <div className="flex flex-1 flex-col items-center justify-center">
           <p className="text-muted-foreground">Admin access required.</p>
@@ -181,14 +181,14 @@ export default function PendingRequestsPage() {
   const emptyMsg = emptyMessages[activeQueue];
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
       <div className="flex flex-1 flex-col items-center">
         <main className="w-full max-w-7xl p-8">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Pending Requests</h1>
-              <p className="mt-1 text-sm text-gray-500">
+              <h1 className="text-2xl font-bold text-gray-900">Pending Requests</h1>
+              <p className="mt-1 text-sm text-gray-400">
                 {activeTabDef?.description ?? "Approve or decline benefit requests"}
               </p>
             </div>
