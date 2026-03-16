@@ -27,6 +27,9 @@ const ACTION_TYPE_OPTIONS = [
   { value: "RULE_PROPOSAL_SUBMITTED", label: "Rule Proposal Submitted" },
   { value: "RULE_PROPOSAL_APPROVED", label: "Rule Proposal Approved" },
   { value: "RULE_PROPOSAL_REJECTED", label: "Rule Proposal Rejected" },
+  { value: "ATTENDANCE_IMPORT", label: "Attendance Import" },
+  { value: "ELIGIBILITY_RECOMPUTED", label: "Eligibility Recomputed" },
+  { value: "OKR_SYNC", label: "OKR Sync" },
 ];
 
 const ACTION_TONE: Record<string, string> = {
@@ -48,6 +51,9 @@ const ACTION_TONE: Record<string, string> = {
   RULE_PROPOSAL_SUBMITTED: "bg-violet-50 text-violet-700",
   RULE_PROPOSAL_APPROVED: "bg-green-50 text-green-700",
   RULE_PROPOSAL_REJECTED: "bg-red-50 text-red-700",
+  ATTENDANCE_IMPORT: "bg-amber-50 text-amber-700",
+  ELIGIBILITY_RECOMPUTED: "bg-sky-50 text-sky-700",
+  OKR_SYNC: "bg-lime-50 text-lime-700",
 };
 
 function formatDate(iso: string) {

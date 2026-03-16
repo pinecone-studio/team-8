@@ -7,6 +7,7 @@ import {
   canReviewFinanceBenefit,
   getInternalRole,
 } from "../../../auth";
+import { sendBenefitRequestApprovedEmail } from "../../../email/sendTransactionalEmail";
 import { writeAuditLog } from "../helpers/audit";
 
 // Statuses that can be transitioned by HR review
@@ -26,7 +27,7 @@ const FINANCE_REVIEWABLE = new Set([
 export const approveBenefitRequest = async (
   _: unknown,
   { requestId }: { requestId: string },
-  { db, currentEmployee }: GraphQLContext,
+  { db, env, currentEmployee }: GraphQLContext,
 ) => {
   const admin = requireAdmin(currentEmployee);
 
@@ -156,6 +157,18 @@ export const approveBenefitRequest = async (
     after: { status: nextStatus },
     metadata: { approvalPolicy, reviewerRole },
   });
+
+  if (nextStatus === "approved" && benefit) {
+    const employeeRows = await db
+      .select()
+      .from(schema.employees)
+      .where(eq(schema.employees.id, req.employeeId));
+    const targetEmployee = employeeRows[0];
+
+    if (targetEmployee) {
+      await sendBenefitRequestApprovedEmail(env, targetEmployee, benefit);
+    }
+  }
 
   return updated;
 };

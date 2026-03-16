@@ -62,14 +62,14 @@ function getUploadUrl(): string {
   return base.replace(/\/$/, "") + "/api/contracts/upload";
 }
 
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
 
 function getExpiryStatus(contract: ContractRow): "active" | "expiring_soon" | "expired" | "inactive" {
   if (!contract.isActive) return "inactive";
   const expiryMs = new Date(contract.expiryDate).getTime();
   const now = Date.now();
   if (expiryMs < now) return "expired";
-  if (expiryMs - now <= THIRTY_DAYS_MS) return "expiring_soon";
+  if (expiryMs - now <= SIXTY_DAYS_MS) return "expiring_soon";
   return "active";
 }
 

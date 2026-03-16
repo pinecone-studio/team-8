@@ -42,6 +42,28 @@ export type AdminDashboardSummary = {
   usageByCategory: Array<AdminDashboardBucket>;
 };
 
+export type AttendanceImportError = {
+  __typename?: 'AttendanceImportError';
+  identifier: Scalars['String']['output'];
+  reason: Scalars['String']['output'];
+  row: Scalars['Int']['output'];
+};
+
+export type AttendanceImportResult = {
+  __typename?: 'AttendanceImportResult';
+  errors: Array<AttendanceImportError>;
+  invalid: Scalars['Int']['output'];
+  processed: Scalars['Int']['output'];
+  updated: Scalars['Int']['output'];
+};
+
+export type AttendanceRowInput = {
+  checkInTime: Scalars['String']['input'];
+  date: Scalars['String']['input'];
+  email?: InputMaybe<Scalars['String']['input']>;
+  employeeId?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type AuditLog = {
   __typename?: 'AuditLog';
   actionType: Scalars['String']['output'];
@@ -255,11 +277,13 @@ export type Mutation = {
   deleteBenefit: Scalars['Boolean']['output'];
   deleteEligibilityRule: Scalars['Boolean']['output'];
   deleteEmployee: Scalars['Boolean']['output'];
+  importAttendance: AttendanceImportResult;
   markNotificationsRead: Scalars['Boolean']['output'];
   overrideEligibility: BenefitEligibility;
   proposeRuleChange: RuleProposal;
   rejectRuleProposal: RuleProposal;
   requestBenefit: BenefitRequest;
+  syncOkrStatus: OkrSyncResult;
   updateEligibilityRule: EligibilityRule;
   updateEmployee?: Maybe<Employee>;
 };
@@ -323,6 +347,11 @@ export type MutationDeleteEmployeeArgs = {
 };
 
 
+export type MutationImportAttendanceArgs = {
+  rows: Array<AttendanceRowInput>;
+};
+
+
 export type MutationMarkNotificationsReadArgs = {
   keys: Array<Scalars['String']['input']>;
 };
@@ -349,6 +378,11 @@ export type MutationRequestBenefitArgs = {
 };
 
 
+export type MutationSyncOkrStatusArgs = {
+  rows: Array<OkrSyncRowInput>;
+};
+
+
 export type MutationUpdateEligibilityRuleArgs = {
   id: Scalars['String']['input'];
   input: UpdateEligibilityRuleInput;
@@ -369,6 +403,28 @@ export type Notification = {
   linkPath?: Maybe<Scalars['String']['output']>;
   title: Scalars['String']['output'];
   type: Scalars['String']['output'];
+};
+
+export type OkrSyncError = {
+  __typename?: 'OkrSyncError';
+  identifier: Scalars['String']['output'];
+  reason: Scalars['String']['output'];
+  row: Scalars['Int']['output'];
+};
+
+export type OkrSyncResult = {
+  __typename?: 'OkrSyncResult';
+  errors: Array<OkrSyncError>;
+  invalid: Scalars['Int']['output'];
+  processed: Scalars['Int']['output'];
+  updated: Scalars['Int']['output'];
+};
+
+export type OkrSyncRowInput = {
+  email?: InputMaybe<Scalars['String']['input']>;
+  employeeId?: InputMaybe<Scalars['String']['input']>;
+  okrSubmitted: Scalars['Boolean']['input'];
+  quarter?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type OverrideEligibilityInput = {
@@ -607,6 +663,9 @@ export type DirectiveResolverFn<TResult = {}, TParent = {}, TContext = {}, TArgs
 export type ResolversTypes = ResolversObject<{
   AdminDashboardBucket: ResolverTypeWrapper<AdminDashboardBucket>;
   AdminDashboardSummary: ResolverTypeWrapper<AdminDashboardSummary>;
+  AttendanceImportError: ResolverTypeWrapper<AttendanceImportError>;
+  AttendanceImportResult: ResolverTypeWrapper<AttendanceImportResult>;
+  AttendanceRowInput: AttendanceRowInput;
   AuditLog: ResolverTypeWrapper<AuditLog>;
   Benefit: ResolverTypeWrapper<Benefit>;
   BenefitEligibility: ResolverTypeWrapper<BenefitEligibility>;
@@ -629,6 +688,9 @@ export type ResolversTypes = ResolversObject<{
   Int: ResolverTypeWrapper<Scalars['Int']['output']>;
   Mutation: ResolverTypeWrapper<{}>;
   Notification: ResolverTypeWrapper<Notification>;
+  OkrSyncError: ResolverTypeWrapper<OkrSyncError>;
+  OkrSyncResult: ResolverTypeWrapper<OkrSyncResult>;
+  OkrSyncRowInput: OkrSyncRowInput;
   OverrideEligibilityInput: OverrideEligibilityInput;
   ProposeRuleChangeInput: ProposeRuleChangeInput;
   Query: ResolverTypeWrapper<{}>;
@@ -644,6 +706,9 @@ export type ResolversTypes = ResolversObject<{
 export type ResolversParentTypes = ResolversObject<{
   AdminDashboardBucket: AdminDashboardBucket;
   AdminDashboardSummary: AdminDashboardSummary;
+  AttendanceImportError: AttendanceImportError;
+  AttendanceImportResult: AttendanceImportResult;
+  AttendanceRowInput: AttendanceRowInput;
   AuditLog: AuditLog;
   Benefit: Benefit;
   BenefitEligibility: BenefitEligibility;
@@ -662,6 +727,9 @@ export type ResolversParentTypes = ResolversObject<{
   Int: Scalars['Int']['output'];
   Mutation: {};
   Notification: Notification;
+  OkrSyncError: OkrSyncError;
+  OkrSyncResult: OkrSyncResult;
+  OkrSyncRowInput: OkrSyncRowInput;
   OverrideEligibilityInput: OverrideEligibilityInput;
   ProposeRuleChangeInput: ProposeRuleChangeInput;
   Query: {};
@@ -693,6 +761,21 @@ export type AdminDashboardSummaryResolvers<ContextType = GraphQLContext, ParentT
   suspendedEnrollments?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   totalEmployees?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   usageByCategory?: Resolver<Array<ResolversTypes['AdminDashboardBucket']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type AttendanceImportErrorResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AttendanceImportError'] = ResolversParentTypes['AttendanceImportError']> = ResolversObject<{
+  identifier?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  reason?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  row?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type AttendanceImportResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AttendanceImportResult'] = ResolversParentTypes['AttendanceImportResult']> = ResolversObject<{
+  errors?: Resolver<Array<ResolversTypes['AttendanceImportError']>, ParentType, ContextType>;
+  invalid?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  processed?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  updated?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -859,11 +942,13 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   deleteBenefit?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteBenefitArgs, 'id'>>;
   deleteEligibilityRule?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteEligibilityRuleArgs, 'id'>>;
   deleteEmployee?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteEmployeeArgs, 'id'>>;
+  importAttendance?: Resolver<ResolversTypes['AttendanceImportResult'], ParentType, ContextType, RequireFields<MutationImportAttendanceArgs, 'rows'>>;
   markNotificationsRead?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationMarkNotificationsReadArgs, 'keys'>>;
   overrideEligibility?: Resolver<ResolversTypes['BenefitEligibility'], ParentType, ContextType, RequireFields<MutationOverrideEligibilityArgs, 'input'>>;
   proposeRuleChange?: Resolver<ResolversTypes['RuleProposal'], ParentType, ContextType, RequireFields<MutationProposeRuleChangeArgs, 'input'>>;
   rejectRuleProposal?: Resolver<ResolversTypes['RuleProposal'], ParentType, ContextType, RequireFields<MutationRejectRuleProposalArgs, 'id' | 'reason'>>;
   requestBenefit?: Resolver<ResolversTypes['BenefitRequest'], ParentType, ContextType, RequireFields<MutationRequestBenefitArgs, 'input'>>;
+  syncOkrStatus?: Resolver<ResolversTypes['OkrSyncResult'], ParentType, ContextType, RequireFields<MutationSyncOkrStatusArgs, 'rows'>>;
   updateEligibilityRule?: Resolver<ResolversTypes['EligibilityRule'], ParentType, ContextType, RequireFields<MutationUpdateEligibilityRuleArgs, 'id' | 'input'>>;
   updateEmployee?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<MutationUpdateEmployeeArgs, 'id' | 'input'>>;
 }>;
@@ -876,6 +961,21 @@ export type NotificationResolvers<ContextType = GraphQLContext, ParentType exten
   linkPath?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   type?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type OkrSyncErrorResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['OkrSyncError'] = ResolversParentTypes['OkrSyncError']> = ResolversObject<{
+  identifier?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  reason?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  row?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type OkrSyncResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['OkrSyncResult'] = ResolversParentTypes['OkrSyncResult']> = ResolversObject<{
+  errors?: Resolver<Array<ResolversTypes['OkrSyncError']>, ParentType, ContextType>;
+  invalid?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  processed?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  updated?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -927,6 +1027,8 @@ export type RuleProposalResolvers<ContextType = GraphQLContext, ParentType exten
 export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   AdminDashboardBucket?: AdminDashboardBucketResolvers<ContextType>;
   AdminDashboardSummary?: AdminDashboardSummaryResolvers<ContextType>;
+  AttendanceImportError?: AttendanceImportErrorResolvers<ContextType>;
+  AttendanceImportResult?: AttendanceImportResultResolvers<ContextType>;
   AuditLog?: AuditLogResolvers<ContextType>;
   Benefit?: BenefitResolvers<ContextType>;
   BenefitEligibility?: BenefitEligibilityResolvers<ContextType>;
@@ -940,6 +1042,8 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   FailedRule?: FailedRuleResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
   Notification?: NotificationResolvers<ContextType>;
+  OkrSyncError?: OkrSyncErrorResolvers<ContextType>;
+  OkrSyncResult?: OkrSyncResultResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   RuleEvaluation?: RuleEvaluationResolvers<ContextType>;
   RuleProposal?: RuleProposalResolvers<ContextType>;

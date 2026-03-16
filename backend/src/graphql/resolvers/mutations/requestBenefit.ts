@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
 import { createContractViewToken, getContractViewUrl } from "../../../contracts";
+import { sendBenefitRequestSubmittedEmail } from "../../../email/sendTransactionalEmail";
 import type { GraphQLContext } from "../../context";
 import { requireAuth } from "../../../auth";
 import { getBenefitsForEmployee } from "../helpers/employeeBenefits";
@@ -95,6 +96,13 @@ export const requestBenefit = async (
     requestId: inserted.id,
     metadata: { status: initialStatus, approvalPolicy },
   });
+
+  await sendBenefitRequestSubmittedEmail(
+    env,
+    employee,
+    benefitFromDb,
+    initialStatus,
+  );
 
   const requiresContract = benefitFromDb.requiresContract;
   let viewContractUrl: string | null = null;
