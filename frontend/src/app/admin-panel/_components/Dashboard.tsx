@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle, CheckCircle, Clock, FileText, Heart, Lock, ScrollText, Users } from "lucide-react";
 import {
-  useGetAdminDashboardSummaryQuery,
-} from "@/graphql/generated/graphql";
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  FileText,
+  Heart,
+  Lock,
+  ScrollText,
+  Users,
+} from "lucide-react";
+import { useGetAdminDashboardSummaryQuery } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import {
   getAdminDashboardSubtitle,
@@ -29,7 +36,9 @@ function StatCard({
   loading?: boolean;
 }) {
   if (loading) {
-    return <div className="h-[110px] animate-pulse rounded-2xl border border-slate-200 bg-white" />;
+    return (
+      <div className="h-[110px] animate-pulse rounded-2xl border border-slate-200 bg-white" />
+    );
   }
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5">
@@ -37,7 +46,9 @@ function StatCard({
         <p className="text-sm text-slate-500">{label}</p>
         <Icon className={`h-4 w-4 ${iconColor}`} />
       </div>
-      <p className="text-4xl font-semibold tracking-tight text-slate-900">{value}</p>
+      <p className="text-4xl font-semibold tracking-tight text-slate-900">
+        {value}
+      </p>
     </div>
   );
 }
@@ -60,15 +71,41 @@ function QueueCard({
   loading?: boolean;
 }) {
   const tones = {
-    blue:  { bg: "bg-blue-50",  border: "border-blue-100",  badge: "bg-blue-100 text-blue-700",  text: "text-blue-700", link: "text-blue-600" },
-    teal:  { bg: "bg-teal-50",  border: "border-teal-100",  badge: "bg-teal-100 text-teal-700",  text: "text-teal-700", link: "text-teal-600" },
-    amber: { bg: "bg-amber-50", border: "border-amber-100", badge: "bg-amber-100 text-amber-700", text: "text-amber-700", link: "text-amber-600" },
-    green: { bg: "bg-green-50", border: "border-green-100", badge: "bg-green-100 text-green-700", text: "text-green-700", link: "text-green-600" },
+    blue: {
+      bg: "bg-blue-50",
+      border: "border-blue-100",
+      badge: "bg-blue-100 text-blue-700",
+      text: "text-blue-700",
+      link: "text-blue-600",
+    },
+    teal: {
+      bg: "bg-teal-50",
+      border: "border-teal-100",
+      badge: "bg-teal-100 text-teal-700",
+      text: "text-teal-700",
+      link: "text-teal-600",
+    },
+    amber: {
+      bg: "bg-amber-50",
+      border: "border-amber-100",
+      badge: "bg-amber-100 text-amber-700",
+      text: "text-amber-700",
+      link: "text-amber-600",
+    },
+    green: {
+      bg: "bg-green-50",
+      border: "border-green-100",
+      badge: "bg-green-100 text-green-700",
+      text: "text-green-700",
+      link: "text-green-600",
+    },
   };
   const t = tones[tone];
 
   if (loading) {
-    return <div className="h-[88px] animate-pulse rounded-2xl border border-slate-200 bg-white" />;
+    return (
+      <div className="h-[88px] animate-pulse rounded-2xl border border-slate-200 bg-white" />
+    );
   }
 
   return (
@@ -80,7 +117,9 @@ function QueueCard({
         <p className={`text-sm font-semibold ${t.text}`}>{label}</p>
         <p className="mt-0.5 text-xs text-slate-500">{hint}</p>
       </div>
-      <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-bold ${t.badge}`}>
+      <span
+        className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-bold ${t.badge}`}
+      >
         {count}
       </span>
     </Link>
@@ -89,7 +128,11 @@ function QueueCard({
 
 // ── Category bar chart (simple inline bars) ─────────────────────────────────
 
-function CategoryBars({ data }: { data: Array<{ label: string; value: number }> }) {
+function CategoryBars({
+  data,
+}: {
+  data: Array<{ label: string; value: number }>;
+}) {
   if (data.length === 0) {
     return (
       <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-400">
@@ -102,14 +145,18 @@ function CategoryBars({ data }: { data: Array<{ label: string; value: number }> 
     <div className="space-y-3">
       {data.slice(0, 6).map((item) => (
         <div key={item.label} className="flex items-center gap-3">
-          <p className="w-32 shrink-0 truncate text-xs text-slate-600">{item.label}</p>
+          <p className="w-32 shrink-0 truncate text-xs text-slate-600">
+            {item.label}
+          </p>
           <div className="flex-1 overflow-hidden rounded-full bg-slate-100 h-2">
             <div
               className="h-2 rounded-full bg-blue-500"
               style={{ width: `${(item.value / max) * 100}%` }}
             />
           </div>
-          <span className="w-6 shrink-0 text-right text-xs font-semibold text-slate-700">{item.value}</span>
+          <span className="w-6 shrink-0 text-right text-xs font-semibold text-slate-700">
+            {item.value}
+          </span>
         </div>
       ))}
     </div>
@@ -118,7 +165,11 @@ function CategoryBars({ data }: { data: Array<{ label: string; value: number }> 
 
 // ── Lock reason list ─────────────────────────────────────────────────────────
 
-function LockReasonList({ data }: { data: Array<{ label: string; value: number }> }) {
+function LockReasonList({
+  data,
+}: {
+  data: Array<{ label: string; value: number }>;
+}) {
   if (data.length === 0) {
     return (
       <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-400">
@@ -132,8 +183,12 @@ function LockReasonList({ data }: { data: Array<{ label: string; value: number }
       {data.slice(0, 5).map((item) => (
         <div key={item.label} className="flex items-center gap-3">
           <p className="flex-1 truncate text-xs text-slate-600">{item.label}</p>
-          <span className="text-xs font-semibold text-slate-700">{item.value}</span>
-          <span className="text-xs text-slate-400">({Math.round((item.value / total) * 100)}%)</span>
+          <span className="text-xs font-semibold text-slate-700">
+            {item.value}
+          </span>
+          <span className="text-xs text-slate-400">
+            ({Math.round((item.value / total) * 100)}%)
+          </span>
         </div>
       ))}
     </div>
@@ -143,7 +198,11 @@ function LockReasonList({ data }: { data: Array<{ label: string; value: number }
 // ── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const { employee, error: employeeError, loading: employeeLoading } = useCurrentEmployee();
+  const {
+    employee,
+    error: employeeError,
+    loading: employeeLoading,
+  } = useCurrentEmployee();
   const hasAdminAccess = isAdminEmployee(employee);
   const isHr = isHrAdmin(employee);
 
@@ -183,20 +242,46 @@ export default function Dashboard() {
           </div>
         ) : !employeeLoading && !employee ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-800">
-            Your Clerk account is signed in, but no matching employee record was found.
+            Your Clerk account is signed in, but no matching employee record was
+            found.
           </div>
         ) : !employeeLoading && employee && !hasAdminAccess ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-800">
-            Admin access requires an HR or Finance employee with responsibility level 2 or higher.
+            Admin access requires an HR or Finance employee with responsibility
+            level 2 or higher.
           </div>
         ) : (
           <>
             {/* Summary stat cards */}
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard label="Total Employees"   value={summary?.totalEmployees ?? 0}  icon={Users}      iconColor="text-slate-400"   loading={isLoading} />
-              <StatCard label="Active Benefits"   value={summary?.activeBenefits ?? 0}  icon={Heart}      iconColor="text-emerald-500" loading={isLoading} />
-              <StatCard label="Pending Requests"  value={summary?.pendingRequests ?? 0} icon={ScrollText} iconColor="text-orange-500"  loading={isLoading} />
-              <StatCard label="Locked Benefits"   value={summary?.lockedBenefits ?? 0}  icon={Lock}       iconColor="text-slate-400"   loading={isLoading} />
+              <StatCard
+                label="Total Employees"
+                value={summary?.totalEmployees ?? 0}
+                icon={Users}
+                iconColor="text-slate-400"
+                loading={isLoading}
+              />
+              <StatCard
+                label="Active Benefits"
+                value={summary?.activeBenefits ?? 0}
+                icon={Heart}
+                iconColor="text-emerald-500"
+                loading={isLoading}
+              />
+              <StatCard
+                label="Pending Requests"
+                value={summary?.pendingRequests ?? 0}
+                icon={ScrollText}
+                iconColor="text-orange-500"
+                loading={isLoading}
+              />
+              <StatCard
+                label="Locked Benefits"
+                value={summary?.lockedBenefits ?? 0}
+                icon={Lock}
+                iconColor="text-slate-400"
+                loading={isLoading}
+              />
             </div>
 
             {/* Contract health + suspension alerts (HR only) */}
@@ -239,7 +324,9 @@ export default function Dashboard() {
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
                 Action Queues
               </h2>
-              <div className={`grid gap-3 ${isHr ? "sm:grid-cols-2 xl:grid-cols-4" : "sm:grid-cols-2"}`}>
+              <div
+                className={`grid gap-3 ${isHr ? "sm:grid-cols-2 xl:grid-cols-4" : "sm:grid-cols-2"}`}
+              >
                 {isHr && (
                   <QueueCard
                     label="HR Review Queue"
@@ -282,7 +369,9 @@ export default function Dashboard() {
             {/* Charts */}
             <div className="mt-6 grid gap-4 lg:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                <h2 className="text-sm font-semibold text-gray-900">Benefit Enrollment by Category</h2>
+                <h2 className="text-sm font-semibold text-gray-900">
+                  Benefit Enrollment by Category
+                </h2>
                 <div className="mt-4">
                   {isLoading ? (
                     <div className="h-40 animate-pulse rounded-xl bg-slate-100" />
@@ -293,7 +382,9 @@ export default function Dashboard() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                <h2 className="text-sm font-semibold text-gray-900">Eligibility Lock Reasons</h2>
+                <h2 className="text-sm font-semibold text-gray-900">
+                  Eligibility Lock Reasons
+                </h2>
                 <div className="mt-4">
                   {isLoading ? (
                     <div className="h-40 animate-pulse rounded-xl bg-slate-100" />
@@ -310,21 +401,24 @@ export default function Dashboard() {
                 {[
                   {
                     title: "Eligibility Inspector",
-                    description: "View and override employee benefit eligibility in real time.",
+                    description:
+                      "View and override employee benefit eligibility in real time.",
                     href: "/admin-panel/eligibility-inspector",
                     icon: Users,
                     iconColor: "text-blue-500",
                   },
                   {
                     title: "Rule Configuration",
-                    description: "Manage per-benefit eligibility rules and conditions.",
+                    description:
+                      "Manage per-benefit eligibility rules and conditions.",
                     href: "/admin-panel/rule-configuration",
                     icon: AlertCircle,
                     iconColor: "text-orange-500",
                   },
                   {
                     title: "Vendor Contracts",
-                    description: "Upload, activate, and review vendor contract documents.",
+                    description:
+                      "Upload, activate, and review vendor contract documents.",
                     href: "/admin-panel/vendor-contracts",
                     icon: FileText,
                     iconColor: "text-purple-500",
@@ -339,7 +433,9 @@ export default function Dashboard() {
                     <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600">
                       {item.title}
                     </h3>
-                    <p className="mt-1 text-xs text-slate-500">{item.description}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {item.description}
+                    </p>
                   </Link>
                 ))}
               </div>
@@ -354,8 +450,12 @@ export default function Dashboard() {
                 >
                   <Clock className="h-5 w-5 text-teal-500 shrink-0" />
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 group-hover:text-teal-700">Finance Review Queue</p>
-                    <p className="mt-0.5 text-xs text-slate-500">Process pending finance approval requests</p>
+                    <p className="text-sm font-semibold text-gray-900 group-hover:text-teal-700">
+                      Finance Review Queue
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Process pending finance approval requests
+                    </p>
                   </div>
                 </Link>
                 <Link
@@ -364,8 +464,12 @@ export default function Dashboard() {
                 >
                   <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 group-hover:text-emerald-700">Company Benefits</p>
-                    <p className="mt-0.5 text-xs text-slate-500">View and manage available benefits</p>
+                    <p className="text-sm font-semibold text-gray-900 group-hover:text-emerald-700">
+                      Company Benefits
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      View and manage available benefits
+                    </p>
                   </div>
                 </Link>
               </div>
