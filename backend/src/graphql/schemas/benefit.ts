@@ -38,6 +38,7 @@ export const benefitTypeDefs = gql`
     requiresContract: Boolean!
     flowType: BenefitFlowType!
     optionsDescription: String
+    approvalPolicy: String!
   }
 
   type BenefitEligibility {
@@ -46,6 +47,10 @@ export const benefitTypeDefs = gql`
     status: BenefitEligibilityStatus!
     ruleEvaluation: [RuleEvaluation!]!
     failedRule: FailedRule
+    overrideStatus: String
+    overrideBy: String
+    overrideReason: String
+    overrideExpiresAt: String
   }
 
   type BenefitRequest {
@@ -88,15 +93,31 @@ export const benefitTypeDefs = gql`
     isActive: Boolean!
   }
 
+  type RuleProposal {
+    id: String!
+    benefitId: String!
+    ruleId: String
+    changeType: String!
+    proposedData: String!
+    summary: String!
+    status: String!
+    proposedByEmployeeId: String!
+    reviewedByEmployeeId: String
+    proposedAt: String!
+    reviewedAt: String
+    reason: String
+  }
+
   extend type Query {
     benefits(category: String): [Benefit!]!
     adminBenefits: [Benefit!]!
     myBenefits: [BenefitEligibility!]!
     getEmployeeBenefits(employeeId: String!): [BenefitEligibility!]!
     benefitRequests: [BenefitRequest!]!
-    allBenefitRequests(status: String): [BenefitRequest!]!
+    allBenefitRequests(status: String, queue: String): [BenefitRequest!]!
     contracts(benefitId: String): [Contract!]!
     eligibilityRules(benefitId: String!): [EligibilityRule!]!
+    ruleProposals(benefitId: String, status: String): [RuleProposal!]!
   }
 
   input CreateBenefitInput {
@@ -105,12 +126,11 @@ export const benefitTypeDefs = gql`
     subsidyPercent: Int!
     vendorName: String
     requiresContract: Boolean
+    approvalPolicy: String
   }
 
   input RequestBenefitInput {
     benefitId: String!
-    contractVersionAccepted: String
-    contractAcceptedAt: String
     requestedAmount: Int
     repaymentMonths: Int
   }
@@ -133,6 +153,22 @@ export const benefitTypeDefs = gql`
     isActive: Boolean
   }
 
+  input OverrideEligibilityInput {
+    employeeId: String!
+    benefitId: String!
+    overrideStatus: String!
+    reason: String!
+    expiresAt: String
+  }
+
+  input ProposeRuleChangeInput {
+    benefitId: String!
+    ruleId: String
+    changeType: String!
+    proposedData: String!
+    summary: String!
+  }
+
   extend type Mutation {
     createBenefit(input: CreateBenefitInput!): Benefit!
     deleteBenefit(id: String!): Boolean!
@@ -141,8 +177,12 @@ export const benefitTypeDefs = gql`
     approveBenefitRequest(requestId: String!): BenefitRequest!
     declineBenefitRequest(requestId: String!, reason: String): BenefitRequest!
     cancelBenefitRequest(requestId: String!): BenefitRequest!
+    overrideEligibility(input: OverrideEligibilityInput!): BenefitEligibility!
     createEligibilityRule(input: CreateEligibilityRuleInput!): EligibilityRule!
     updateEligibilityRule(id: String!, input: UpdateEligibilityRuleInput!): EligibilityRule!
     deleteEligibilityRule(id: String!): Boolean!
+    proposeRuleChange(input: ProposeRuleChangeInput!): RuleProposal!
+    approveRuleProposal(id: String!, reason: String): RuleProposal!
+    rejectRuleProposal(id: String!, reason: String!): RuleProposal!
   }
 `;

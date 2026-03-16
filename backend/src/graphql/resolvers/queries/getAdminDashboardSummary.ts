@@ -15,6 +15,16 @@ type StoredRuleEvaluation = {
   rule_type?: string;
 };
 
+// All non-terminal in-flight statuses
+const IN_FLIGHT_STATUSES = new Set([
+  "pending",
+  "awaiting_contract_acceptance",
+  "awaiting_hr_review",
+  "awaiting_finance_review",
+  "hr_approved",
+  "finance_approved",
+]);
+
 function normalizeStatus(status: string | null | undefined) {
   return status?.trim().toLowerCase() ?? "";
 }
@@ -47,6 +57,15 @@ function toBuckets(counts: Map<string, number>): DashboardBucket[] {
     });
 }
 
+function isOverrideActive(input: {
+  overrideStatus?: string | null;
+  overrideExpiresAt?: string | null;
+}) {
+  if (!input.overrideStatus) return false;
+  if (!input.overrideExpiresAt) return true;
+  return new Date(input.overrideExpiresAt) > new Date();
+}
+
 export const getAdminDashboardSummary = async (
   _: unknown,
   __: unknown,
@@ -56,78 +75,140 @@ export const getAdminDashboardSummary = async (
     throw new Error("Not authorized to view admin dashboard.");
   }
 
-  const [employees, benefits, eligibilityRows, requestRows] = await Promise.all([
+  const [employees, benefits, enrollmentRows, eligibilityRows, requestRows, contractRows] = await Promise.all([
     db
-      .select({
-        employmentStatus: schema.employees.employmentStatus,
-      })
+      .select({ employmentStatus: schema.employees.employmentStatus })
       .from(schema.employees),
     db
-      .select({
-        id: schema.benefits.id,
-        category: schema.benefits.category,
-      })
+      .select({ id: schema.benefits.id, category: schema.benefits.category, requiresContract: schema.benefits.requiresContract })
       .from(schema.benefits)
       .where(eq(schema.benefits.isActive, true)),
+    // Canonical source for active enrollments (activeBenefits + usageByCategory)
+    db
+      .select({
+        benefitId: schema.employeeBenefitEnrollments.benefitId,
+        status: schema.employeeBenefitEnrollments.status,
+      })
+      .from(schema.employeeBenefitEnrollments),
+    // Eligibility engine output — canonical source for locked state
     db
       .select({
         benefitId: schema.benefitEligibility.benefitId,
         ruleEvaluationJson: schema.benefitEligibility.ruleEvaluationJson,
         status: schema.benefitEligibility.status,
+        overrideReason: schema.benefitEligibility.overrideReason,
+        overrideStatus: schema.benefitEligibility.overrideStatus,
+        overrideExpiresAt: schema.benefitEligibility.overrideExpiresAt,
       })
       .from(schema.benefitEligibility),
     db
       .select({
         status: schema.benefitRequests.status,
+        updatedAt: schema.benefitRequests.updatedAt,
       })
       .from(schema.benefitRequests),
+    db
+      .select({
+        id: schema.contracts.id,
+        benefitId: schema.contracts.benefitId,
+        isActive: schema.contracts.isActive,
+        expiryDate: schema.contracts.expiryDate,
+      })
+      .from(schema.contracts),
   ]);
+
+  const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const benefitCategoryById = new Map(
     benefits.map((benefit) => [benefit.id, formatCategoryLabel(benefit.category)])
   );
 
+  // ── Contract health metrics ────────────────────────────────────────────────
+  const activeContracts = contractRows.filter((c) => c.isActive);
+  const activeContractBenefitIds = new Set(activeContracts.map((c) => c.benefitId));
+
+  const contractsExpiringSoon = activeContracts.filter((c) => {
+    if (!c.expiryDate) return false;
+    return c.expiryDate >= new Date().toISOString() && c.expiryDate <= thirtyDaysFromNow;
+  }).length;
+
+  const benefitsMissingContracts = benefits.filter(
+    (b) => b.requiresContract && !activeContractBenefitIds.has(b.id)
+  ).length;
+
+  // ── Suspended enrollments ─────────────────────────────────────────────────
+  const suspendedEnrollments = enrollmentRows.filter(
+    (row) => normalizeStatus(row.status) === "suspended"
+  ).length;
+
+  // ── Active enrollments (canonical) ────────────────────────────────────────
   const usageByCategory = new Map<string, number>();
-  const lockReasons = new Map<string, number>();
+  let activeBenefitsCount = 0;
 
-  for (const row of eligibilityRows) {
-    const status = normalizeStatus(row.status);
-
-    if (status === "active" || status === "pending") {
+  for (const row of enrollmentRows) {
+    if (normalizeStatus(row.status) === "active") {
+      activeBenefitsCount++;
       const category = benefitCategoryById.get(row.benefitId);
       if (category) {
         usageByCategory.set(category, (usageByCategory.get(category) ?? 0) + 1);
       }
     }
+  }
 
-    if (status === "locked") {
-      const failedRule = parseRuleEvaluations(row.ruleEvaluationJson).find(
-        (entry) => entry.passed === false
-      );
-      const label =
-        failedRule?.reason?.trim() ||
-        failedRule?.ruleType?.trim() ||
-        failedRule?.rule_type?.trim() ||
-        "Locked by policy";
+  // ── Locked benefits (from eligibility engine snapshots) ───────────────────
+  const lockReasons = new Map<string, number>();
+  let lockedBenefitsCount = 0;
 
-      lockReasons.set(label, (lockReasons.get(label) ?? 0) + 1);
-    }
+  for (const row of eligibilityRows) {
+    const effectiveStatus = isOverrideActive(row)
+      ? normalizeStatus(row.overrideStatus)
+      : normalizeStatus(row.status);
+
+    if (effectiveStatus !== "locked") continue;
+
+    lockedBenefitsCount++;
+    const failedRule = parseRuleEvaluations(row.ruleEvaluationJson).find(
+      (entry) => entry.passed === false
+    );
+    const label =
+      row.overrideReason?.trim() ||
+      failedRule?.reason?.trim() ||
+      failedRule?.ruleType?.trim() ||
+      failedRule?.rule_type?.trim() ||
+      "Locked by policy";
+    lockReasons.set(label, (lockReasons.get(label) ?? 0) + 1);
   }
 
   return {
-    activeBenefits: eligibilityRows.filter(
-      (row) => normalizeStatus(row.status) === "active"
-    ).length,
+    activeBenefits: activeBenefitsCount,
     lockReasons: toBuckets(lockReasons),
-    lockedBenefits: eligibilityRows.filter(
-      (row) => normalizeStatus(row.status) === "locked"
-    ).length,
+    lockedBenefits: lockedBenefitsCount,
     pendingRequests: requestRows.filter(
-      (row) => normalizeStatus(row.status) === "pending"
+      (row) => IN_FLIGHT_STATUSES.has(normalizeStatus(row.status))
     ).length,
     totalEmployees: employees.filter(
       (employee) => normalizeStatus(employee.employmentStatus) !== "terminated"
     ).length,
     usageByCategory: toBuckets(usageByCategory),
+    // Operational queue counts
+    hrQueueCount: requestRows.filter(
+      (row) => normalizeStatus(row.status) === "awaiting_hr_review"
+    ).length,
+    financeQueueCount: requestRows.filter(
+      (row) => normalizeStatus(row.status) === "awaiting_finance_review"
+    ).length,
+    awaitingContractCount: requestRows.filter(
+      (row) => normalizeStatus(row.status) === "awaiting_contract_acceptance"
+    ).length,
+    approvedThisWeekCount: requestRows.filter(
+      (row) =>
+        normalizeStatus(row.status) === "approved" &&
+        !!row.updatedAt &&
+        row.updatedAt >= oneWeekAgo
+    ).length,
+    contractsExpiringSoon,
+    benefitsMissingContracts,
+    suspendedEnrollments,
   };
 };

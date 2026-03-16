@@ -58,7 +58,8 @@ export const employeeTypeDefs = gql`
   }
 
   extend type Query {
-    getEmployees: [Employee!]!
+    getEmployees(search: String, department: String, limit: Int): [Employee!]!
+    getDepartments: [String!]!
     getEmployee(id: String!): Employee
     getEmployeeByEmail(email: String!): Employee
     session: Employee

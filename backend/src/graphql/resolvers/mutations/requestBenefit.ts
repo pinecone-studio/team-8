@@ -4,6 +4,24 @@ import { createContractViewToken, getContractViewUrl } from "../../../contracts"
 import type { GraphQLContext } from "../../context";
 import { requireAuth } from "../../../auth";
 import { getBenefitsForEmployee } from "../helpers/employeeBenefits";
+import { writeAuditLog } from "../helpers/audit";
+
+/** Derive initial request status from benefit's approvalPolicy.
+ *  Contract benefits ALWAYS enter awaiting_contract_acceptance first.
+ *  Contract acceptance is ONLY recorded via confirmBenefitRequest. */
+function deriveInitialStatus(
+  approvalPolicy: string,
+  requiresContract: boolean,
+): string {
+  if (requiresContract) {
+    return "awaiting_contract_acceptance";
+  }
+  if (approvalPolicy === "finance") {
+    return "awaiting_finance_review";
+  }
+  // hr or dual → HR reviews first
+  return "awaiting_hr_review";
+}
 
 export const requestBenefit = async (
   _: unknown,
@@ -12,8 +30,6 @@ export const requestBenefit = async (
   }: {
     input: {
       benefitId: string;
-      contractVersionAccepted?: string | null;
-      contractAcceptedAt?: string | null;
       requestedAmount?: number | null;
       repaymentMonths?: number | null;
     };
@@ -21,13 +37,7 @@ export const requestBenefit = async (
   { db, env, baseUrl, currentEmployee }: GraphQLContext,
 ) => {
   const employee = requireAuth(currentEmployee);
-  const {
-    benefitId,
-    contractVersionAccepted,
-    contractAcceptedAt,
-    requestedAmount,
-    repaymentMonths,
-  } = input;
+  const { benefitId, requestedAmount, repaymentMonths } = input;
 
   const benefitRows = await db
     .select()
@@ -57,20 +67,34 @@ export const requestBenefit = async (
     );
   }
 
+  const approvalPolicy = benefitFromDb.approvalPolicy ?? "hr";
+  const initialStatus = deriveInitialStatus(approvalPolicy, benefitFromDb.requiresContract);
+
   const [inserted] = await db
     .insert(schema.benefitRequests)
     .values({
       employeeId: employee.id,
       benefitId,
-      status: "pending",
-      contractVersionAccepted: contractVersionAccepted ?? null,
-      contractAcceptedAt: contractAcceptedAt ?? null,
+      status: initialStatus,
       requestedAmount: requestedAmount ?? null,
       repaymentMonths: repaymentMonths ?? null,
     })
     .returning();
 
   if (!inserted) throw new Error("Failed to create benefit request");
+
+  // Audit log for request submission
+  await writeAuditLog({
+    db,
+    actor: employee,
+    actionType: "REQUEST_SUBMITTED",
+    entityType: "benefit_request",
+    entityId: inserted.id,
+    targetEmployeeId: employee.id,
+    benefitId,
+    requestId: inserted.id,
+    metadata: { status: initialStatus, approvalPolicy },
+  });
 
   const requiresContract = benefitFromDb.requiresContract;
   let viewContractUrl: string | null = null;

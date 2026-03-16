@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isAdminEmployee } from "@/app/admin-panel/_lib/access";
+import NotificationBell from "@/app/_components/NotificationBell";
 
 function formatLabel(value: string | null | undefined) {
   if (!value) return "Employee";
@@ -79,13 +80,14 @@ export default function Sidebar() {
   return (
     <>
       <aside className="fixed left-0 top-0 z-10 flex h-screen w-[260px] flex-col border-r border-sidebar-border bg-sidebar">
-        <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-sidebar-border px-4">
           <Link href="/employee-panel/dashboard" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <Gift className="h-4 w-4 text-primary-foreground" />
             </div>
             <span className="font-semibold text-sidebar-foreground">Benefits</span>
           </Link>
+          <NotificationBell />
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">

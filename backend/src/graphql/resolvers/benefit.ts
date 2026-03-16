@@ -3,11 +3,41 @@ import { getBenefitConfig } from "../../eligibility";
 import { schema } from "../../db";
 import type { GraphQLContext } from "../context";
 import { mapBenefitRecordToGraphql } from "./helpers/employeeBenefits";
+import { createContractViewToken, getContractViewUrl } from "../../contracts";
 
 /** Resolve Benefit.employeePercent when returned from Query.benefits (config may omit it) */
 export const Benefit = {
   employeePercent(parent: { subsidyPercent: number; employeePercent?: number }) {
     return parent.employeePercent ?? 100 - parent.subsidyPercent;
+  },
+  approvalPolicy(parent: { approvalPolicy?: string }) {
+    return parent.approvalPolicy ?? "hr";
+  },
+};
+
+/** Resolve BenefitRequest.viewContractUrl on-demand (for list queries).
+ *  Only generates a URL for requests in awaiting_contract_acceptance status. */
+export const BenefitRequest = {
+  async viewContractUrl(
+    parent: { benefitId: string; status: string; viewContractUrl?: string | null },
+    _: unknown,
+    { db, env, baseUrl }: GraphQLContext,
+  ): Promise<string | null> {
+    // Already computed (e.g., returned directly from requestBenefit mutation)
+    if (parent.viewContractUrl) return parent.viewContractUrl;
+    // Only relevant when awaiting employee contract acceptance
+    if (parent.status !== "awaiting_contract_acceptance") return null;
+    if (!env.CONTRACT_VIEW_TOKENS) return null;
+
+    const contracts = await db
+      .select()
+      .from(schema.contracts)
+      .where(eq(schema.contracts.benefitId, parent.benefitId));
+    const active = contracts.find((c) => c.isActive);
+    if (!active) return null;
+
+    const token = await createContractViewToken(env.CONTRACT_VIEW_TOKENS, active.r2ObjectKey);
+    return getContractViewUrl(baseUrl, token);
   },
 };
 
@@ -27,6 +57,7 @@ export const BenefitEligibility = {
         unitPrice?: number | null;
         vendorName?: string | null;
         flowType?: string;
+        approvalPolicy?: string;
       };
       benefitId: string;
     },
@@ -61,6 +92,7 @@ export const BenefitEligibility = {
         requiresContract: false,
         flowType: "normal",
         optionsDescription: null,
+        approvalPolicy: "hr",
       };
     }
     const employeePercent =
@@ -77,6 +109,7 @@ export const BenefitEligibility = {
       requiresContract: config.requiresContract,
       flowType: config.flowType,
       optionsDescription: config.optionsDescription ?? null,
+      approvalPolicy: "hr",
     };
   },
 };

@@ -2,8 +2,16 @@ import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
 import type { GraphQLContext } from "../../context";
 import { requireAuth } from "../../../auth";
+import { writeAuditLog } from "../helpers/audit";
 
-/** Employee: cancel own pending benefit request. */
+const CANCELLABLE_STATUSES = new Set([
+  "pending",
+  "awaiting_contract_acceptance",
+  "awaiting_hr_review",
+  "awaiting_finance_review",
+]);
+
+/** Employee: cancel own non-terminal benefit request. */
 export const cancelBenefitRequest = async (
   _: unknown,
   { requestId }: { requestId: string },
@@ -19,9 +27,9 @@ export const cancelBenefitRequest = async (
   if (req.employeeId !== employee.id) {
     throw new Error("You can only cancel your own request.");
   }
-  if (req.status !== "pending") {
+  if (!CANCELLABLE_STATUSES.has(req.status)) {
     throw new Error(
-      `Request cannot be cancelled (current status: ${req.status}).`,
+      `Request cannot be cancelled from status: ${req.status}. Requests that have been approved or are awaiting secondary review cannot be cancelled.`,
     );
   }
 
@@ -30,6 +38,21 @@ export const cancelBenefitRequest = async (
     .set({ status: "cancelled", updatedAt: new Date().toISOString() })
     .where(eq(schema.benefitRequests.id, requestId))
     .returning();
+
+  // Phase 4: Audit log
+  await writeAuditLog({
+    db,
+    actor: employee,
+    actionType: "REQUEST_CANCELLED",
+    entityType: "benefit_request",
+    entityId: requestId,
+    targetEmployeeId: employee.id,
+    benefitId: req.benefitId,
+    requestId,
+    reason: "Cancelled by employee",
+    before: { status: req.status },
+    after: { status: "cancelled" },
+  });
 
   return updated;
 };

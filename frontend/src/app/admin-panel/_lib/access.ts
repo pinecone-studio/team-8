@@ -40,6 +40,30 @@ export function isAdminEmployee(employee: CurrentEmployee) {
   return hasAdminDepartment && employee.responsibilityLevel >= 2;
 }
 
+export function isHrAdmin(employee: CurrentEmployee) {
+  if (!employee) return false;
+  const department = normalizeDepartment(employee.department);
+  return isHrDepartment(department) && employee.responsibilityLevel >= 2;
+}
+
+export function isHrManager(employee: CurrentEmployee) {
+  if (!employee) return false;
+  const department = normalizeDepartment(employee.department);
+  return isHrDepartment(department) && employee.responsibilityLevel >= 3;
+}
+
+export function isFinanceAdmin(employee: CurrentEmployee) {
+  if (!employee) return false;
+  const department = normalizeDepartment(employee.department);
+  return isFinanceDepartment(department) && employee.responsibilityLevel >= 2;
+}
+
+export function isFinanceManager(employee: CurrentEmployee) {
+  if (!employee) return false;
+  const department = normalizeDepartment(employee.department);
+  return isFinanceDepartment(department) && employee.responsibilityLevel >= 3;
+}
+
 export function getAdminRoleLabel(employee: CurrentEmployee) {
   if (!employee) return "Admin";
 

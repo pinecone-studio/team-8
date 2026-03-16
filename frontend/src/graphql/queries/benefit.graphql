@@ -11,6 +11,7 @@ query GetBenefits($category: String) {
     requiresContract
     flowType
     optionsDescription
+    approvalPolicy
   }
 }
 
@@ -18,6 +19,10 @@ query GetMyBenefits {
   myBenefits {
     benefitId
     status
+    overrideStatus
+    overrideBy
+    overrideReason
+    overrideExpiresAt
     benefit {
       id
       name
@@ -30,6 +35,7 @@ query GetMyBenefits {
       requiresContract
       flowType
       optionsDescription
+      approvalPolicy
     }
     ruleEvaluation {
       ruleType
@@ -62,8 +68,8 @@ query GetBenefitRequests {
   }
 }
 
-query GetAllBenefitRequests($status: String) {
-  allBenefitRequests(status: $status) {
+query GetAllBenefitRequests($status: String, $queue: String) {
+  allBenefitRequests(status: $status, queue: $queue) {
     id
     employeeId
     benefitId
@@ -85,6 +91,10 @@ query GetEmployeeBenefits($employeeId: String!) {
   getEmployeeBenefits(employeeId: $employeeId) {
     benefitId
     status
+    overrideStatus
+    overrideBy
+    overrideReason
+    overrideExpiresAt
     benefit {
       id
       name
@@ -97,6 +107,7 @@ query GetEmployeeBenefits($employeeId: String!) {
       requiresContract
       flowType
       optionsDescription
+      approvalPolicy
     }
     ruleEvaluation {
       ruleType
@@ -107,6 +118,18 @@ query GetEmployeeBenefits($employeeId: String!) {
       ruleType
       errorMessage
     }
+  }
+}
+
+query GetContractsForBenefit($benefitId: String!) {
+  contracts(benefitId: $benefitId) {
+    id
+    version
+    isActive
+    viewUrl
+    vendorName
+    effectiveDate
+    expiryDate
   }
 }
 

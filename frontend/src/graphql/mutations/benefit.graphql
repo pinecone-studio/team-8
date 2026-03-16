@@ -4,16 +4,26 @@ mutation RequestBenefit($input: RequestBenefitInput!) {
     employeeId
     benefitId
     status
-    contractVersionAccepted
-    contractAcceptedAt
     reviewedBy
     requestedAmount
     repaymentMonths
-    employeeApprovedAt
     declineReason
     createdAt
     updatedAt
     viewContractUrl
+  }
+}
+
+mutation ConfirmBenefitRequest($requestId: String!, $contractAccepted: Boolean!) {
+  confirmBenefitRequest(requestId: $requestId, contractAccepted: $contractAccepted) {
+    id
+    employeeId
+    benefitId
+    status
+    contractVersionAccepted
+    contractAcceptedAt
+    createdAt
+    updatedAt
   }
 }
 
@@ -100,4 +110,49 @@ mutation UpdateEligibilityRule($id: String!, $input: UpdateEligibilityRuleInput!
 
 mutation DeleteEligibilityRule($id: String!) {
   deleteEligibilityRule(id: $id)
+}
+
+mutation OverrideEligibility($input: OverrideEligibilityInput!) {
+  overrideEligibility(input: $input) {
+    benefitId
+    status
+    overrideStatus
+    overrideBy
+    overrideReason
+    overrideExpiresAt
+  }
+}
+
+mutation ProposeRuleChange($input: ProposeRuleChangeInput!) {
+  proposeRuleChange(input: $input) {
+    id
+    benefitId
+    ruleId
+    changeType
+    proposedData
+    summary
+    status
+    proposedByEmployeeId
+    proposedAt
+  }
+}
+
+mutation ApproveRuleProposal($id: String!, $reason: String) {
+  approveRuleProposal(id: $id, reason: $reason) {
+    id
+    status
+    reviewedByEmployeeId
+    reviewedAt
+    reason
+  }
+}
+
+mutation RejectRuleProposal($id: String!, $reason: String!) {
+  rejectRuleProposal(id: $id, reason: $reason) {
+    id
+    status
+    reviewedByEmployeeId
+    reviewedAt
+    reason
+  }
 }

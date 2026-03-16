@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CheckCircle } from "lucide-react";
 import Sidebar from "../_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
 import {
@@ -12,26 +13,75 @@ import {
   GetAllBenefitRequestsDocument,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
-import { isAdminEmployee } from "@/app/admin-panel/_lib/access";
+import { isAdminEmployee, isHrAdmin, isFinanceAdmin } from "@/app/admin-panel/_lib/access";
 
-const statusTone: Record<string, string> = {
+const STATUS_TONE: Record<string, string> = {
   pending: "bg-orange-50 text-orange-600 border-orange-200",
+  awaiting_contract_acceptance: "bg-yellow-50 text-yellow-700 border-yellow-200",
+  awaiting_hr_review: "bg-orange-50 text-orange-600 border-orange-200",
+  awaiting_finance_review: "bg-blue-50 text-blue-700 border-blue-200",
+  hr_approved: "bg-teal-50 text-teal-700 border-teal-200",
+  finance_approved: "bg-teal-50 text-teal-700 border-teal-200",
   approved: "bg-green-50 text-green-600 border-green-200",
   rejected: "bg-red-50 text-red-600 border-red-200",
   cancelled: "bg-gray-50 text-gray-500 border-gray-200",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  pending: "Pending",
+  awaiting_contract_acceptance: "Contract Pending",
+  awaiting_hr_review: "HR Review",
+  awaiting_finance_review: "Finance Review",
+  hr_approved: "HR Approved",
+  finance_approved: "Finance Approved",
+  approved: "Approved",
+  rejected: "Rejected",
+  cancelled: "Cancelled",
+};
+
+const POLICY_STYLE: Record<string, { cls: string; label: string; hint: string }> = {
+  hr: { cls: "bg-gray-100 text-gray-700", label: "HR", hint: "HR approval required" },
+  finance: { cls: "bg-blue-50 text-blue-700", label: "Finance", hint: "Finance approval required" },
+  dual: { cls: "bg-purple-50 text-purple-700", label: "Dual", hint: "HR + Finance approval required" },
+};
+
+type QueueTab = "all" | "hr" | "finance";
 type ActionResult = { id: string; ok: boolean; message: string };
 
 export default function PendingRequestsPage() {
   const { employee } = useCurrentEmployee();
   const isAdmin = isAdminEmployee(employee);
+  const isHr = isHrAdmin(employee);
+  const isFinance = isFinanceAdmin(employee);
 
-  const { data: requestsData, loading: requestsLoading } =
-    useGetAllBenefitRequestsQuery({
-      variables: { status: "pending" },
-      skip: !isAdmin,
-    });
+  // Default to the user's primary queue
+  const defaultQueue: QueueTab = isFinance && !isHr ? "finance" : "hr";
+  const [activeQueue, setActiveQueue] = useState<QueueTab>(defaultQueue);
+
+  // Primary data for the current tab view
+  const currentVars =
+    activeQueue === "all"
+      ? { status: "pending" as string, queue: null as string | null }
+      : { status: null as string | null, queue: activeQueue as string };
+
+  const { data: requestsData, loading: requestsLoading } = useGetAllBenefitRequestsQuery({
+    variables: currentVars,
+    skip: !isAdmin,
+  });
+
+  // Parallel count queries for tab badges (cached by Apollo, no extra network cost when active)
+  const { data: hrCountData } = useGetAllBenefitRequestsQuery({
+    variables: { queue: "hr", status: null },
+    skip: !isHr,
+  });
+  const { data: financeCountData } = useGetAllBenefitRequestsQuery({
+    variables: { queue: "finance", status: null },
+    skip: !isFinance,
+  });
+
+  const hrCount = hrCountData?.allBenefitRequests?.length ?? 0;
+  const financeCount = financeCountData?.allBenefitRequests?.length ?? 0;
+
   const { data: benefitsData } = useGetAdminBenefitsQuery({ skip: !isAdmin });
   const { data: employeesData } = useGetEmployeesQuery({ skip: !isAdmin });
 
@@ -41,34 +91,26 @@ export default function PendingRequestsPage() {
   const [declineModalId, setDeclineModalId] = useState<string | null>(null);
   const [results, setResults] = useState<ActionResult[]>([]);
 
-  const refetchOptions = {
-    refetchQueries: [
-      { query: GetAllBenefitRequestsDocument, variables: { status: "pending" } },
-    ],
-  };
+  const makeRefetch = () => ({ refetchQueries: [{ query: GetAllBenefitRequestsDocument, variables: currentVars }] });
 
-  const [approveRequest] = useApproveBenefitRequestMutation(refetchOptions);
-  const [declineRequest] = useDeclineBenefitRequestMutation(refetchOptions);
+  const [approveRequest] = useApproveBenefitRequestMutation();
+  const [declineRequest] = useDeclineBenefitRequestMutation();
 
-  const benefitsById = new Map(
-    (benefitsData?.adminBenefits ?? []).map((b) => [b.id, b]),
-  );
-  const employeesById = new Map(
-    (employeesData?.getEmployees ?? []).map((e) => [e.id, e]),
-  );
+  const benefitsById = new Map((benefitsData?.adminBenefits ?? []).map((b) => [b.id, b]));
+  const employeesById = new Map((employeesData?.getEmployees ?? []).map((e) => [e.id, e]));
 
   const requests = (requestsData?.allBenefitRequests ?? []).map((req) => {
     const benefit = benefitsById.get(req.benefitId);
     const emp = employeesById.get(req.employeeId);
     const benefitName = benefit?.name ?? req.benefitId;
     const vendor = benefit?.vendorName ?? "";
-    const benefitLabel = vendor ? `${benefitName} – ${vendor}` : benefitName;
     return {
       id: req.id,
-      benefitLabel,
+      benefitLabel: vendor ? `${benefitName} – ${vendor}` : benefitName,
       employeeName: emp?.name ?? req.employeeId,
       requestDate: req.createdAt?.split("T")[0] ?? "—",
       status: req.status,
+      approvalPolicy: benefit?.approvalPolicy ?? "hr",
       requestedAmount: req.requestedAmount ?? null,
       repaymentMonths: req.repaymentMonths ?? null,
     };
@@ -82,7 +124,7 @@ export default function PendingRequestsPage() {
   const handleApprove = async (requestId: string) => {
     setApprovingId(requestId);
     try {
-      await approveRequest({ variables: { requestId } });
+      await approveRequest({ variables: { requestId }, ...makeRefetch() });
       addResult(requestId, true, "Approved");
     } catch (e) {
       addResult(requestId, false, e instanceof Error ? e.message : "Failed");
@@ -91,18 +133,11 @@ export default function PendingRequestsPage() {
     }
   };
 
-  const openDeclineModal = (requestId: string) => {
-    setDeclineModalId(requestId);
-    setDeclineReason("");
-  };
-
   const handleDecline = async () => {
     if (!declineModalId) return;
     setDecliningId(declineModalId);
     try {
-      await declineRequest({
-        variables: { requestId: declineModalId, reason: declineReason || null },
-      });
+      await declineRequest({ variables: { requestId: declineModalId, reason: declineReason || null }, ...makeRefetch() });
       addResult(declineModalId, true, "Declined");
       setDeclineModalId(null);
     } catch (e) {
@@ -123,117 +158,164 @@ export default function PendingRequestsPage() {
     );
   }
 
+  // Build tabs based on role
+  type TabDef = { key: QueueTab; label: string; count?: number; description: string };
+  const tabs: TabDef[] = [];
+  if (isHr) {
+    tabs.push({ key: "hr", label: "HR Queue", count: hrCount, description: "Requests awaiting HR review" });
+  }
+  if (isFinance) {
+    tabs.push({ key: "finance", label: "Finance Queue", count: financeCount, description: "Requests awaiting Finance review" });
+  }
+  if (isHr) {
+    tabs.push({ key: "all", label: "All In-Progress", description: "Full view of all active requests" });
+  }
+
+  const activeTabDef = tabs.find((t) => t.key === activeQueue) ?? tabs[0];
+
+  const emptyMessages: Record<QueueTab, { title: string; body: string }> = {
+    hr: { title: "HR queue is clear", body: "No requests are waiting for HR review at this time." },
+    finance: { title: "Finance queue is clear", body: "No requests are waiting for Finance review at this time." },
+    all: { title: "No in-progress requests", body: "All benefit requests have been resolved." },
+  };
+  const emptyMsg = emptyMessages[activeQueue];
+
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
       <div className="flex flex-1 flex-col items-center">
         <main className="w-full max-w-7xl p-8">
-          <h1 className="text-xl font-semibold text-gray-900">
-            Pending Requests
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Approve or decline benefit requests from employees
-          </p>
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">Pending Requests</h1>
+              <p className="mt-1 text-sm text-gray-500">
+                {activeTabDef?.description ?? "Approve or decline benefit requests"}
+              </p>
+            </div>
+            {requests.length > 0 && (
+              <p className="text-xs text-gray-400">{requests.length} request{requests.length !== 1 ? "s" : ""}</p>
+            )}
+          </div>
 
-          <div className="mt-8 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+          {/* Queue tabs */}
+          <div className="mt-6 flex gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 w-fit">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveQueue(tab.key)}
+                className={`flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+                  activeQueue === tab.key
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {tab.label}
+                {tab.count !== undefined && tab.count > 0 && (
+                  <span className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+                    activeQueue === tab.key
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-600"
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white">
             <div className="overflow-x-auto">
               <table className="min-w-full text-left">
-                <thead className="border-b border-gray-200 bg-white text-sm font-semibold text-gray-700">
+                <thead className="border-b border-gray-200 bg-white text-xs font-semibold uppercase tracking-wide text-gray-500">
                   <tr>
-                    <th className="px-5 py-4">Benefit</th>
-                    <th className="px-5 py-4">Employee</th>
-                    <th className="px-5 py-4">Request Date</th>
-                    <th className="px-5 py-4">Amount</th>
-                    <th className="px-5 py-4">Status</th>
-                    <th className="px-5 py-4">Actions</th>
+                    <th className="px-5 py-3">Benefit</th>
+                    <th className="px-5 py-3">Employee</th>
+                    <th className="px-5 py-3">Date</th>
+                    <th className="px-5 py-3">Amount</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Policy</th>
+                    <th className="px-5 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {requestsLoading ? (
                     <tr>
-                      <td colSpan={6} className="px-5 py-8">
-                        <PageLoading inline message="Loading pending requests..." />
+                      <td colSpan={7} className="px-5 py-10">
+                        <PageLoading inline message="Loading requests…" />
                       </td>
                     </tr>
                   ) : requests.length === 0 ? (
                     <tr>
-                      <td className="px-5 py-6 text-gray-500" colSpan={6}>
-                        No pending requests.
+                      <td colSpan={7}>
+                        <div className="flex flex-col items-center justify-center py-14 text-center">
+                          <CheckCircle className="h-10 w-10 text-green-200" />
+                          <p className="mt-3 text-sm font-medium text-gray-700">{emptyMsg.title}</p>
+                          <p className="mt-1 text-xs text-gray-400 max-w-xs">{emptyMsg.body}</p>
+                        </div>
                       </td>
                     </tr>
                   ) : (
                     requests.map((req) => {
                       const result = results.find((r) => r.id === req.id);
+                      const policy = POLICY_STYLE[req.approvalPolicy] ?? POLICY_STYLE.hr;
                       return (
-                        <tr
-                          key={req.id}
-                          className="border-b border-gray-100 last:border-b-0"
-                        >
-                          <td className="px-5 py-5 font-medium text-gray-900">
-                            {req.benefitLabel}
+                        <tr key={req.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors">
+                          <td className="px-5 py-4">
+                            <p className="text-sm font-medium text-gray-900">{req.benefitLabel}</p>
                           </td>
-                          <td className="px-5 py-5 text-gray-700">
-                            {req.employeeName}
-                          </td>
-                          <td className="px-5 py-5 text-gray-700">
-                            {req.requestDate}
-                          </td>
-                          <td className="px-5 py-5 text-gray-700 text-sm">
+                          <td className="px-5 py-4 text-sm text-gray-700">{req.employeeName}</td>
+                          <td className="px-5 py-4 text-sm text-gray-500">{req.requestDate}</td>
+                          <td className="px-5 py-4 text-sm text-gray-700">
                             {req.requestedAmount != null ? (
                               <span>
                                 {req.requestedAmount.toLocaleString()}
-                                {req.repaymentMonths
-                                  ? ` / ${req.repaymentMonths} mo`
-                                  : ""}
+                                {req.repaymentMonths ? ` / ${req.repaymentMonths} mo` : ""}
                               </span>
                             ) : (
-                              <span className="text-gray-400">—</span>
+                              <span className="text-gray-300">—</span>
                             )}
                           </td>
-                          <td className="px-5 py-5">
+                          <td className="px-5 py-4">
                             {result ? (
-                              <span
-                                className={`inline-flex rounded-full border px-3 py-1 text-sm font-medium ${
-                                  result.ok
-                                    ? "bg-green-50 text-green-600 border-green-200"
-                                    : "bg-red-50 text-red-600 border-red-200"
-                                }`}
-                              >
+                              <span className={`inline-flex rounded border px-2 py-0.5 text-xs font-medium ${
+                                result.ok
+                                  ? "bg-green-50 text-green-700 border-green-200"
+                                  : "bg-red-50 text-red-600 border-red-200"
+                              }`}>
                                 {result.message}
                               </span>
                             ) : (
-                              <span
-                                className={`inline-flex rounded-full border px-3 py-1 text-sm font-medium ${
-                                  statusTone[req.status.toLowerCase()] ??
-                                  "bg-gray-100 text-gray-500 border-gray-200"
-                                }`}
-                              >
-                                {req.status.charAt(0).toUpperCase() +
-                                  req.status.slice(1)}
+                              <span className={`inline-flex rounded border px-2 py-0.5 text-xs font-medium ${
+                                STATUS_TONE[req.status] ?? "bg-gray-100 text-gray-500 border-gray-200"
+                              }`}>
+                                {STATUS_LABELS[req.status] ?? req.status}
                               </span>
                             )}
                           </td>
-                          <td className="px-5 py-5">
+                          <td className="px-5 py-4">
+                            <span
+                              className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold ${policy.cls}`}
+                              title={policy.hint}
+                            >
+                              {policy.label}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4">
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => handleApprove(req.id)}
-                                disabled={
-                                  approvingId !== null || decliningId !== null
-                                }
-                                className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-700 active:scale-[0.98] active:bg-blue-800 disabled:bg-gray-300 disabled:active:scale-100"
+                                disabled={approvingId !== null || decliningId !== null}
+                                className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-700 disabled:bg-gray-300"
                               >
-                                {approvingId === req.id
-                                  ? "Approving…"
-                                  : "Approve"}
+                                {approvingId === req.id ? "Approving…" : "Approve"}
                               </button>
                               <button
                                 type="button"
-                                onClick={() => openDeclineModal(req.id)}
-                                disabled={
-                                  approvingId !== null || decliningId !== null
-                                }
-                                className="inline-flex items-center rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100"
+                                onClick={() => { setDeclineModalId(req.id); setDeclineReason(""); }}
+                                disabled={approvingId !== null || decliningId !== null}
+                                className="inline-flex items-center rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
                               >
                                 Decline
                               </button>
@@ -254,25 +336,23 @@ export default function PendingRequestsPage() {
       {declineModalId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Decline Request
-            </h2>
+            <h2 className="text-base font-semibold text-gray-900">Decline Request</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Optionally provide a reason for declining this request.
+              Optionally provide a reason. The employee will see this reason.
             </p>
             <textarea
               value={declineReason}
               onChange={(e) => setDeclineReason(e.target.value)}
               placeholder="Reason (optional)"
               rows={3}
-              className="mt-4 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-4 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-red-300"
             />
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="mt-4 flex gap-2">
               <button
                 type="button"
                 onClick={() => setDeclineModalId(null)}
                 disabled={decliningId !== null}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                className="flex-1 rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -280,7 +360,7 @@ export default function PendingRequestsPage() {
                 type="button"
                 onClick={handleDecline}
                 disabled={decliningId !== null}
-                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
+                className="flex-1 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
               >
                 {decliningId ? "Declining…" : "Confirm Decline"}
               </button>

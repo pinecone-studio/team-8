@@ -11,6 +11,11 @@ import { deleteBenefit } from "./deleteBenefit";
 import { createEligibilityRule } from "./createEligibilityRule";
 import { updateEligibilityRule } from "./updateEligibilityRule";
 import { deleteEligibilityRule } from "./deleteEligibilityRule";
+import { overrideEligibility } from "./overrideEligibility";
+import { proposeRuleChange } from "./proposeRuleChange";
+import { approveRuleProposal } from "./approveRuleProposal";
+import { rejectRuleProposal } from "./rejectRuleProposal";
+import { markNotificationsRead } from "./markNotificationsRead";
 
 export const mutations = {
   createBenefit,
@@ -26,4 +31,9 @@ export const mutations = {
   createEligibilityRule,
   updateEligibilityRule,
   deleteEligibilityRule,
+  overrideEligibility,
+  proposeRuleChange,
+  approveRuleProposal,
+  rejectRuleProposal,
+  markNotificationsRead,
 };

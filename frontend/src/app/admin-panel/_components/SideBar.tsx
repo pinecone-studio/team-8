@@ -18,43 +18,51 @@ import {
   User,
 } from "lucide-react";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
-import { getAdminRoleLabel, isAdminEmployee } from "../_lib/access";
+import { getAdminRoleLabel, isAdminEmployee, isHrAdmin } from "../_lib/access";
+import NotificationBell from "@/app/_components/NotificationBell";
 
-const navItems = [
+const ALL_NAV_ITEMS = [
   {
     href: "/admin-panel",
     label: "Dashboard",
     icon: LayoutGrid,
+    hrOnly: false,
   },
   {
     href: "/admin-panel/company-benefits",
     label: "Company Benefits",
     icon: Gift,
+    hrOnly: false,
   },
   {
     href: "/admin-panel/pending-requests",
     label: "Pending Requests",
     icon: CheckCircle,
+    hrOnly: false,
   },
   {
     href: "/admin-panel/eligibility-inspector",
     label: "Eligibility Inspector",
     icon: FileText,
+    hrOnly: true,
   },
   {
     href: "/admin-panel/rule-configuration",
     label: "Rule Configuration",
     icon: ClipboardList,
+    hrOnly: true,
   },
   {
     href: "/admin-panel/vendor-contracts",
     label: "Vendor Contracts",
     icon: FileBadge,
+    hrOnly: true,
   },
   {
     href: "/admin-panel/audit-logs",
     label: "Audit Logs",
     icon: ShieldCheck,
+    hrOnly: true,
   },
 ];
 
@@ -65,12 +73,16 @@ export default function Sidebar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const hasAdminAccess = isAdminEmployee(employee);
+  const hasHrAccess = isHrAdmin(employee);
   const profileName = loading ? "Loading..." : employee?.name ?? "Employee";
   const profileRole = loading
     ? "Profile"
     : hasAdminAccess
       ? getAdminRoleLabel(employee)
       : "No admin access";
+
+  // Finance-only admins must not see HR-governance pages
+  const navItems = ALL_NAV_ITEMS.filter((item) => !item.hrOnly || hasHrAccess);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -97,13 +109,14 @@ export default function Sidebar() {
   return (
     <>
       <aside className="fixed left-0 top-0 z-10 flex h-screen w-[260px] flex-col border-r border-sidebar-border bg-sidebar">
-        <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-sidebar-border px-4">
           <Link href="/admin-panel" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <ShieldCheck className="h-4 w-4 text-primary-foreground" />
             </div>
             <span className="font-semibold text-sidebar-foreground">Admin</span>
           </Link>
+          <NotificationBell />
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">

@@ -12,6 +12,7 @@ export const benefits = sqliteTable("benefits", {
     .default(false),
   activeContractId: text("active_contract_id"),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  approvalPolicy: text("approval_policy").notNull().default("hr"), // hr | finance | dual
 });
 
 export type Benefit = typeof benefits.$inferSelect;
