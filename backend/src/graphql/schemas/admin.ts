@@ -136,6 +136,7 @@ export const adminTypeDefs = gql`
       toDate: String
       limit: Int
     ): [AuditLog!]!
+    auditLogActionTypes: [String!]!
     contractAcceptances(
       employeeId: String
       benefitId: String
