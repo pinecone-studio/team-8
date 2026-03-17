@@ -44,23 +44,71 @@ function ApprovalPolicyBadge({ policy }: { policy: string | null | undefined }) 
   );
 }
 
-function ApprovalFlow({ policy, requiresContract }: { policy: string | null | undefined; requiresContract: boolean }) {
+function getActiveStep(status: string): string {
+  switch (status) {
+    case "awaiting_contract_acceptance": return "Contract";
+    case "awaiting_hr_review": return "HR Review";
+    case "awaiting_finance_review": return "Finance Review";
+    case "hr_approved": return "Finance Review";
+    case "finance_approved":
+    case "approved": return "Approved";
+    default: return "Submitted";
+  }
+}
+
+function ApprovalFlow({
+  policy,
+  requiresContract,
+  requestStatus,
+}: {
+  policy: string | null | undefined;
+  requiresContract: boolean;
+  requestStatus?: string | null;
+}) {
   const p = (policy ?? "hr").toLowerCase();
-  const steps: string[] = [];
+  const steps = ["Submitted"];
   if (requiresContract) steps.push("Contract");
   if (p === "hr" || p === "dual") steps.push("HR Review");
   if (p === "finance" || p === "dual") steps.push("Finance Review");
-  steps.push("Enrolled");
+  steps.push("Approved");
+
+  const activeStep = requestStatus ? getActiveStep(requestStatus) : null;
+  const isTerminal = requestStatus === "approved" || requestStatus === "rejected" || requestStatus === "cancelled";
+
+  const doneSteps = new Set<string>();
+  if (requestStatus && !isTerminal) {
+    for (const step of steps) {
+      if (step === activeStep) break;
+      doneSteps.add(step);
+    }
+  }
+  if (requestStatus === "approved") steps.forEach((s) => doneSteps.add(s));
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-xs font-medium text-gray-500">You</span>
-      {steps.map((step) => (
-        <div key={step} className="flex items-center gap-1.5">
-          <ArrowRight className="h-3 w-3 text-gray-300" />
-          <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{step}</span>
-        </div>
-      ))}
+    <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+      <p className="mb-2 text-sm font-semibold text-gray-800">Approval Flow</p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {steps.map((step, i) => {
+          const isActive = step === activeStep && !isTerminal;
+          const isDone = doneSteps.has(step);
+          return (
+            <div key={step} className="flex items-center gap-1.5">
+              {i > 0 && <ArrowRight className="h-3 w-3 text-gray-300 shrink-0" />}
+              <span
+                className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
+                  isActive
+                    ? "bg-blue-100 text-blue-700"
+                    : isDone
+                      ? "bg-green-100 text-green-700"
+                      : "bg-gray-100 text-gray-400"
+                }`}
+              >
+                {step}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -242,10 +290,10 @@ export default function BenefitDetailPage() {
       <div className="flex flex-1 flex-col items-center">
         <main className="w-full max-w-5xl p-8">
           <Link
-            href="/employee-panel/mybenefits"
+            href="/employee-panel/requests"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
           >
-            ← Back to Benefits
+            ← Back
           </Link>
 
           <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[2fr_1fr]">
@@ -291,9 +339,11 @@ export default function BenefitDetailPage() {
                 </div>
 
                 {/* Approval flow */}
-                <div className="mt-4">
-                  <ApprovalFlow policy={policy} requiresContract={benefit.requiresContract} />
-                </div>
+                <ApprovalFlow
+                  policy={policy}
+                  requiresContract={benefit.requiresContract}
+                  requestStatus={latestRequest?.status}
+                />
               </div>
 
               {/* Eligibility breakdown */}
