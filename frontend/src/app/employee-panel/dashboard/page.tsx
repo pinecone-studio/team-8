@@ -1,29 +1,45 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { CheckCircle, Clock, Search, Sparkles } from "lucide-react";
 import Sidebar from "../_components/SideBar";
 import SummaryCard from "../_components/benefits/SummaryCard";
 import BenefitCard from "../_components/benefits/BenefitCard";
+import BenefitDetailModal from "../_components/benefits/BenefitDetailModal";
+import BenefitRequestModal from "../_components/benefits/BenefitRequestModal";
 import PageHeader from "../_components/layout/PageHeader";
 import PageLoading from "@/app/_components/PageLoading";
 import {
   BenefitEligibilityStatus,
   useGetMyBenefitsQuery,
+  type BenefitEligibility,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 
-const FILTERS = [
-  { label: "All", value: "ALL" },
-  { label: "Active", value: BenefitEligibilityStatus.Active },
-  { label: "Eligible", value: BenefitEligibilityStatus.Eligible },
-  { label: "Pending", value: BenefitEligibilityStatus.Pending },
-  { label: "Locked", value: BenefitEligibilityStatus.Locked },
+const STATUS_FILTERS = [
+  { label: "All",      value: "ALL" },
+  { label: "Active",   value: "ACTIVE" },
+  { label: "Pending",  value: "PENDING" },
+  { label: "Eligible", value: "ELIGIBLE" },
+  { label: "Locked",   value: "LOCKED" },
 ] as const;
 
-type FilterValue = (typeof FILTERS)[number]["value"];
+type StatusFilter = (typeof STATUS_FILTERS)[number]["value"];
+
+const STATUS_ORDER: Record<string, number> = {
+  ACTIVE: 0,
+  PENDING: 1,
+  ELIGIBLE: 2,
+  LOCKED: 3,
+};
 
 export default function DashboardPage() {
-  const [activeFilter, setActiveFilter] = useState<FilterValue>("ALL");
+  const router = useRouter();
+  const [activeFilter, setActiveFilter] = useState<StatusFilter>("ALL");
+  const [search, setSearch] = useState("");
+  const [selectedBenefit, setSelectedBenefit] = useState<BenefitEligibility | null>(null);
+  const [requestModalBenefitId, setRequestModalBenefitId] = useState<string | null>(null);
 
   const { employee, error, loading: employeeLoading } = useCurrentEmployee();
 
@@ -35,10 +51,15 @@ export default function DashboardPage() {
 
   const myBenefits = benefitsData?.myBenefits ?? [];
 
-  const filteredBenefits =
-    activeFilter === "ALL"
-      ? myBenefits
-      : myBenefits.filter((b) => b.status === activeFilter);
+  const filteredBenefits = myBenefits
+    .filter((b) => {
+      const matchesStatus = activeFilter === "ALL" || String(b.status).toUpperCase() === activeFilter;
+      const matchesSearch = search.trim() === "" ||
+        b.benefit.name.toLowerCase().includes(search.toLowerCase()) ||
+        (b.benefit.vendorName ?? "").toLowerCase().includes(search.toLowerCase());
+      return matchesStatus && matchesSearch;
+    })
+    .sort((a, b) => (STATUS_ORDER[String(a.status).toUpperCase()] ?? 99) - (STATUS_ORDER[String(b.status).toUpperCase()] ?? 99));
 
   const subtitle = error
     ? "We couldn't load your employee profile."
@@ -49,8 +70,7 @@ export default function DashboardPage() {
   const stats = myBenefits.reduce(
     (acc, benefit) => {
       if (benefit.status === BenefitEligibilityStatus.Active) acc.active += 1;
-      if (benefit.status === BenefitEligibilityStatus.Eligible)
-        acc.eligible += 1;
+      if (benefit.status === BenefitEligibilityStatus.Eligible) acc.eligible += 1;
       if (benefit.status === BenefitEligibilityStatus.Pending) acc.pending += 1;
       return acc;
     },
@@ -61,70 +81,114 @@ export default function DashboardPage() {
   const dashboardError = error ?? benefitsError ?? null;
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
 
       <div className="flex flex-1 flex-col items-center">
-        <main className="w-full max-w-7xl p-8">
+        <main className="w-full max-w-7xl px-8 py-8">
           <PageHeader
             title={`Good to see you, ${employee?.name ?? "Employee"}`}
             description={subtitle}
           />
 
           {/* Summary Cards */}
-          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <SummaryCard label="Active Benefits" value={stats.active} />
-            <SummaryCard label="Eligible Benefits" value={stats.eligible} />
-            <SummaryCard label="Pending Requests" value={stats.pending} />
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <SummaryCard
+              label="Active Benefits"
+              value={stats.active}
+              icon={<CheckCircle className="h-5 w-5" />}
+            />
+            <SummaryCard
+              label="Eligible Benefits"
+              value={stats.eligible}
+              icon={<Sparkles className="h-5 w-5" />}
+            />
+            <SummaryCard
+              label="Pending Requests"
+              value={stats.pending}
+              icon={<Clock className="h-5 w-5" />}
+            />
           </div>
 
           {/* Benefits Overview */}
-          <section className="mt-6">
-            <div className="flex items-center gap-5">
-              <h2 className="text-lg font-semibold text-foreground">
-                Benefits Overview
-              </h2>
-              <div className="flex items-center gap-1">
-                {FILTERS.map((f) => (
-                  <button
-                    key={f.value}
-                    type="button"
-                    onClick={() => setActiveFilter(f.value)}
-                    className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-                      activeFilter === f.value
-                        ? "bg-foreground text-background"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
+          <section className="mt-8">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-base font-semibold text-gray-900">Benefits Overview</h2>
+              {/* Search */}
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-48 rounded-xl border border-gray-200 bg-white py-2 pl-9 pr-4 text-sm text-gray-700 placeholder-gray-400 outline-none focus:border-gray-400 focus:ring-0"
+                />
               </div>
             </div>
 
-            <div className="mt-3 grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(320px,1fr))] [&>*]:min-w-0">
+            {/* Status tabs */}
+            <div className="mt-4 flex items-center gap-1">
+              {STATUS_FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  type="button"
+                  onClick={() => setActiveFilter(f.value)}
+                  className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+                    activeFilter === f.value
+                      ? "bg-gray-900 text-white"
+                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4 grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))] [&>*]:min-w-0">
               {isDashboardLoading ? (
                 <PageLoading message="Loading benefits..." />
               ) : dashboardError ? (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
                   Failed to load benefit data.
                 </div>
               ) : filteredBenefits.length === 0 ? (
-                <div className="rounded-lg border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
-                  No{" "}
-                  {activeFilter === "ALL"
-                    ? ""
-                    : activeFilter.toLowerCase() + " "}
-                  benefits found.
+                <div className="rounded-xl border border-gray-100 bg-white px-4 py-6 text-center text-sm text-gray-400">
+                  No benefits found.
                 </div>
               ) : (
                 filteredBenefits.map((benefit) => (
-                  <BenefitCard key={benefit.benefitId} benefit={benefit} />
+                  <BenefitCard
+                    key={benefit.benefitId}
+                    benefit={benefit}
+                    onClick={setSelectedBenefit}
+                  />
                 ))
               )}
             </div>
           </section>
         </main>
+
+        {selectedBenefit && (
+          <BenefitDetailModal
+            benefit={selectedBenefit}
+            onClose={() => setSelectedBenefit(null)}
+            onRequestBenefit={(benefitId) => {
+              setSelectedBenefit(null);
+              setRequestModalBenefitId(benefitId);
+            }}
+          />
+        )}
+        {requestModalBenefitId && (
+          <BenefitRequestModal
+            benefitId={requestModalBenefitId}
+            onClose={() => setRequestModalBenefitId(null)}
+            onSuccess={() => {
+              setRequestModalBenefitId(null);
+              router.push("/employee-panel/requests?submitted=true");
+            }}
+          />
+        )}
       </div>
     </div>
   );

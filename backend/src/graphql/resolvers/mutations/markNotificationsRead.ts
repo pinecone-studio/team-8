@@ -1,14 +1,13 @@
-import { eq, and, inArray } from "drizzle-orm";
-import { schema } from "../../../db";
+import { sql } from "drizzle-orm";
 import type { Database } from "../../../db";
 import type { GraphQLContext } from "../../context";
 
 /**
- * Upserts read records for the given notification keys for the current employee.
+ * Inserts read records for the given notification keys for the current employee.
  *
- * SQLite doesn't support real upserts on composite PKs via Drizzle's onConflict
- * without some care, so we fetch existing keys first and only insert the new ones.
- * This keeps the operation cheap and idempotent.
+ * Uses raw "INSERT OR IGNORE" (SQLite/D1 native syntax) to atomically skip
+ * duplicate (employee_id, notification_key) pairs — avoids UNIQUE constraint
+ * errors from concurrent or repeated calls.
  */
 export const markNotificationsRead = async (
   _: unknown,
@@ -20,29 +19,14 @@ export const markNotificationsRead = async (
 
   const now = new Date().toISOString();
 
-  // Find which of these keys are already recorded as read
-  const existing = await db
-    .select({ notificationKey: schema.notificationReads.notificationKey })
-    .from(schema.notificationReads)
-    .where(
-      and(
-        eq(schema.notificationReads.employeeId, currentEmployee.id),
-        inArray(schema.notificationReads.notificationKey, keys),
-      ),
-    );
+  const valuesSql = sql.join(
+    keys.map((key) => sql`(${currentEmployee.id}, ${key}, ${now})`),
+    sql`, `,
+  );
 
-  const alreadyRead = new Set(existing.map((r) => r.notificationKey));
-  const toInsert = keys.filter((k) => !alreadyRead.has(k));
-
-  if (toInsert.length > 0) {
-    await db.insert(schema.notificationReads).values(
-      toInsert.map((key) => ({
-        employeeId: currentEmployee.id,
-        notificationKey: key,
-        readAt: now,
-      })),
-    );
-  }
+  await db.run(
+    sql`INSERT OR IGNORE INTO notification_reads (employee_id, notification_key, read_at) VALUES ${valuesSql}`,
+  );
 
   return true;
 };

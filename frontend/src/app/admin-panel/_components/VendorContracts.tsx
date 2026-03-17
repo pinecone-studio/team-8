@@ -247,8 +247,13 @@ export default function VendorContracts() {
 
         {/* Upload modal */}
         {modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            onClick={closeModal}
+          >
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-gray-900">Upload New Contract</h2>
                 <button type="button" onClick={closeModal} className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 active:scale-95 active:bg-slate-200" aria-label="Close">

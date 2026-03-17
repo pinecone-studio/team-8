@@ -293,6 +293,7 @@ export type Mutation = {
   rejectRuleProposal: RuleProposal;
   requestBenefit: BenefitRequest;
   syncOkrStatus: OkrSyncResult;
+  updateBenefit: Benefit;
   updateEligibilityRule: EligibilityRule;
   updateEmployee?: Maybe<Employee>;
   updateMySettings: EmployeeSettings;
@@ -390,6 +391,12 @@ export type MutationRequestBenefitArgs = {
 
 export type MutationSyncOkrStatusArgs = {
   rows: Array<OkrSyncRowInput>;
+};
+
+
+export type MutationUpdateBenefitArgs = {
+  id: Scalars['String']['input'];
+  input: UpdateBenefitInput;
 };
 
 
@@ -583,6 +590,15 @@ export type RuleProposal = {
   summary: Scalars['String']['output'];
 };
 
+export type UpdateBenefitInput = {
+  approvalPolicy?: InputMaybe<Scalars['String']['input']>;
+  category?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  requiresContract?: InputMaybe<Scalars['Boolean']['input']>;
+  subsidyPercent?: InputMaybe<Scalars['Int']['input']>;
+  vendorName?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type UpdateEligibilityRuleInput = {
   errorMessage?: InputMaybe<Scalars['String']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
@@ -723,6 +739,7 @@ export type ResolversTypes = ResolversObject<{
   RuleEvaluation: ResolverTypeWrapper<RuleEvaluation>;
   RuleProposal: ResolverTypeWrapper<RuleProposal>;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
+  UpdateBenefitInput: UpdateBenefitInput;
   UpdateEligibilityRuleInput: UpdateEligibilityRuleInput;
   UpdateEmployeeInput: UpdateEmployeeInput;
   UpdateMySettingsInput: UpdateMySettingsInput;
@@ -764,6 +781,7 @@ export type ResolversParentTypes = ResolversObject<{
   RuleEvaluation: RuleEvaluation;
   RuleProposal: RuleProposal;
   String: Scalars['String']['output'];
+  UpdateBenefitInput: UpdateBenefitInput;
   UpdateEligibilityRuleInput: UpdateEligibilityRuleInput;
   UpdateEmployeeInput: UpdateEmployeeInput;
   UpdateMySettingsInput: UpdateMySettingsInput;
@@ -986,6 +1004,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   rejectRuleProposal?: Resolver<ResolversTypes['RuleProposal'], ParentType, ContextType, RequireFields<MutationRejectRuleProposalArgs, 'id' | 'reason'>>;
   requestBenefit?: Resolver<ResolversTypes['BenefitRequest'], ParentType, ContextType, RequireFields<MutationRequestBenefitArgs, 'input'>>;
   syncOkrStatus?: Resolver<ResolversTypes['OkrSyncResult'], ParentType, ContextType, RequireFields<MutationSyncOkrStatusArgs, 'rows'>>;
+  updateBenefit?: Resolver<ResolversTypes['Benefit'], ParentType, ContextType, RequireFields<MutationUpdateBenefitArgs, 'id' | 'input'>>;
   updateEligibilityRule?: Resolver<ResolversTypes['EligibilityRule'], ParentType, ContextType, RequireFields<MutationUpdateEligibilityRuleArgs, 'id' | 'input'>>;
   updateEmployee?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<MutationUpdateEmployeeArgs, 'id' | 'input'>>;
   updateMySettings?: Resolver<ResolversTypes['EmployeeSettings'], ParentType, ContextType, RequireFields<MutationUpdateMySettingsArgs, 'input'>>;

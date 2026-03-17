@@ -2,20 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useClerk } from "@clerk/nextjs";
+import { useClerk, useUser } from "@clerk/nextjs";
 import { useRef, useEffect, useState } from "react";
 import {
   CheckCircle,
   ChevronDown,
-  ClipboardList,
-  FileBadge,
   FileText,
   Gift,
   LayoutGrid,
   LogOut,
-  Settings,
   ShieldCheck,
-  User,
 } from "lucide-react";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { getAdminRoleLabel, isAdminEmployee, isHrAdmin } from "../_lib/access";
@@ -47,20 +43,8 @@ const ALL_NAV_ITEMS = [
     hrOnly: true,
   },
   {
-    href: "/admin-panel/rule-configuration",
-    label: "Rule Configuration",
-    icon: ClipboardList,
-    hrOnly: true,
-  },
-  {
-    href: "/admin-panel/vendor-contracts",
-    label: "Vendor Contracts",
-    icon: FileBadge,
-    hrOnly: true,
-  },
-  {
     href: "/admin-panel/audit-logs",
-    label: "Audit Logs",
+    label: "Request History",
     icon: ShieldCheck,
     hrOnly: true,
   },
@@ -69,17 +53,14 @@ const ALL_NAV_ITEMS = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { signOut } = useClerk();
+  const { user, isLoaded: isUserLoaded } = useUser();
   const { employee, loading } = useCurrentEmployee();
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const hasAdminAccess = isAdminEmployee(employee);
   const hasHrAccess = isHrAdmin(employee);
-  const profileName = loading ? "Loading..." : employee?.name ?? "Employee";
-  const profileRole = loading
-    ? "Profile"
-    : hasAdminAccess
-      ? getAdminRoleLabel(employee)
-      : "No admin access";
+  const profileName = employee?.name ?? "Employee";
+  const profileRole = hasAdminAccess ? getAdminRoleLabel(employee) : "No admin access";
 
   // Finance-only admins must not see HR-governance pages
   const navItems = ALL_NAV_ITEMS.filter((item) => !item.hrOnly || hasHrAccess);
@@ -100,21 +81,27 @@ export default function Sidebar() {
     href === "/admin-panel" ? pathname === href : pathname.startsWith(href);
 
   const navLinkClass = (href: string) =>
-    `flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition active:scale-[0.98] border-l-2 ${
+    `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition active:scale-[0.98] ${
       isActive(href)
-        ? "border-primary bg-sidebar-accent text-sidebar-accent-foreground"
-        : "border-transparent text-sidebar-foreground hover:border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        ? "bg-gray-100 text-gray-900"
+        : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
     }`;
 
   return (
     <>
-      <aside className="fixed left-0 top-0 z-10 flex h-screen w-[260px] flex-col border-r border-sidebar-border bg-sidebar">
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-sidebar-border px-4">
+      <aside className="fixed left-0 top-0 z-10 flex h-screen w-[260px] flex-col border-r border-gray-100 bg-white">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-100 px-4">
           <Link href="/admin-panel" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <ShieldCheck className="h-4 w-4 text-primary-foreground" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900">
+              <ShieldCheck className="h-4 w-4 text-white" />
             </div>
-            <span className="font-semibold text-sidebar-foreground">Admin</span>
+            {loading ? (
+              <div className="h-4 w-20 rounded bg-gray-200 animate-pulse" />
+            ) : (
+              <span className="font-semibold text-gray-900">
+                {hasAdminAccess ? getAdminRoleLabel(employee) : "Employee"}
+              </span>
+            )}
           </Link>
           <NotificationBell />
         </div>
@@ -124,34 +111,45 @@ export default function Sidebar() {
             <button
               type="button"
               onClick={() => setProfileOpen((o) => !o)}
-              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-sidebar-accent active:scale-[0.99]"
+              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-gray-50 active:scale-[0.99]"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-accent">
-                <User className="h-4 w-4 text-sidebar-foreground" />
-              </div>
+              {loading || !isUserLoaded ? (
+                <div className="h-9 w-9 shrink-0 rounded-full bg-gray-200 animate-pulse" />
+              ) : user?.imageUrl ? (
+                <img
+                  src={user.imageUrl}
+                  alt={profileName}
+                  className="h-9 w-9 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-800 text-sm font-semibold text-white">
+                  {profileName.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-sidebar-foreground">{profileName}</p>
-                <p className="truncate text-xs text-muted-foreground">{profileRole}</p>
+                {loading ? (
+                  <>
+                    <div className="h-3.5 w-24 rounded bg-gray-200 animate-pulse" />
+                    <div className="mt-1.5 h-3 w-16 rounded bg-gray-200 animate-pulse" />
+                  </>
+                ) : (
+                  <>
+                    <p className="truncate text-sm font-medium text-gray-900">{profileName}</p>
+                    <p className="truncate text-xs text-gray-400">{profileRole}</p>
+                  </>
+                )}
               </div>
-              <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`} />
+              <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`} />
             </button>
             <div
-              className={`absolute left-0 right-0 top-full z-20 mt-1.5 origin-top rounded-lg border border-border bg-popover py-1 shadow-lg transition-all duration-200 ease-out ${
+              className={`absolute left-0 right-0 top-full z-20 mt-1.5 origin-top rounded-lg border border-gray-100 bg-white py-1 shadow-lg transition-all duration-200 ease-out ${
                 profileOpen ? "visible scale-100 opacity-100" : "invisible scale-95 opacity-0 pointer-events-none"
               }`}
             >
-              <Link
-                href="/admin-panel/settings"
-                onClick={() => setProfileOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground"
-              >
-                <Settings className="h-4 w-4" />
-                <span>Settings</span>
-              </Link>
-              <Link
+<Link
                 href="/employee-panel/dashboard"
                 onClick={() => setProfileOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground"
+                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
               >
                 <LayoutGrid className="h-4 w-4" />
                 <span>My dashboard</span>
@@ -162,7 +160,7 @@ export default function Sidebar() {
                   setProfileOpen(false);
                   signOut({ redirectUrl: "/sign-in" });
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-gray-700 transition hover:bg-gray-50"
               >
                 <LogOut className="h-4 w-4" />
                 <span>Sign out</span>
@@ -171,7 +169,7 @@ export default function Sidebar() {
           </div>
 
           <nav className="space-y-0.5">
-            <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Menu</p>
+            <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">Menu</p>
             {navItems.map((item) => {
               const Icon = item.icon;
               return (

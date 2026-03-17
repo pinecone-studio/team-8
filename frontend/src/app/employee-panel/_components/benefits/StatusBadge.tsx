@@ -4,19 +4,19 @@ type Props = {
   status: BenefitEligibilityStatus;
 };
 
-const styles = {
-  ACTIVE: "bg-green-50 text-green-600 border-green-200",
-  ELIGIBLE: "bg-blue-50 text-blue-600 border-blue-200",
-  PENDING: "bg-orange-50 text-orange-600 border-orange-200",
-  LOCKED: "bg-red-50 text-red-600 border-red-200",
+const styles: Record<string, string> = {
+  ACTIVE:   "bg-emerald-100 text-emerald-700",
+  ELIGIBLE: "bg-blue-100 text-blue-700",
+  PENDING:  "bg-amber-400 text-white",
+  LOCKED:   "bg-gray-300 text-gray-700",
 };
 
 export default function StatusBadge({ status }: Props) {
+  const key = String(status).toUpperCase();
+  const style = styles[key] ?? "bg-gray-200 text-gray-600";
   return (
-    <span
-      className={`inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium ${styles[status]}`}
-    >
-      {status}
+    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${style}`}>
+      {key}
     </span>
   );
 }

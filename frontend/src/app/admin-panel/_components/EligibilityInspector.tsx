@@ -335,8 +335,8 @@ export default function EligibilityInspector() {
     <main className="flex-1 px-8 py-9">
       <section className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-xl font-semibold text-gray-900">Employee Eligibility Inspector</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-gray-900">Employee Eligibility Inspector</h1>
+          <p className="mt-1 text-sm text-gray-400">
             Search by name, email, or department to review an employee&apos;s benefit eligibility.
           </p>
         </div>
@@ -483,8 +483,13 @@ export default function EligibilityInspector() {
 
         {/* Override Modal */}
         {overrideTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+            role="dialog"
+            aria-modal="true"
+            onClick={() => setOverrideTarget(null)}
+          >
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-base font-semibold text-slate-900">
                 Override Eligibility — {overrideTarget.benefitName}
               </h3>

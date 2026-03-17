@@ -78,6 +78,23 @@ mutation CreateBenefit($input: CreateBenefitInput!) {
   }
 }
 
+mutation UpdateBenefit($id: String!, $input: UpdateBenefitInput!) {
+  updateBenefit(id: $id, input: $input) {
+    id
+    name
+    nameEng
+    category
+    subsidyPercent
+    employeePercent
+    unitPrice
+    vendorName
+    requiresContract
+    flowType
+    optionsDescription
+    approvalPolicy
+  }
+}
+
 mutation DeleteBenefit($id: String!) {
   deleteBenefit(id: $id)
 }
