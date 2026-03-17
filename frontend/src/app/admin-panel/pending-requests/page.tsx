@@ -54,6 +54,7 @@ type RequestRow = {
   benefitLabel: string;
   benefitName: string;
   vendorName: string;
+  subsidyPercent: number | null;
   employeeName: string;
   employeeEmail: string;
   employeeDepartment: string;
@@ -62,6 +63,7 @@ type RequestRow = {
   requestDate: string;
   status: string;
   approvalPolicy: string;
+  unitPrice: number | null;
   requestedAmount: number | null;
   repaymentMonths: number | null;
   viewContractUrl: string | null;
@@ -133,6 +135,7 @@ export default function PendingRequestsPage() {
       benefitLabel: vendor ? `${benefitName} – ${vendor}` : benefitName,
       benefitName,
       vendorName: vendor,
+      subsidyPercent: benefit?.subsidyPercent ?? null,
       employeeName: emp?.name ?? req.employeeId,
       employeeEmail: emp?.email ?? "",
       employeeDepartment: emp?.department ?? "",
@@ -141,6 +144,7 @@ export default function PendingRequestsPage() {
       requestDate: req.createdAt?.split("T")[0] ?? "—",
       status: req.status,
       approvalPolicy: benefit?.approvalPolicy ?? "hr",
+      unitPrice: benefit?.unitPrice ?? null,
       requestedAmount: req.requestedAmount ?? null,
       repaymentMonths: req.repaymentMonths ?? null,
       viewContractUrl: req.viewContractUrl ?? null,
@@ -270,7 +274,7 @@ export default function PendingRequestsPage() {
                     <th className="px-5 py-3">Benefit</th>
                     <th className="px-5 py-3">Employee</th>
                     <th className="px-5 py-3">Date</th>
-                    <th className="px-5 py-3">Amount</th>
+                    <th className="px-5 py-3">Amount / Subsidy</th>
                     <th className="px-5 py-3">Status</th>
                     <th className="px-5 py-3">Policy</th>
                     <th className="px-5 py-3">Actions</th>
@@ -309,6 +313,15 @@ export default function PendingRequestsPage() {
                               <span>
                                 {req.requestedAmount.toLocaleString()}
                                 {req.repaymentMonths ? ` / ${req.repaymentMonths} mo` : ""}
+                              </span>
+                            ) : req.unitPrice != null ? (
+                              <span>{req.unitPrice.toLocaleString()}</span>
+                            ) : req.subsidyPercent != null ? (
+                              <span
+                                className="text-gray-500"
+                                title="No specific amount provided for this request. Showing benefit subsidy rate instead."
+                              >
+                                {req.subsidyPercent}% subsidy
                               </span>
                             ) : (
                               <span className="text-gray-300">—</span>
@@ -487,13 +500,14 @@ function RequestDetailModal({
               <Briefcase className="h-3.5 w-3.5" />
               Benefit Details
             </div>
-            <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-2.5">
-              <InfoRow label="Benefit" value={req.benefitName} />
-              {req.vendorName && <InfoRow label="Vendor" value={req.vendorName} />}
-              <InfoRow label="Approval Policy" value={(POLICY_STYLE[req.approvalPolicy] ?? POLICY_STYLE.hr).hint} />
-              <InfoRow label="Contract Required" value={req.requiresContract ? "Yes" : "No"} />
-            </div>
-          </section>
+	            <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-2.5">
+	              <InfoRow label="Benefit" value={req.benefitName} />
+	              {req.vendorName && <InfoRow label="Vendor" value={req.vendorName} />}
+	              {req.subsidyPercent != null && <InfoRow label="Subsidy" value={`${req.subsidyPercent}%`} />}
+	              <InfoRow label="Approval Policy" value={(POLICY_STYLE[req.approvalPolicy] ?? POLICY_STYLE.hr).hint} />
+	              <InfoRow label="Contract Required" value={req.requiresContract ? "Yes" : "No"} />
+	            </div>
+	          </section>
 
           {/* Request Info */}
           <section>
