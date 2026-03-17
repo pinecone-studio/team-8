@@ -2,7 +2,10 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { Download, X } from "lucide-react";
-import { useGetAuditLogsQuery, useGetEmployeesQuery } from "@/graphql/generated/graphql";
+import {
+  useGetAuditLogsQuery,
+  useGetEmployeesQuery,
+} from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
 import PageLoading from "@/app/_components/PageLoading";
@@ -533,15 +536,14 @@ export default function AuditLogs() {
           ) : (
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
               <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
+                <table className="min-w-full text-left text-sm table-fixed">
                   <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
                     <tr>
                       <th className="px-5 py-3">Name</th>
                       <th className="px-5 py-3">Position</th>
                       <th className="px-5 py-3">Action</th>
-                      <th className="px-5 py-3">Date</th>
-                      <th className="px-5 py-3">Reason</th>
-                      <th className="px-5 py-3 w-20" />
+                      <th className="px-5 py-3 w-44">Date</th>
+                      <th className="px-5 py-3 w-full">Reason</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -549,49 +551,47 @@ export default function AuditLogs() {
                       const actorEmployee = log.actorEmployeeId
                         ? employeesById.get(log.actorEmployeeId)
                         : null;
-                      const actorName = actorEmployee?.name ?? (log.actorEmployeeId ? "Unknown" : "System");
+                      const actorName =
+                        actorEmployee?.name ??
+                        (log.actorEmployeeId ? "Unknown" : "System");
                       return (
-                      <tr
-                        key={log.id}
-                        className={`border-b border-slate-100 last:border-b-0 cursor-pointer transition-colors hover:bg-slate-50 ${
-                          selectedLog?.id === log.id ? "bg-blue-50/40" : ""
-                        }`}
-                        onClick={() => setSelectedLog(log)}
-                      >
-                        <td className="px-5 py-3 text-slate-700">
-                          <span className="font-medium">{actorName}</span>
-                          {actorEmployee?.email && (
-                            <span className="ml-1.5 text-xs text-slate-400">
-                              {actorEmployee.email}
+                        <tr
+                          key={log.id}
+                          className={`border-b border-slate-100 last:border-b-0 cursor-pointer transition-colors hover:bg-slate-50 ${
+                            selectedLog?.id === log.id ? "bg-blue-50/40" : ""
+                          }`}
+                          onClick={() => setSelectedLog(log)}
+                        >
+                          <td className="px-5 py-3 text-slate-700">
+                            <span className="font-medium">{actorName}</span>
+                            {actorEmployee?.email && (
+                              <span className="ml-1.5 text-xs text-slate-400">
+                                {actorEmployee.email}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3 text-slate-700">
+                            {formatRole(log.actorRole)}
+                          </td>
+                          <td className="px-5 py-3">
+                            <span
+                              className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
+                                ACTION_TONE[log.actionType] ??
+                                "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {log.actionType}
                             </span>
-                          )}
-                        </td>
-                        <td className="px-5 py-3 text-slate-700">
-                          {formatRole(log.actorRole)}
-                        </td>
-                        <td className="px-5 py-3">
-                          <span
-                            className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
-                              ACTION_TONE[log.actionType] ??
-                              "bg-gray-100 text-gray-600"
-                            }`}
-                          >
-                            {log.actionType}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap px-5 py-3 text-slate-500">
-                          {formatDate(log.createdAt)}
-                        </td>
-                        <td className="px-5 py-3 max-w-[180px] truncate text-slate-500">
-                          {log.reason ?? "—"}
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          <span className="text-xs font-medium text-blue-500 hover:underline">
-                            Details →
-                          </span>
-                        </td>
-                      </tr>
-                    )})}
+                          </td>
+                          <td className="whitespace-nowrap px-5 py-3 text-slate-500">
+                            {formatDate(log.createdAt)}
+                          </td>
+                          <td className="px-5 py-3 text-slate-500 whitespace-normal break-words">
+                            {log.reason ?? "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
