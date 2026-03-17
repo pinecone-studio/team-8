@@ -19,6 +19,8 @@
 
 import type { Benefit, Employee } from "../db";
 import type { Env } from "../graphql/context";
+import { fetchWithRetry } from "../lib/retry";
+import { truncateForLog } from "../lib/pii";
 
 type EmailPayload = {
   to: string;
@@ -40,22 +42,28 @@ function hasGmailConfig(env: Env): boolean {
   );
 }
 
-/** Exchange a refresh token for a short-lived access token. Returns null on failure. */
+/**
+ * Exchange a refresh token for a short-lived access token.
+ * Retries up to 3 times on 5xx / network errors; returns null on all failures.
+ */
 async function getAccessToken(env: Env): Promise<string | null> {
   try {
-    const res = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: env.GMAIL_CLIENT_ID!.trim(),
-        client_secret: env.GMAIL_CLIENT_SECRET!.trim(),
-        refresh_token: env.GMAIL_REFRESH_TOKEN!.trim(),
-        grant_type: "refresh_token",
-      }),
-    });
+    const res = await fetchWithRetry(
+      "https://oauth2.googleapis.com/token",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: env.GMAIL_CLIENT_ID!.trim(),
+          client_secret: env.GMAIL_CLIENT_SECRET!.trim(),
+          refresh_token: env.GMAIL_REFRESH_TOKEN!.trim(),
+          grant_type: "refresh_token",
+        }),
+      },
+    );
     if (!res.ok) {
       const body = await res.text();
-      console.error(`[email] Gmail token refresh failed (${res.status}): ${body}`);
+      console.error(`[email] Gmail token refresh failed (${res.status}): ${truncateForLog(body)}`);
       return null;
     }
     const data = (await res.json()) as { access_token?: string };
@@ -135,7 +143,8 @@ async function sendEmail(env: Env, payload: EmailPayload): Promise<void> {
   const raw = toBase64Url(buildMimeMessage(senderEmail, payload));
 
   try {
-    const res = await fetch(
+    // fetchWithRetry re-tries on 5xx / network errors (up to 3 attempts).
+    const res = await fetchWithRetry(
       "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
       {
         method: "POST",
@@ -148,7 +157,7 @@ async function sendEmail(env: Env, payload: EmailPayload): Promise<void> {
     );
     if (!res.ok) {
       const body = await res.text();
-      console.error(`[email] Gmail send failed (${res.status}): ${body}`);
+      console.error(`[email] Gmail send failed (${res.status}): ${truncateForLog(body)}`);
     }
   } catch (err) {
     console.error("[email] Gmail send request error:", err);
@@ -226,6 +235,35 @@ export async function sendBenefitRequestSubmittedEmail(
     html: shell(
       subject,
       `${escapeHtml(name)}, your request for <strong>${escapeHtml(benefit.name)}</strong> was submitted successfully and is now awaiting ${escapeHtml(reviewTeam)} review.`,
+    ),
+  });
+}
+
+/**
+ * Notify HR managers that a new benefit request has been submitted.
+ * Called best-effort from requestBenefit — never throws.
+ */
+export async function sendHrNewBenefitRequestEmail(
+  env: Env,
+  hrEmail: string,
+  requestingEmployeeName: string,
+  benefitName: string,
+): Promise<void> {
+  const subject = `PineQuest: New benefit request — ${benefitName}`;
+  const text =
+    `Hi,\n\n` +
+    `A new benefit request has been submitted:\n\n` +
+    `• Employee: ${requestingEmployeeName}\n` +
+    `• Benefit: ${benefitName}\n\n` +
+    `Sign in to PineQuest EBMS › Admin Panel to review and approve.\n\n` +
+    `PineQuest EBMS`;
+  await sendEmail(env, {
+    to: hrEmail,
+    subject,
+    text,
+    html: shell(
+      "New benefit request",
+      `<strong>${escapeHtml(requestingEmployeeName)}</strong> has submitted a new request for <strong>${escapeHtml(benefitName)}</strong>. Sign in to PineQuest EBMS › Admin Panel to review and approve.`,
     ),
   });
 }

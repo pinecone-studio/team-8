@@ -17,6 +17,7 @@ import { getEnrollments } from "./getEnrollments";
 import { getDepartments } from "./getDepartments";
 import { getNotifications } from "./getNotifications";
 import { getRuleProposals } from "./getRuleProposals";
+import { getMySettings } from "./getMySettings";
 
 export const queries = {
   adminDashboardSummary: getAdminDashboardSummary,
@@ -38,4 +39,5 @@ export const queries = {
   getDepartments,
   notifications: getNotifications,
   ruleProposals: getRuleProposals,
+  mySettings: getMySettings,
 };

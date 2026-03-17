@@ -24,7 +24,10 @@ export type AuditActionType =
   | "RULE_PROPOSAL_REJECTED"
   | "ATTENDANCE_IMPORT"
   | "ELIGIBILITY_RECOMPUTED"
-  | "OKR_SYNC";
+  | "OKR_SYNC"
+  | "OKR_EVENT"
+  | "CONTRACT_EXPIRY_ALERT"
+  | "CONTRACT_VIEWED";
 
 export type AuditEntityType =
   | "benefit_request"

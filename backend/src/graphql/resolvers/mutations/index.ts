@@ -18,6 +18,7 @@ import { rejectRuleProposal } from "./rejectRuleProposal";
 import { markNotificationsRead } from "./markNotificationsRead";
 import { importAttendance } from "./importAttendance";
 import { syncOkrStatus } from "./syncOkrStatus";
+import { updateMySettings } from "./updateMySettings";
 
 export const mutations = {
   createBenefit,
@@ -40,4 +41,5 @@ export const mutations = {
   markNotificationsRead,
   importAttendance,
   syncOkrStatus,
+  updateMySettings,
 };

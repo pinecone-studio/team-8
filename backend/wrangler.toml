@@ -14,12 +14,26 @@ migrations_dir = "drizzle"
 [[r2_buckets]]
 binding = "CONTRACTS_BUCKET"
 bucket_name = "team8-ebms-contracts"
+[[r2_buckets]]
+binding = "AUDIT_ARCHIVE_BUCKET"
+bucket_name = "team8-ebms-audit-archive"
 
 # KV — short-lived tokens for contract view URL (TTL 7 days)
 [[kv_namespaces]]
 binding = "CONTRACT_VIEW_TOKENS"
 id = "4c59f29697b94e30b57fedf8b7a2d7c4"
 preview_id = "3bad0be611ac489abc5641ea713e0ea6"
+
+[[kv_namespaces]]
+binding = "ELIGIBILITY_CACHE"
+id = "5f42e4c56fc745b59e1bf3270677841b"
+preview_id = "22bd329b4ebb4215bd08b854dd0fa77a"
+
+# Scheduled cron triggers.
+# "0 9 * * *" → daily at 09:00 UTC for contract expiry alerts, OKR sync, and
+# (1st of each month) audit log archive to R2.
+[triggers]
+crons = ["0 9 * * *"]
 
 [vars]
 ENVIRONMENT = "development"
