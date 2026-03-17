@@ -48,10 +48,8 @@ export default function Sidebar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const profileName = loading ? "Loading..." : employee?.name ?? "Employee";
-  const profileRole = loading
-    ? "Profile"
-    : `${formatLabel(employee?.role)}${employee?.department ? ` · ${formatLabel(employee.department)}` : ""}`;
+  const profileName = employee?.name ?? "Employee";
+  const profileRole = `${formatLabel(employee?.role)}${employee?.department ? ` · ${formatLabel(employee.department)}` : ""}`;
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -95,12 +93,25 @@ export default function Sidebar() {
               onClick={() => setProfileOpen((o) => !o)}
               className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-gray-50 active:scale-[0.99]"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-800 text-sm font-semibold text-white">
-                {(employee?.name ?? "E").charAt(0).toUpperCase()}
-              </div>
+              {loading ? (
+                <div className="h-9 w-9 shrink-0 rounded-full bg-gray-200 animate-pulse" />
+              ) : (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-800 text-sm font-semibold text-white">
+                  {profileName.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-900">{profileName}</p>
-                <p className="truncate text-xs text-gray-400">{profileRole}</p>
+                {loading ? (
+                  <>
+                    <div className="h-3.5 w-24 rounded bg-gray-200 animate-pulse" />
+                    <div className="mt-1.5 h-3 w-16 rounded bg-gray-200 animate-pulse" />
+                  </>
+                ) : (
+                  <>
+                    <p className="truncate text-sm font-medium text-gray-900">{profileName}</p>
+                    <p className="truncate text-xs text-gray-400">{profileRole}</p>
+                  </>
+                )}
               </div>
               <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`} />
             </button>
