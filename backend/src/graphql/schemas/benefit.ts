@@ -29,6 +29,7 @@ export const benefitTypeDefs = gql`
   type Benefit {
     id: String!
     name: String!
+    description: String
     nameEng: String
     category: String!
     subsidyPercent: Int!
@@ -122,6 +123,7 @@ export const benefitTypeDefs = gql`
 
   input CreateBenefitInput {
     name: String!
+    description: String
     category: String!
     subsidyPercent: Int!
     vendorName: String
@@ -131,6 +133,7 @@ export const benefitTypeDefs = gql`
 
   input UpdateBenefitInput {
     name: String
+    description: String
     category: String
     subsidyPercent: Int
     vendorName: String

@@ -88,6 +88,7 @@ export type Benefit = {
   __typename?: 'Benefit';
   approvalPolicy: Scalars['String']['output'];
   category: Scalars['String']['output'];
+  description?: Maybe<Scalars['String']['output']>;
   employeePercent: Scalars['Int']['output'];
   flowType: BenefitFlowType;
   id: Scalars['String']['output'];
@@ -173,6 +174,7 @@ export type ContractAcceptance = {
 export type CreateBenefitInput = {
   approvalPolicy?: InputMaybe<Scalars['String']['input']>;
   category: Scalars['String']['input'];
+  description?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   requiresContract?: InputMaybe<Scalars['Boolean']['input']>;
   subsidyPercent: Scalars['Int']['input'];
@@ -470,6 +472,7 @@ export type Query = {
   adminBenefits: Array<Benefit>;
   adminDashboardSummary: AdminDashboardSummary;
   allBenefitRequests: Array<BenefitRequest>;
+  auditLogActionTypes: Array<Scalars['String']['output']>;
   auditLogs: Array<AuditLog>;
   benefitRequests: Array<BenefitRequest>;
   benefits: Array<Benefit>;
@@ -593,6 +596,7 @@ export type RuleProposal = {
 export type UpdateBenefitInput = {
   approvalPolicy?: InputMaybe<Scalars['String']['input']>;
   category?: InputMaybe<Scalars['String']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   requiresContract?: InputMaybe<Scalars['Boolean']['input']>;
   subsidyPercent?: InputMaybe<Scalars['Int']['input']>;
@@ -848,6 +852,7 @@ export type AuditLogResolvers<ContextType = GraphQLContext, ParentType extends R
 export type BenefitResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Benefit'] = ResolversParentTypes['Benefit']> = ResolversObject<{
   approvalPolicy?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   category?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  description?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   employeePercent?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   flowType?: Resolver<ResolversTypes['BenefitFlowType'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -1040,6 +1045,7 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   adminBenefits?: Resolver<Array<ResolversTypes['Benefit']>, ParentType, ContextType>;
   adminDashboardSummary?: Resolver<ResolversTypes['AdminDashboardSummary'], ParentType, ContextType>;
   allBenefitRequests?: Resolver<Array<ResolversTypes['BenefitRequest']>, ParentType, ContextType, Partial<QueryAllBenefitRequestsArgs>>;
+  auditLogActionTypes?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
   auditLogs?: Resolver<Array<ResolversTypes['AuditLog']>, ParentType, ContextType, Partial<QueryAuditLogsArgs>>;
   benefitRequests?: Resolver<Array<ResolversTypes['BenefitRequest']>, ParentType, ContextType>;
   benefits?: Resolver<Array<ResolversTypes['Benefit']>, ParentType, ContextType, Partial<QueryBenefitsArgs>>;

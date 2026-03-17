@@ -2,6 +2,7 @@ query GetBenefits($category: String) {
   benefits(category: $category) {
     id
     name
+    description
     nameEng
     category
     subsidyPercent
@@ -26,6 +27,7 @@ query GetMyBenefits {
     benefit {
       id
       name
+      description
       nameEng
       category
       subsidyPercent
@@ -98,6 +100,7 @@ query GetEmployeeBenefits($employeeId: String!) {
     benefit {
       id
       name
+      description
       nameEng
       category
       subsidyPercent

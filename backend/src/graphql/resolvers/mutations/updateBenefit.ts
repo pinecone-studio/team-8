@@ -13,6 +13,7 @@ export const updateBenefit = async (
     id: string;
     input: {
       name?: string | null;
+      description?: string | null;
       category?: string | null;
       subsidyPercent?: number | null;
       vendorName?: string | null;
@@ -26,6 +27,7 @@ export const updateBenefit = async (
 
   const updates: Record<string, unknown> = {};
   if (input.name != null) updates.name = input.name;
+  if ("description" in input) updates.description = input.description ?? null;
   if (input.category != null) updates.category = input.category;
   if (input.subsidyPercent != null) updates.subsidyPercent = input.subsidyPercent;
   if ("vendorName" in input) updates.vendorName = input.vendorName ?? null;
