@@ -299,6 +299,18 @@ export default function EligibilityInspector() {
 
   const departments = departmentsData?.getDepartments ?? [];
   const eligibilities = eligibilityData?.getEmployeeBenefits ?? [];
+  const STATUS_ORDER: Record<string, number> = {
+    ACTIVE: 0,
+    PENDING: 1,
+    ELIGIBLE: 2,
+    NOT_ELIGIBLE: 3,
+  };
+  const sortedEligibilities = [...eligibilities].sort((a, b) => {
+    const aRank = STATUS_ORDER[a.status] ?? 99;
+    const bRank = STATUS_ORDER[b.status] ?? 99;
+    if (aRank !== bRank) return aRank - bRank;
+    return a.benefit.name.localeCompare(b.benefit.name);
+  });
   const clerkEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? null;
 
   if (!isHr) {
@@ -441,7 +453,7 @@ export default function EligibilityInspector() {
                       </td>
                     </tr>
                   ) : (
-                    eligibilities.map((row) => {
+                    sortedEligibilities.map((row) => {
                       const eligible =
                         row.status === "ELIGIBLE" || row.status === "ACTIVE" || row.status === "PENDING";
                       const statusLabel =
