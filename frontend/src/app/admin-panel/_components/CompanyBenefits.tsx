@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   useGetAdminBenefitsQuery,
-  useCreateBenefitMutation,
   useDeleteBenefitMutation,
   GetAdminBenefitsDocument,
 } from "@/graphql/generated/graphql";
@@ -12,14 +11,6 @@ import PageLoading from "@/app/_components/PageLoading";
 import { ArrowRight, Plus, Trash2 } from "lucide-react";
 import { isAdminEmployee, isHrAdmin } from "../_lib/access";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
-
-const CATEGORIES = ["wellness", "equipment", "financial", "career", "flexibility", "other"];
-
-const APPROVAL_POLICIES = [
-  { value: "hr", label: "HR only" },
-  { value: "finance", label: "Finance only" },
-  { value: "dual", label: "Dual (HR + Finance)" },
-];
 
 const APPROVAL_POLICY_LABELS: Record<string, string> = {
   hr: "HR",
@@ -34,28 +25,12 @@ export default function CompanyBenefits() {
   const { data, loading, error } = useGetAdminBenefitsQuery({
     skip: !hasAdminAccess,
   });
-  const [createBenefit, { loading: creating, error: createError }] = useCreateBenefitMutation({
-    refetchQueries: [{ query: GetAdminBenefitsDocument }],
-    onCompleted: () => {
-      setFormOpen(false);
-      setForm({ name: "", category: "wellness", subsidyPercent: 50, vendorName: "", requiresContract: false, approvalPolicy: "hr" });
-    },
-  });
   const [deleteBenefit, { loading: deleting }] = useDeleteBenefitMutation({
     refetchQueries: [{ query: GetAdminBenefitsDocument }],
     onCompleted: () => setFeedback({ type: "success", message: "Benefit removed." }),
     onError: () => setFeedback({ type: "error", message: "Failed to remove benefit." }),
   });
 
-  const [formOpen, setFormOpen] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    category: "wellness",
-    subsidyPercent: 50,
-    vendorName: "",
-    requiresContract: false,
-    approvalPolicy: "hr",
-  });
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -72,37 +47,6 @@ export default function CompanyBenefits() {
   };
 
   const benefits = data?.adminBenefits ?? [];
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFeedback(null);
-    if (!form.name.trim()) {
-      setFeedback({ type: "error", message: "Name is required." });
-      return;
-    }
-    if (form.subsidyPercent < 0 || form.subsidyPercent > 100) {
-      setFeedback({ type: "error", message: "Subsidy must be between 0 and 100." });
-      return;
-    }
-    try {
-      await createBenefit({
-        variables: {
-          input: {
-            name: form.name.trim(),
-            category: form.category,
-            subsidyPercent: form.subsidyPercent,
-            vendorName: form.vendorName.trim() || undefined,
-            requiresContract: form.requiresContract,
-            approvalPolicy: form.approvalPolicy,
-          },
-        },
-      });
-      setFeedback({ type: "success", message: "Benefit added." });
-      setTimeout(() => setFeedback(null), 3000);
-    } catch {
-      setFeedback({ type: "error", message: "Failed to add benefit. Try again." });
-    }
-  };
 
   if (employeeLoading || !hasAdminAccess) {
     return (
@@ -125,14 +69,13 @@ export default function CompanyBenefits() {
             </p>
           </div>
           {canCreate && (
-            <button
-              type="button"
-              onClick={() => setFormOpen(true)}
+            <Link
+              href="/admin-panel/company-benefits/create"
               className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
             >
               <Plus className="h-4 w-4" />
               Add benefit
-            </button>
+            </Link>
           )}
         </div>
 
@@ -146,108 +89,6 @@ export default function CompanyBenefits() {
           >
             {feedback.message}
           </div>
-        )}
-
-        {formOpen && canCreate && (
-          <form
-            onSubmit={handleSubmit}
-            className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
-          >
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">New benefit</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Name *</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  placeholder="e.g. Gym membership"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Category</label>
-                <select
-                  value={form.category}
-                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c.charAt(0).toUpperCase() + c.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Subsidy %</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={form.subsidyPercent}
-                  onChange={(e) => setForm((f) => ({ ...f, subsidyPercent: Number(e.target.value) || 0 }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Vendor (optional)</label>
-                <input
-                  type="text"
-                  value={form.vendorName}
-                  onChange={(e) => setForm((f) => ({ ...f, vendorName: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  placeholder="Vendor name"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Approval Policy</label>
-                <select
-                  value={form.approvalPolicy}
-                  onChange={(e) => setForm((f) => ({ ...f, approvalPolicy: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                >
-                  {APPROVAL_POLICIES.map((p) => (
-                    <option key={p.value} value={p.value}>
-                      {p.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-center gap-2 self-end pb-2">
-                <input
-                  type="checkbox"
-                  id="requiresContract"
-                  checked={form.requiresContract}
-                  onChange={(e) => setForm((f) => ({ ...f, requiresContract: e.target.checked }))}
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                <label htmlFor="requiresContract" className="text-sm text-gray-600">
-                  Requires contract
-                </label>
-              </div>
-            </div>
-            <div className="mt-4 flex gap-2">
-              <button
-                type="submit"
-                disabled={creating}
-                className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-50"
-              >
-                {creating ? "Adding..." : "Add benefit"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormOpen(false)}
-                disabled={creating}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
-            {createError && (
-              <p className="mt-2 text-sm text-red-600">{createError.message}</p>
-            )}
-          </form>
         )}
 
         <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
