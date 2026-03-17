@@ -33,6 +33,17 @@ function getStatusTone(status: string): string {
   return "bg-orange-50 text-orange-600 border-orange-200";
 }
 
+function getStatusTooltip(status: string): string | null {
+  switch (status.toLowerCase()) {
+    case "awaiting_hr_review": return "Your request is in the HR review queue. The HR team will process it shortly — no action needed from you.";
+    case "awaiting_finance_review": return "Your request is in the Finance review queue. The Finance team will process it — no action needed from you.";
+    case "hr_approved": return "HR has approved your request. It is now awaiting Finance review.";
+    case "finance_approved": return "Finance has approved your request. It is being finalised.";
+    case "cancelled": return "This request was cancelled.";
+    default: return null;
+  }
+}
+
 function formatStatusLabel(status: string): string {
   switch (status.toLowerCase()) {
     case "awaiting_contract_acceptance": return "Contract Pending";
@@ -127,24 +138,24 @@ function buildTimeline(
 function TimelineDot({ state }: { state: StepState }) {
   if (state === "done")
     return (
-      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white text-[10px] font-bold shrink-0">
+      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gray-300 text-white text-[9px] font-bold shrink-0">
         ✓
       </span>
     );
   if (state === "active")
     return (
-      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 ring-2 ring-blue-200 shrink-0">
-        <span className="h-2 w-2 rounded-full bg-white" />
+      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 shrink-0">
+        <span className="h-1.5 w-1.5 rounded-full bg-white" />
       </span>
     );
   if (state === "failed")
     return (
-      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-400 text-white text-[10px] font-bold shrink-0">
+      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-red-400 text-white text-[9px] font-bold shrink-0">
         ✕
       </span>
     );
   return (
-    <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-gray-200 bg-white shrink-0" />
+    <span className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-gray-200 bg-white shrink-0" />
   );
 }
 
@@ -161,7 +172,6 @@ function RequestTimeline({
     () => buildTimeline(status, policy, requiresContract),
     [status, policy, requiresContract],
   );
-
   return (
     <div className="flex items-center gap-1 flex-wrap">
       {steps.map((step, i) => (
@@ -170,20 +180,18 @@ function RequestTimeline({
             <TimelineDot state={step.state} />
             <span
               className={`text-xs font-medium whitespace-nowrap ${
-                step.state === "done"
-                  ? "text-green-700"
-                  : step.state === "active"
-                    ? "text-blue-700"
-                    : step.state === "failed"
-                      ? "text-red-600"
-                      : "text-gray-400"
+                step.state === "active"
+                  ? "text-amber-600"
+                  : step.state === "failed"
+                    ? "text-red-500"
+                    : "text-gray-400"
               }`}
             >
               {step.label}
             </span>
           </div>
           {i < steps.length - 1 && (
-            <ArrowRight className="h-3 w-3 text-gray-300 shrink-0" />
+            <ArrowRight className="h-3 w-3 text-gray-200 shrink-0" />
           )}
         </div>
       ))}
@@ -370,6 +378,19 @@ function RequestsContent() {
     (benefitsData?.benefits ?? []).map((b) => [b.id, b]),
   );
 
+  const REQUEST_STATUS_ORDER: Record<string, number> = {
+    awaiting_hr_review: 0,
+    awaiting_finance_review: 0,
+    awaiting_contract_acceptance: 0,
+    hr_approved: 0,
+    finance_approved: 0,
+    pending: 0,
+    cancelled: 1,
+    rejected: 1,
+    declined: 1,
+    approved: 2,
+  };
+
   const requests = (requestsData?.benefitRequests ?? []).map((req) => {
     const benefit = benefitsById.get(req.benefitId);
     const name = benefit?.name ?? req.benefitId;
@@ -387,7 +408,7 @@ function RequestsContent() {
       approvalPolicy: benefit?.approvalPolicy ?? "hr",
       requiresContract: benefit?.requiresContract ?? false,
     };
-  });
+  }).sort((a, b) => (REQUEST_STATUS_ORDER[a.status] ?? 1) - (REQUEST_STATUS_ORDER[b.status] ?? 1));
 
   const loading = employeeLoading || requestsLoading;
 
@@ -467,9 +488,16 @@ function RequestsContent() {
                             )}
                           </p>
                         </div>
-                        <span className={`inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium shrink-0 ${getStatusTone(req.status)}`}>
-                          {formatStatusLabel(req.status)}
-                        </span>
+                        <div className="relative group shrink-0">
+                          <span className={`inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium cursor-default ${getStatusTone(req.status)}`}>
+                            {formatStatusLabel(req.status)}
+                          </span>
+                          {getStatusTooltip(req.status) && (
+                            <div className="absolute right-0 top-full mt-1.5 z-10 hidden group-hover:block w-64 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 shadow-lg">
+                              {getStatusTooltip(req.status)}
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Timeline */}
@@ -481,32 +509,6 @@ function RequestsContent() {
                         />
                       </div>
 
-                      {/* In-progress status context */}
-                      {req.status === "awaiting_hr_review" && (
-                        <div className="mx-5 mb-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
-                          Your request is in the <span className="font-medium">HR review queue</span>. The HR team will process it shortly — no action needed from you.
-                        </div>
-                      )}
-                      {req.status === "awaiting_finance_review" && (
-                        <div className="mx-5 mb-3 rounded-lg border border-teal-100 bg-teal-50 px-3 py-2 text-xs text-teal-700">
-                          Your request is in the <span className="font-medium">Finance review queue</span>. The Finance team will process it — no action needed from you.
-                        </div>
-                      )}
-                      {req.status === "hr_approved" && (
-                        <div className="mx-5 mb-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-                          HR has approved your request. It is now awaiting <span className="font-medium">Finance review</span>.
-                        </div>
-                      )}
-                      {req.status === "finance_approved" && (
-                        <div className="mx-5 mb-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-                          Finance has approved your request. It is being <span className="font-medium">finalised</span>.
-                        </div>
-                      )}
-                      {req.status === "cancelled" && (
-                        <div className="mx-5 mb-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-500">
-                          This request was cancelled. You can submit a new request at any time.
-                        </div>
-                      )}
 
                       {/* Decline reason */}
                       {isDeclined && req.declineReason && (
@@ -564,7 +566,7 @@ function RequestsContent() {
                               cancelRequest({ variables: { requestId: req.id } });
                             }}
                             disabled={cancellingId === req.id}
-                            className="inline-flex items-center gap-1 rounded px-2 py-1.5 text-xs font-medium text-red-500 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                            className="inline-flex items-center gap-1 rounded px-2 py-1.5 text-xs font-medium text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
                           >
                             <X className="h-3.5 w-3.5" />
                             {cancellingId === req.id ? "Cancelling…" : "Cancel Request"}

@@ -7,13 +7,13 @@ import { useRef, useEffect, useState } from "react";
 import {
   LayoutGrid,
   FileText,
-  Settings,
   LogOut,
   ChevronDown,
   ShieldCheck,
   Gift,
   ClipboardList,
   FlaskConical,
+
 } from "lucide-react";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isAdminEmployee } from "@/app/admin-panel/_lib/access";
@@ -32,7 +32,6 @@ function formatLabel(value: string | null | undefined) {
 
 const mainNavItems = [
   { href: "/employee-panel/dashboard", label: "Dashboard", icon: LayoutGrid },
-  { href: "/employee-panel/mybenefits", label: "My Benefits", icon: Gift },
   { href: "/employee-panel/requests", label: "Requests", icon: ClipboardList },
   { href: "/employee-panel/contracts", label: "Contracts", icon: FileText },
 ];
@@ -72,7 +71,7 @@ export default function Sidebar() {
   const navLinkClass = (href: string) =>
     `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition active:scale-[0.98] ${
       isActive(href)
-        ? "bg-gray-900 text-white"
+        ? "bg-gray-100 text-gray-900"
         : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
     }`;
 
@@ -110,15 +109,7 @@ export default function Sidebar() {
                 profileOpen ? "visible scale-100 opacity-100" : "invisible scale-95 opacity-0 pointer-events-none"
               }`}
             >
-              <Link
-                href="/employee-panel/settings"
-                onClick={() => setProfileOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
-              >
-                <Settings className="h-4 w-4" />
-                <span>Settings</span>
-              </Link>
-              {hasAdminAccess && (
+{hasAdminAccess && (
                 <Link
                   href="/admin-panel"
                   onClick={() => setProfileOpen(false)}
