@@ -3,21 +3,36 @@ import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin
 import { startServerAndCreateCloudflareWorkersHandler } from "@as-integrations/cloudflare-workers";
 import { createDb } from "./db";
 import { typeDefs, resolvers, GraphQLContext } from "./graphql";
-import { getCurrentUserFromRequest, canUploadContracts } from "./auth";
+import { getCurrentUserFromRequest, canUploadContracts, requireHrAdmin } from "./auth";
 import {
   resolveContractViewToken,
   getContract,
   getContractObjectKey,
   putContract,
 } from "./contracts";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { schema } from "./db";
 import { writeAuditLog } from "./graphql/resolvers/helpers/audit";
+import { checkAndSendContractExpiryAlerts } from "./email/contractExpiryAlerts";
+import {
+  handleOkrWebhook,
+  handleOkrManualSync,
+  fetchAndSyncFromOkrSystem,
+} from "./okr/adapter";
+import {
+  importAttendanceCore,
+  type AttendanceRowInput,
+} from "./graphql/resolvers/helpers/attendanceCore";
+import { archiveOldAuditLogs } from "./graphql/resolvers/helpers/auditArchive";
 
 export interface Env {
   DB: D1Database;
   CONTRACTS_BUCKET?: R2Bucket;
   CONTRACT_VIEW_TOKENS: KVNamespace;
+  /** KV namespace for caching per-employee eligibility snapshots (TTL 1 h). */
+  ELIGIBILITY_CACHE: KVNamespace;
+  /** R2 bucket for archiving audit_logs rows older than 12 months (TDD §14). */
+  AUDIT_ARCHIVE_BUCKET?: R2Bucket;
   ENVIRONMENT: string;
   CLERK_SECRET_KEY?: string;
   CLERK_JWT_KEY?: string;
@@ -25,6 +40,8 @@ export interface Env {
   GMAIL_CLIENT_SECRET?: string;
   GMAIL_REFRESH_TOKEN?: string;
   GMAIL_SENDER_EMAIL?: string;
+  OKR_WEBHOOK_SECRET?: string;
+  OKR_API_URL?: string;
 }
 
 function getCorsHeaders(request: Request): HeadersInit {
@@ -74,11 +91,73 @@ const handler = startServerAndCreateCloudflareWorkersHandler<
     const db = createDb(env.DB);
     const baseUrl = new URL(request.url).origin;
     const currentUser = await getCurrentUserFromRequest(request, env, db);
-    return { db, env, baseUrl, currentUser, currentEmployee: currentUser.employee };
+    // CF-Connecting-IP is the authoritative client IP on Cloudflare Workers.
+    // Fall back to X-Forwarded-For for local dev / non-Cloudflare proxies.
+    const ipAddress =
+      request.headers.get("CF-Connecting-IP") ??
+      request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ??
+      null;
+    return { db, env, baseUrl, currentUser, currentEmployee: currentUser.employee, ipAddress };
   },
 });
 
-/** Serve contract PDF by token (TTL 7 days). */
+/**
+ * GET /health — lightweight liveness + readiness probe.
+ *
+ * Probes:
+ *   db  — executes a trivial D1 query (SELECT 1) to verify database connectivity
+ *   kv  — performs a KV get on a sentinel key to verify KV namespace connectivity
+ *
+ * Response shape:
+ *   { status: "ok" | "degraded", checks: { db: boolean, kv: boolean }, ts: string }
+ *
+ * HTTP status: 200 when all checks pass, 503 when any check fails.
+ * Auth: public — no credentials required (intentional; returns no sensitive data).
+ */
+async function handleHealthCheck(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/health" || request.method !== "GET") return null;
+
+  const db = createDb(env.DB);
+
+  const [dbOk, kvOk] = await Promise.all([
+    db
+      .run(sql`SELECT 1`)
+      .then(() => true)
+      .catch(() => false),
+    env.CONTRACT_VIEW_TOKENS.get("__health__")
+      .then(() => true)
+      .catch(() => false),
+  ]);
+
+  const allOk = dbOk && kvOk;
+  const body = JSON.stringify({
+    status: allOk ? "ok" : "degraded",
+    checks: { db: dbOk, kv: kvOk },
+    ts: new Date().toISOString(),
+  });
+
+  return withCors(
+    request,
+    new Response(body, {
+      status: allOk ? 200 : 503,
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+}
+
+/**
+ * Serve contract PDF by session-scoped token (TTL 7 days).
+ *
+ * Security model:
+ *  1. The caller must be authenticated (valid session).
+ *  2. When the token was created with an `employeeId` binding, the authenticated
+ *     employee's ID must match — forwarded URLs cannot be used by other sessions.
+ *  3. A CONTRACT_VIEWED audit log entry is written on every successful serve.
+ */
 async function handleContractView(
   request: Request,
   env: Env,
@@ -102,6 +181,32 @@ async function handleContractView(
     );
   }
 
+  // Session check: require an authenticated employee.
+  const db = createDb(env.DB);
+  const currentUser = await getCurrentUserFromRequest(request, env, db);
+  if (!currentUser.employee) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Authentication required." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  // Session-scope check: if the token was issued for a specific employee, only
+  // that employee may use it. HR admins can view any contract for oversight.
+  const isHrAdmin = currentUser.isAdmin;
+  if (resolved.employeeId && !isHrAdmin && currentUser.employee.id !== resolved.employeeId) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "This contract link was issued for a different session." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
   if (!env.CONTRACTS_BUCKET) {
     return withCors(
       request,
@@ -119,6 +224,25 @@ async function handleContractView(
 
   const body = object.body;
   const contentType = object.httpMetadata?.contentType ?? "application/pdf";
+
+  // Audit log: record who viewed the contract and from which IP.
+  // Fire-and-forget — never let audit failure block the PDF response.
+  const ipAddress =
+    request.headers.get("CF-Connecting-IP") ??
+    request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ??
+    null;
+  writeAuditLog({
+    db,
+    actor: currentUser.employee,
+    actionType: "CONTRACT_VIEWED",
+    entityType: "contract",
+    entityId: resolved.contractId ?? resolved.r2Key,
+    targetEmployeeId: resolved.employeeId ?? currentUser.employee.id,
+    contractId: resolved.contractId,
+    ipAddress,
+    metadata: { r2Key: resolved.r2Key, viewerIsAdmin: isHrAdmin },
+  }).catch((err) => console.error("[contractView] audit log failed:", err));
+
   return withCors(
     request,
     new Response(body, {
@@ -281,6 +405,148 @@ async function handleContractUpload(
   );
 }
 
+/**
+ * Manual trigger for contract expiry alerts.
+ * Allows HR admins (or a cron-like external caller) to trigger the daily alert
+ * check without waiting for the Cloudflare scheduled event.
+ * Auth: requires admin credentials (same as admin mutations).
+ */
+async function handleContractExpiryCheck(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/admin/scheduled/contract-expiry" || request.method !== "POST")
+    return null;
+
+  const db = createDb(env.DB);
+  const currentUser = await getCurrentUserFromRequest(request, env, db);
+  if (!currentUser.employee) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Authentication required." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+  if (!currentUser.isAdmin) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Admin access required." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const result = await checkAndSendContractExpiryAlerts(db, env);
+  return withCors(
+    request,
+    new Response(JSON.stringify(result), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+}
+
+/**
+ * HR CSV attendance import: POST /api/attendance/import-csv
+ *
+ * Accepts multipart/form-data with a `file` field containing a UTF-8 CSV.
+ * Expected format — first line is a header (skipped), subsequent lines:
+ *   employeeId,email,date,checkInTime
+ * Any column can be empty string when not available (at least one of
+ * employeeId/email must be present per row).
+ *
+ * Auth: HR admin only (same as importAttendance GraphQL mutation).
+ */
+async function handleAttendanceCsvImport(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/api/attendance/import-csv" || request.method !== "POST")
+    return null;
+
+  const db = createDb(env.DB);
+  const currentUser = await getCurrentUserFromRequest(request, env, db);
+
+  let actor: ReturnType<typeof requireHrAdmin>;
+  try {
+    actor = requireHrAdmin(currentUser.employee);
+  } catch {
+    const isUnauthenticated = !currentUser.employee;
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({ error: isUnauthenticated ? "Authentication required." : "HR admin access required." }),
+        { status: isUnauthenticated ? 401 : 403, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+  }
+
+  let csvText: string;
+  try {
+    const formData = await request.formData();
+    const file = formData.get("file") as File | null;
+    if (!file?.size) {
+      return withCors(
+        request,
+        new Response(JSON.stringify({ error: "Missing required field: file (CSV)." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    }
+    csvText = await file.text();
+  } catch {
+    return withCors(request, new Response(JSON.stringify({ error: "Invalid form data." }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    }));
+  }
+
+  // Parse CSV: skip blank lines and the header row (first non-blank line)
+  const lines = csvText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const dataLines = lines.slice(1); // drop header
+
+  const rows: AttendanceRowInput[] = dataLines.map((line) => {
+    // Handle quoted fields minimally — split on comma, strip outer quotes
+    const cols = line.split(",").map((c) => c.trim().replace(/^"(.*)"$/, "$1").trim());
+    const [employeeId, email, date, checkInTime] = cols;
+    return {
+      employeeId: employeeId || null,
+      email: email || null,
+      date: date ?? "",
+      checkInTime: checkInTime ?? "",
+    };
+  });
+
+  // Quick up-front check — reject if every row has both columns empty
+  const hasAnyIdentifier = rows.some((r) => r.employeeId || r.email);
+  if (rows.length === 0 || !hasAnyIdentifier) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({
+          error: "CSV appears empty or missing employee identifiers. Expected header: employeeId,email,date,checkInTime",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+  }
+
+  const result = await importAttendanceCore(db, rows, actor, env.ELIGIBILITY_CACHE);
+  return withCors(
+    request,
+    new Response(JSON.stringify(result), {
+      status: result.invalid === rows.length ? 422 : 200,
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+}
+
 export default {
   async fetch(
     request: Request,
@@ -294,10 +560,88 @@ export default {
       });
     }
 
+    const health = await handleHealthCheck(request, env);
+    if (health !== null) return health;
     const contractView = await handleContractView(request, env);
     if (contractView !== null) return contractView;
     const upload = await handleContractUpload(request, env);
     if (upload !== null) return upload;
+    const expiryCheck = await handleContractExpiryCheck(request, env);
+    if (expiryCheck !== null) return expiryCheck;
+    const attendanceCsv = await handleAttendanceCsvImport(request, env);
+    if (attendanceCsv !== null) return attendanceCsv;
+
+    // OKR webhook (no session required — uses HMAC signature auth)
+    const okrWebhook = await handleOkrWebhook(request, env, createDb(env.DB));
+    if (okrWebhook !== null) return withCors(request, okrWebhook);
+
+    // OKR manual sync (requires authenticated admin employee)
+    const url = new URL(request.url);
+    if (url.pathname === "/okr/sync/manual" && request.method === "POST") {
+      const db = createDb(env.DB);
+      const currentUser = await getCurrentUserFromRequest(request, env, db);
+      if (!currentUser.employee) {
+        return withCors(
+          request,
+          new Response(JSON.stringify({ error: "Authentication required." }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      if (!currentUser.isAdmin) {
+        return withCors(
+          request,
+          new Response(JSON.stringify({ error: "Admin access required." }), {
+            status: 403,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      const okrManual = await handleOkrManualSync(request, env, db, currentUser.employee);
+      if (okrManual !== null) return withCors(request, okrManual);
+    }
+
     return withCors(request, await handler(request, env, ctx));
+  },
+
+  /**
+   * Cloudflare scheduled handler — runs daily maintenance tasks.
+   *
+   * To activate, add to wrangler.toml:
+   *   [triggers]
+   *   crons = ["0 9 * * *"]   # Daily at 09:00 UTC
+   *
+   * Tasks:
+   *   1. Contract expiry alerts (daily)
+   *   2. OKR sync poll from external API (daily, if OKR_API_URL configured)
+   *   3. Audit log archive to R2 (monthly — 1st of each month only)
+   */
+  async scheduled(
+    _event: ScheduledEvent,
+    env: Env,
+    _ctx: ExecutionContext,
+  ): Promise<void> {
+    const db = createDb(env.DB);
+
+    // -- 1. Contract expiry alerts (daily) -----------------------------------
+    const expiryResult = await checkAndSendContractExpiryAlerts(db, env);
+    console.log(
+      `[scheduled] Contract expiry check complete: ${expiryResult.expiring} expiring, ${expiryResult.emailsSent} emails sent.`,
+    );
+
+    // -- 2. OKR sync poll (daily, if OKR_API_URL configured) -----------------
+    await fetchAndSyncFromOkrSystem(db, env);
+
+    // -- 3. Audit log archive (monthly — 1st of each month) ------------------
+    // Running archive every day would produce redundant R2 objects and is not
+    // necessary for a 12-month window.  Guard with a day-of-month check.
+    const dayOfMonth = new Date().getUTCDate();
+    if (dayOfMonth === 1) {
+      const archiveResult = await archiveOldAuditLogs(db, env);
+      console.log(
+        `[scheduled] Audit archive complete: fetched=${archiveResult.fetched}, archived=${archiveResult.archived}, deleted=${archiveResult.deleted}`,
+      );
+    }
   },
 };

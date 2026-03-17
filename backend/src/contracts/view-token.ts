@@ -17,18 +17,28 @@ function randomToken(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+export interface ContractTokenMeta {
+  /** Employee the token was issued for — stored so views can be audit-logged. */
+  employeeId?: string;
+  /** D1 contract row ID — stored so views can be audit-logged. */
+  contractId?: string;
+}
+
 /**
  * Create a view token for an R2 object key; store in KV with TTL.
+ * Pass optional meta (employeeId, contractId) so the view endpoint can write
+ * a CONTRACT_VIEWED audit log entry without an extra DB lookup.
  * Returns the token string.
  */
 export async function createContractViewToken(
   kv: KVNamespace,
   r2Key: string,
-  ttlSeconds: number = TTL_SECONDS
+  ttlSeconds: number = TTL_SECONDS,
+  meta?: ContractTokenMeta,
 ): Promise<string> {
   const token = randomToken();
   const expiresAt = Date.now() + ttlSeconds * 1000;
-  await kv.put(token, JSON.stringify({ r2Key, expiresAt }), {
+  await kv.put(token, JSON.stringify({ r2Key, expiresAt, ...meta }), {
     expirationTtl: ttlSeconds,
   });
   return token;
@@ -45,18 +55,25 @@ export function getContractViewUrl(baseUrl: string, token: string): string {
 }
 
 /**
- * Resolve token from KV; returns r2Key if valid.
+ * Resolve token from KV.
+ * Returns r2Key plus any optional meta (employeeId, contractId) stored at
+ * token-creation time — callers use these to write audit log entries.
  */
 export async function resolveContractViewToken(
   kv: KVNamespace,
-  token: string
-): Promise<{ r2Key: string } | null> {
+  token: string,
+): Promise<{ r2Key: string; employeeId?: string; contractId?: string } | null> {
   const raw = await kv.get(token);
   if (!raw) return null;
   try {
-    const { r2Key, expiresAt } = JSON.parse(raw) as { r2Key: string; expiresAt: number };
+    const { r2Key, expiresAt, employeeId, contractId } = JSON.parse(raw) as {
+      r2Key: string;
+      expiresAt: number;
+      employeeId?: string;
+      contractId?: string;
+    };
     if (Date.now() > expiresAt) return null;
-    return { r2Key };
+    return { r2Key, employeeId, contractId };
   } catch {
     return null;
   }

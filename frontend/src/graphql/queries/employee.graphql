@@ -57,3 +57,13 @@ query GetEmployeeByEmail($email: String!) {
     updatedAt
   }
 }
+
+query GetMySettings {
+  mySettings {
+    notificationEmail
+    notificationEligibility
+    notificationRenewals
+    language
+    timezone
+  }
+}

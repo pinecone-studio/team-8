@@ -254,6 +254,15 @@ export enum EmployeeRole {
   UxEngineer = 'ux_engineer'
 }
 
+export type EmployeeSettings = {
+  __typename?: 'EmployeeSettings';
+  language: Scalars['String']['output'];
+  notificationEligibility: Scalars['Boolean']['output'];
+  notificationEmail: Scalars['Boolean']['output'];
+  notificationRenewals: Scalars['Boolean']['output'];
+  timezone: Scalars['String']['output'];
+};
+
 export enum EmploymentStatus {
   Active = 'active',
   Leave = 'leave',
@@ -290,6 +299,7 @@ export type Mutation = {
   updateBenefit: Benefit;
   updateEligibilityRule: EligibilityRule;
   updateEmployee?: Maybe<Employee>;
+  updateMySettings: EmployeeSettings;
 };
 
 
@@ -404,6 +414,11 @@ export type MutationUpdateEmployeeArgs = {
   input: UpdateEmployeeInput;
 };
 
+
+export type MutationUpdateMySettingsArgs = {
+  input: UpdateMySettingsInput;
+};
+
 export type Notification = {
   __typename?: 'Notification';
   body: Scalars['String']['output'];
@@ -472,6 +487,7 @@ export type Query = {
   getEmployeeByEmail?: Maybe<Employee>;
   getEmployees: Array<Employee>;
   myBenefits: Array<BenefitEligibility>;
+  mySettings: EmployeeSettings;
   notifications: Array<Notification>;
   ruleProposals: Array<RuleProposal>;
   session?: Maybe<Employee>;
@@ -607,6 +623,14 @@ export type UpdateEmployeeInput = {
   okrSubmitted?: InputMaybe<Scalars['Int']['input']>;
   responsibilityLevel?: InputMaybe<Scalars['Int']['input']>;
   role?: InputMaybe<EmployeeRole>;
+};
+
+export type UpdateMySettingsInput = {
+  language?: InputMaybe<Scalars['String']['input']>;
+  notificationEligibility?: InputMaybe<Scalars['Boolean']['input']>;
+  notificationEmail?: InputMaybe<Scalars['Boolean']['input']>;
+  notificationRenewals?: InputMaybe<Scalars['Boolean']['input']>;
+  timezone?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type MarkNotificationsReadMutationVariables = Exact<{
@@ -749,6 +773,13 @@ export type DeleteEmployeeMutationVariables = Exact<{
 
 export type DeleteEmployeeMutation = { __typename?: 'Mutation', deleteEmployee: boolean };
 
+export type UpdateMySettingsMutationVariables = Exact<{
+  input: UpdateMySettingsInput;
+}>;
+
+
+export type UpdateMySettingsMutation = { __typename?: 'Mutation', updateMySettings: { __typename?: 'EmployeeSettings', notificationEmail: boolean, notificationEligibility: boolean, notificationRenewals: boolean, language: string, timezone: string } };
+
 export type GetAdminDashboardSummaryQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -879,6 +910,11 @@ export type GetEmployeeByEmailQueryVariables = Exact<{
 
 
 export type GetEmployeeByEmailQuery = { __typename?: 'Query', getEmployeeByEmail?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
+
+export type GetMySettingsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetMySettingsQuery = { __typename?: 'Query', mySettings: { __typename?: 'EmployeeSettings', notificationEmail: boolean, notificationEligibility: boolean, notificationRenewals: boolean, language: string, timezone: string } };
 
 
 export const MarkNotificationsReadDocument = gql`
@@ -1617,6 +1653,43 @@ export function useDeleteEmployeeMutation(baseOptions?: Apollo.MutationHookOptio
 export type DeleteEmployeeMutationHookResult = ReturnType<typeof useDeleteEmployeeMutation>;
 export type DeleteEmployeeMutationResult = Apollo.MutationResult<DeleteEmployeeMutation>;
 export type DeleteEmployeeMutationOptions = Apollo.BaseMutationOptions<DeleteEmployeeMutation, DeleteEmployeeMutationVariables>;
+export const UpdateMySettingsDocument = gql`
+    mutation UpdateMySettings($input: UpdateMySettingsInput!) {
+  updateMySettings(input: $input) {
+    notificationEmail
+    notificationEligibility
+    notificationRenewals
+    language
+    timezone
+  }
+}
+    `;
+export type UpdateMySettingsMutationFn = Apollo.MutationFunction<UpdateMySettingsMutation, UpdateMySettingsMutationVariables>;
+
+/**
+ * __useUpdateMySettingsMutation__
+ *
+ * To run a mutation, you first call `useUpdateMySettingsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateMySettingsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateMySettingsMutation, { data, loading, error }] = useUpdateMySettingsMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateMySettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateMySettingsMutation, UpdateMySettingsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateMySettingsMutation, UpdateMySettingsMutationVariables>(UpdateMySettingsDocument, options);
+      }
+export type UpdateMySettingsMutationHookResult = ReturnType<typeof useUpdateMySettingsMutation>;
+export type UpdateMySettingsMutationResult = Apollo.MutationResult<UpdateMySettingsMutation>;
+export type UpdateMySettingsMutationOptions = Apollo.BaseMutationOptions<UpdateMySettingsMutation, UpdateMySettingsMutationVariables>;
 export const GetAdminDashboardSummaryDocument = gql`
     query GetAdminDashboardSummary {
   adminDashboardSummary {
@@ -2671,3 +2744,49 @@ export type GetEmployeeByEmailQueryHookResult = ReturnType<typeof useGetEmployee
 export type GetEmployeeByEmailLazyQueryHookResult = ReturnType<typeof useGetEmployeeByEmailLazyQuery>;
 export type GetEmployeeByEmailSuspenseQueryHookResult = ReturnType<typeof useGetEmployeeByEmailSuspenseQuery>;
 export type GetEmployeeByEmailQueryResult = Apollo.QueryResult<GetEmployeeByEmailQuery, GetEmployeeByEmailQueryVariables>;
+export const GetMySettingsDocument = gql`
+    query GetMySettings {
+  mySettings {
+    notificationEmail
+    notificationEligibility
+    notificationRenewals
+    language
+    timezone
+  }
+}
+    `;
+
+/**
+ * __useGetMySettingsQuery__
+ *
+ * To run a query within a React component, call `useGetMySettingsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetMySettingsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetMySettingsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetMySettingsQuery(baseOptions?: Apollo.QueryHookOptions<GetMySettingsQuery, GetMySettingsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetMySettingsQuery, GetMySettingsQueryVariables>(GetMySettingsDocument, options);
+      }
+export function useGetMySettingsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetMySettingsQuery, GetMySettingsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetMySettingsQuery, GetMySettingsQueryVariables>(GetMySettingsDocument, options);
+        }
+// @ts-ignore
+export function useGetMySettingsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetMySettingsQuery, GetMySettingsQueryVariables>): Apollo.UseSuspenseQueryResult<GetMySettingsQuery, GetMySettingsQueryVariables>;
+export function useGetMySettingsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetMySettingsQuery, GetMySettingsQueryVariables>): Apollo.UseSuspenseQueryResult<GetMySettingsQuery | undefined, GetMySettingsQueryVariables>;
+export function useGetMySettingsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetMySettingsQuery, GetMySettingsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetMySettingsQuery, GetMySettingsQueryVariables>(GetMySettingsDocument, options);
+        }
+export type GetMySettingsQueryHookResult = ReturnType<typeof useGetMySettingsQuery>;
+export type GetMySettingsLazyQueryHookResult = ReturnType<typeof useGetMySettingsLazyQuery>;
+export type GetMySettingsSuspenseQueryHookResult = ReturnType<typeof useGetMySettingsSuspenseQuery>;
+export type GetMySettingsQueryResult = Apollo.QueryResult<GetMySettingsQuery, GetMySettingsQueryVariables>;

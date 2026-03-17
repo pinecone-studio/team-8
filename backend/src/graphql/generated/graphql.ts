@@ -252,6 +252,15 @@ export type EmployeeRole =
   | 'teacher'
   | 'ux_engineer';
 
+export type EmployeeSettings = {
+  __typename?: 'EmployeeSettings';
+  language: Scalars['String']['output'];
+  notificationEligibility: Scalars['Boolean']['output'];
+  notificationEmail: Scalars['Boolean']['output'];
+  notificationRenewals: Scalars['Boolean']['output'];
+  timezone: Scalars['String']['output'];
+};
+
 export type EmploymentStatus =
   | 'active'
   | 'leave'
@@ -287,6 +296,7 @@ export type Mutation = {
   updateBenefit: Benefit;
   updateEligibilityRule: EligibilityRule;
   updateEmployee?: Maybe<Employee>;
+  updateMySettings: EmployeeSettings;
 };
 
 
@@ -401,6 +411,11 @@ export type MutationUpdateEmployeeArgs = {
   input: UpdateEmployeeInput;
 };
 
+
+export type MutationUpdateMySettingsArgs = {
+  input: UpdateMySettingsInput;
+};
+
 export type Notification = {
   __typename?: 'Notification';
   body: Scalars['String']['output'];
@@ -468,6 +483,7 @@ export type Query = {
   getEmployeeByEmail?: Maybe<Employee>;
   getEmployees: Array<Employee>;
   myBenefits: Array<BenefitEligibility>;
+  mySettings: EmployeeSettings;
   notifications: Array<Notification>;
   ruleProposals: Array<RuleProposal>;
   session?: Maybe<Employee>;
@@ -605,6 +621,14 @@ export type UpdateEmployeeInput = {
   role?: InputMaybe<EmployeeRole>;
 };
 
+export type UpdateMySettingsInput = {
+  language?: InputMaybe<Scalars['String']['input']>;
+  notificationEligibility?: InputMaybe<Scalars['Boolean']['input']>;
+  notificationEmail?: InputMaybe<Scalars['Boolean']['input']>;
+  notificationRenewals?: InputMaybe<Scalars['Boolean']['input']>;
+  timezone?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type WithIndex<TObject> = TObject & Record<string, any>;
 export type ResolversObject<TObject> = WithIndex<TObject>;
 
@@ -699,6 +723,7 @@ export type ResolversTypes = ResolversObject<{
   Employee: ResolverTypeWrapper<EmployeeModel>;
   EmployeeBenefitEnrollment: ResolverTypeWrapper<EmployeeBenefitEnrollment>;
   EmployeeRole: EmployeeRole;
+  EmployeeSettings: ResolverTypeWrapper<EmployeeSettings>;
   EmploymentStatus: EmploymentStatus;
   FailedRule: ResolverTypeWrapper<FailedRule>;
   Int: ResolverTypeWrapper<Scalars['Int']['output']>;
@@ -717,6 +742,7 @@ export type ResolversTypes = ResolversObject<{
   UpdateBenefitInput: UpdateBenefitInput;
   UpdateEligibilityRuleInput: UpdateEligibilityRuleInput;
   UpdateEmployeeInput: UpdateEmployeeInput;
+  UpdateMySettingsInput: UpdateMySettingsInput;
 }>;
 
 /** Mapping between all available schema types and the resolvers parents */
@@ -740,6 +766,7 @@ export type ResolversParentTypes = ResolversObject<{
   EligibilityRule: EligibilityRule;
   Employee: EmployeeModel;
   EmployeeBenefitEnrollment: EmployeeBenefitEnrollment;
+  EmployeeSettings: EmployeeSettings;
   FailedRule: FailedRule;
   Int: Scalars['Int']['output'];
   Mutation: {};
@@ -757,6 +784,7 @@ export type ResolversParentTypes = ResolversObject<{
   UpdateBenefitInput: UpdateBenefitInput;
   UpdateEligibilityRuleInput: UpdateEligibilityRuleInput;
   UpdateEmployeeInput: UpdateEmployeeInput;
+  UpdateMySettingsInput: UpdateMySettingsInput;
 }>;
 
 export type AdminDashboardBucketResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AdminDashboardBucket'] = ResolversParentTypes['AdminDashboardBucket']> = ResolversObject<{
@@ -942,6 +970,15 @@ export type EmployeeBenefitEnrollmentResolvers<ContextType = GraphQLContext, Par
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
+export type EmployeeSettingsResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['EmployeeSettings'] = ResolversParentTypes['EmployeeSettings']> = ResolversObject<{
+  language?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  notificationEligibility?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  notificationEmail?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  notificationRenewals?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  timezone?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export type FailedRuleResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['FailedRule'] = ResolversParentTypes['FailedRule']> = ResolversObject<{
   errorMessage?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   ruleType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -970,6 +1007,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   updateBenefit?: Resolver<ResolversTypes['Benefit'], ParentType, ContextType, RequireFields<MutationUpdateBenefitArgs, 'id' | 'input'>>;
   updateEligibilityRule?: Resolver<ResolversTypes['EligibilityRule'], ParentType, ContextType, RequireFields<MutationUpdateEligibilityRuleArgs, 'id' | 'input'>>;
   updateEmployee?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<MutationUpdateEmployeeArgs, 'id' | 'input'>>;
+  updateMySettings?: Resolver<ResolversTypes['EmployeeSettings'], ParentType, ContextType, RequireFields<MutationUpdateMySettingsArgs, 'input'>>;
 }>;
 
 export type NotificationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Notification'] = ResolversParentTypes['Notification']> = ResolversObject<{
@@ -1015,6 +1053,7 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   getEmployeeByEmail?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<QueryGetEmployeeByEmailArgs, 'email'>>;
   getEmployees?: Resolver<Array<ResolversTypes['Employee']>, ParentType, ContextType, Partial<QueryGetEmployeesArgs>>;
   myBenefits?: Resolver<Array<ResolversTypes['BenefitEligibility']>, ParentType, ContextType>;
+  mySettings?: Resolver<ResolversTypes['EmployeeSettings'], ParentType, ContextType>;
   notifications?: Resolver<Array<ResolversTypes['Notification']>, ParentType, ContextType>;
   ruleProposals?: Resolver<Array<ResolversTypes['RuleProposal']>, ParentType, ContextType, Partial<QueryRuleProposalsArgs>>;
   session?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType>;
@@ -1058,6 +1097,7 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   EligibilityRule?: EligibilityRuleResolvers<ContextType>;
   Employee?: EmployeeResolvers<ContextType>;
   EmployeeBenefitEnrollment?: EmployeeBenefitEnrollmentResolvers<ContextType>;
+  EmployeeSettings?: EmployeeSettingsResolvers<ContextType>;
   FailedRule?: FailedRuleResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
   Notification?: NotificationResolvers<ContextType>;
