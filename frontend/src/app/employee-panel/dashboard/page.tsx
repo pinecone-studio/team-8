@@ -17,20 +17,26 @@ import {
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 
-const CATEGORY_FILTERS = [
-  { label: "All",         value: "ALL" },
-  { label: "Wellness",    value: "wellness" },
-  { label: "Equipment",   value: "equipment" },
-  { label: "Career",      value: "career" },
-  { label: "Financial",   value: "financial" },
-  { label: "Flexibility", value: "flexibility" },
+const STATUS_FILTERS = [
+  { label: "All",      value: "ALL" },
+  { label: "Active",   value: "ACTIVE" },
+  { label: "Pending",  value: "PENDING" },
+  { label: "Eligible", value: "ELIGIBLE" },
+  { label: "Locked",   value: "LOCKED" },
 ] as const;
 
-type CategoryFilter = (typeof CATEGORY_FILTERS)[number]["value"];
+type StatusFilter = (typeof STATUS_FILTERS)[number]["value"];
+
+const STATUS_ORDER: Record<string, number> = {
+  ACTIVE: 0,
+  PENDING: 1,
+  ELIGIBLE: 2,
+  LOCKED: 3,
+};
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [activeFilter, setActiveFilter] = useState<CategoryFilter>("ALL");
+  const [activeFilter, setActiveFilter] = useState<StatusFilter>("ALL");
   const [search, setSearch] = useState("");
   const [selectedBenefit, setSelectedBenefit] = useState<BenefitEligibility | null>(null);
   const [requestModalBenefitId, setRequestModalBenefitId] = useState<string | null>(null);
@@ -45,13 +51,15 @@ export default function DashboardPage() {
 
   const myBenefits = benefitsData?.myBenefits ?? [];
 
-  const filteredBenefits = myBenefits.filter((b) => {
-    const matchesCategory = activeFilter === "ALL" || b.benefit.category === activeFilter;
-    const matchesSearch = search.trim() === "" ||
-      b.benefit.name.toLowerCase().includes(search.toLowerCase()) ||
-      (b.benefit.vendorName ?? "").toLowerCase().includes(search.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const filteredBenefits = myBenefits
+    .filter((b) => {
+      const matchesStatus = activeFilter === "ALL" || String(b.status).toUpperCase() === activeFilter;
+      const matchesSearch = search.trim() === "" ||
+        b.benefit.name.toLowerCase().includes(search.toLowerCase()) ||
+        (b.benefit.vendorName ?? "").toLowerCase().includes(search.toLowerCase());
+      return matchesStatus && matchesSearch;
+    })
+    .sort((a, b) => (STATUS_ORDER[String(a.status).toUpperCase()] ?? 99) - (STATUS_ORDER[String(b.status).toUpperCase()] ?? 99));
 
   const subtitle = error
     ? "We couldn't load your employee profile."
@@ -119,9 +127,9 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Category tabs */}
+            {/* Status tabs */}
             <div className="mt-4 flex items-center gap-1">
-              {CATEGORY_FILTERS.map((f) => (
+              {STATUS_FILTERS.map((f) => (
                 <button
                   key={f.value}
                   type="button"
