@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useClerk } from "@clerk/nextjs";
+import { useClerk, useUser } from "@clerk/nextjs";
 import { useRef, useEffect, useState } from "react";
 import {
   LayoutGrid,
@@ -43,6 +43,7 @@ const devNavItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { signOut } = useClerk();
+  const { user, isLoaded: isUserLoaded } = useUser();
   const { employee, loading } = useCurrentEmployee();
   const hasAdminAccess = isAdminEmployee(employee);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -93,8 +94,14 @@ export default function Sidebar() {
               onClick={() => setProfileOpen((o) => !o)}
               className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-gray-50 active:scale-[0.99]"
             >
-              {loading ? (
+              {loading || !isUserLoaded ? (
                 <div className="h-9 w-9 shrink-0 rounded-full bg-gray-200 animate-pulse" />
+              ) : user?.imageUrl ? (
+                <img
+                  src={user.imageUrl}
+                  alt={profileName}
+                  className="h-9 w-9 shrink-0 rounded-full object-cover"
+                />
               ) : (
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-800 text-sm font-semibold text-white">
                   {profileName.charAt(0).toUpperCase()}
