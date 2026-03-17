@@ -9,6 +9,7 @@ type Props = {
 
 function buildDescription(benefit: BenefitEligibility) {
   if (benefit.failedRule?.errorMessage) return benefit.failedRule.errorMessage;
+  if (benefit.benefit.description) return benefit.benefit.description;
   if (benefit.benefit.optionsDescription) return benefit.benefit.optionsDescription;
   if (benefit.benefit.requiresContract) {
     return `Requires contract acceptance. Employee share ${benefit.benefit.employeePercent}%.`;
@@ -17,7 +18,6 @@ function buildDescription(benefit: BenefitEligibility) {
 }
 
 export default function BenefitCard({ benefit, onClick }: Props) {
-  const subsidyLabel = `${benefit.benefit.subsidyPercent}%`;
   const vendor = benefit.benefit.vendorName ?? "Internal Benefit";
 
   const content = (
@@ -42,14 +42,6 @@ export default function BenefitCard({ benefit, onClick }: Props) {
       <p className="mt-3 text-xs leading-relaxed text-gray-500 line-clamp-2 flex-1">
         {buildDescription(benefit)}
       </p>
-
-      {/* Footer */}
-      <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-          Subsidy
-        </span>
-        <span className="text-sm font-bold text-gray-900">{subsidyLabel}</span>
-      </div>
     </div>
   );
 

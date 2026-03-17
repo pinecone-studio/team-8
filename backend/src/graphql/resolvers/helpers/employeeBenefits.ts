@@ -5,6 +5,7 @@ import type { Benefit, BenefitEligibility, EligibilityRule, Employee } from "../
 
 type GraphqlBenefit = {
   category: string;
+  description: string | null;
   employeePercent: number;
   flowType: "contract" | "normal";
   id: string;
@@ -55,6 +56,7 @@ const IN_FLIGHT_REQUEST_STATUSES = new Set([
 export function mapBenefitRecordToGraphql(benefit: Benefit): GraphqlBenefit {
   return {
     category: benefit.category,
+    description: benefit.description ?? null,
     employeePercent: 100 - benefit.subsidyPercent,
     flowType: benefit.requiresContract ? "contract" : "normal",
     id: benefit.id,

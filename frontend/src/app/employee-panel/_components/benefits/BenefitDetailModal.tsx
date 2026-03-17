@@ -41,6 +41,7 @@ export default function BenefitDetailModal({ benefit, onClose, onRequestBenefit 
   const vendor = benefit.benefit.vendorName ?? "Internal Benefit";
   const b = benefit.benefit;
   const description =
+    b.description ??
     b.optionsDescription ??
     `Company covers ${b.subsidyPercent}%. Employee share ${b.employeePercent}%.`;
   const category = formatCategory(b.category ?? "Other");

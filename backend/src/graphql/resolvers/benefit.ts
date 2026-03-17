@@ -91,6 +91,7 @@ export const BenefitEligibility = {
       return {
         id: parent.benefitId,
         name: "Unknown",
+        description: null,
         nameEng: null,
         category: "other",
         subsidyPercent: 0,
@@ -108,6 +109,7 @@ export const BenefitEligibility = {
     return {
       id: config.id,
       name: config.name,
+      description: null,
       nameEng: config.nameEng ?? null,
       category: config.category,
       subsidyPercent: config.subsidyPercent,

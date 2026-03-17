@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 export const benefits = sqliteTable("benefits", {
   id: text("id").primaryKey().$defaultFn(() => nanoid()),
   name: text("name").notNull(),
+  description: text("description"),
   category: text("category").notNull(), // wellness | equipment | financial | career | flexibility
   subsidyPercent: integer("subsidy_percent").notNull(),
   vendorName: text("vendor_name"),
