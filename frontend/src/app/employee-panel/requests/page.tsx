@@ -500,16 +500,6 @@ function RequestsContent() {
                         </div>
                       </div>
 
-                      {/* Timeline */}
-                      <div className="border-t border-gray-50 px-5 py-3">
-                        <RequestTimeline
-                          status={req.status}
-                          policy={req.approvalPolicy}
-                          requiresContract={req.requiresContract}
-                        />
-                      </div>
-
-
                       {/* Decline reason */}
                       {isDeclined && req.declineReason && (
                         <div className="mx-5 mb-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700">
