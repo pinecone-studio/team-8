@@ -58,12 +58,8 @@ export default function Sidebar() {
   const profileRef = useRef<HTMLDivElement>(null);
   const hasAdminAccess = isAdminEmployee(employee);
   const hasHrAccess = isHrAdmin(employee);
-  const profileName = loading ? "Loading..." : employee?.name ?? "Employee";
-  const profileRole = loading
-    ? "Profile"
-    : hasAdminAccess
-      ? getAdminRoleLabel(employee)
-      : "No admin access";
+  const profileName = employee?.name ?? "Employee";
+  const profileRole = hasAdminAccess ? getAdminRoleLabel(employee) : "No admin access";
 
   // Finance-only admins must not see HR-governance pages
   const navItems = ALL_NAV_ITEMS.filter((item) => !item.hrOnly || hasHrAccess);
@@ -98,9 +94,13 @@ export default function Sidebar() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900">
               <ShieldCheck className="h-4 w-4 text-white" />
             </div>
-            <span className="font-semibold text-gray-900">
-              {loading ? "Admin" : hasAdminAccess ? getAdminRoleLabel(employee) : "Employee"}
-            </span>
+            {loading ? (
+              <div className="h-4 w-20 rounded bg-gray-200 animate-pulse" />
+            ) : (
+              <span className="font-semibold text-gray-900">
+                {hasAdminAccess ? getAdminRoleLabel(employee) : "Employee"}
+              </span>
+            )}
           </Link>
           <NotificationBell />
         </div>
@@ -112,12 +112,25 @@ export default function Sidebar() {
               onClick={() => setProfileOpen((o) => !o)}
               className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-gray-50 active:scale-[0.99]"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-800 text-sm font-semibold text-white">
-                {(employee?.name ?? "A").charAt(0).toUpperCase()}
-              </div>
+              {loading ? (
+                <div className="h-9 w-9 shrink-0 rounded-full bg-gray-200 animate-pulse" />
+              ) : (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-800 text-sm font-semibold text-white">
+                  {profileName.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-900">{profileName}</p>
-                <p className="truncate text-xs text-gray-400">{profileRole}</p>
+                {loading ? (
+                  <>
+                    <div className="h-3.5 w-24 rounded bg-gray-200 animate-pulse" />
+                    <div className="mt-1.5 h-3 w-16 rounded bg-gray-200 animate-pulse" />
+                  </>
+                ) : (
+                  <>
+                    <p className="truncate text-sm font-medium text-gray-900">{profileName}</p>
+                    <p className="truncate text-xs text-gray-400">{profileRole}</p>
+                  </>
+                )}
               </div>
               <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`} />
             </button>
