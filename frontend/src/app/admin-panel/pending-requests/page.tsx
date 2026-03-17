@@ -391,7 +391,10 @@ export default function PendingRequestsPage() {
                           className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors"
                         >
                           <td className="px-5 py-4 text-sm text-gray-700">
-                            {req.employeeName}
+                            <div className="flex items-center gap-2">
+                              <UserAvatar />
+                              <span>{req.employeeName}</span>
+                            </div>
                           </td>
                           <td className="px-5 py-4">
                             <p className="text-sm font-medium text-gray-900">
@@ -542,6 +545,7 @@ export default function PendingRequestsPage() {
 
 import { X, User, Briefcase, Calendar, ExternalLink } from "lucide-react";
 import { useGetContractsForBenefitQuery } from "@/graphql/generated/graphql";
+import { UserAvatar } from "@clerk/nextjs";
 
 function RequestDetailModal({
   req,
