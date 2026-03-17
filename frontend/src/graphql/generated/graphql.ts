@@ -458,6 +458,7 @@ export type Query = {
   adminBenefits: Array<Benefit>;
   adminDashboardSummary: AdminDashboardSummary;
   allBenefitRequests: Array<BenefitRequest>;
+  auditLogActionTypes: Array<Scalars['String']['output']>;
   auditLogs: Array<AuditLog>;
   benefitRequests: Array<BenefitRequest>;
   benefits: Array<Benefit>;
@@ -757,6 +758,11 @@ export type GetAdminBenefitsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type GetAdminBenefitsQuery = { __typename?: 'Query', adminBenefits: Array<{ __typename?: 'Benefit', id: string, name: string, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string }> };
+
+export type GetAuditLogActionTypesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetAuditLogActionTypesQuery = { __typename?: 'Query', auditLogActionTypes: Array<string> };
 
 export type GetAuditLogsQueryVariables = Exact<{
   employeeId?: InputMaybe<Scalars['String']['input']>;
@@ -1724,6 +1730,46 @@ export type GetAdminBenefitsQueryHookResult = ReturnType<typeof useGetAdminBenef
 export type GetAdminBenefitsLazyQueryHookResult = ReturnType<typeof useGetAdminBenefitsLazyQuery>;
 export type GetAdminBenefitsSuspenseQueryHookResult = ReturnType<typeof useGetAdminBenefitsSuspenseQuery>;
 export type GetAdminBenefitsQueryResult = Apollo.QueryResult<GetAdminBenefitsQuery, GetAdminBenefitsQueryVariables>;
+export const GetAuditLogActionTypesDocument = gql`
+    query GetAuditLogActionTypes {
+  auditLogActionTypes
+}
+    `;
+
+/**
+ * __useGetAuditLogActionTypesQuery__
+ *
+ * To run a query within a React component, call `useGetAuditLogActionTypesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetAuditLogActionTypesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetAuditLogActionTypesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetAuditLogActionTypesQuery(baseOptions?: Apollo.QueryHookOptions<GetAuditLogActionTypesQuery, GetAuditLogActionTypesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetAuditLogActionTypesQuery, GetAuditLogActionTypesQueryVariables>(GetAuditLogActionTypesDocument, options);
+      }
+export function useGetAuditLogActionTypesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetAuditLogActionTypesQuery, GetAuditLogActionTypesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetAuditLogActionTypesQuery, GetAuditLogActionTypesQueryVariables>(GetAuditLogActionTypesDocument, options);
+        }
+// @ts-ignore
+export function useGetAuditLogActionTypesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetAuditLogActionTypesQuery, GetAuditLogActionTypesQueryVariables>): Apollo.UseSuspenseQueryResult<GetAuditLogActionTypesQuery, GetAuditLogActionTypesQueryVariables>;
+export function useGetAuditLogActionTypesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetAuditLogActionTypesQuery, GetAuditLogActionTypesQueryVariables>): Apollo.UseSuspenseQueryResult<GetAuditLogActionTypesQuery | undefined, GetAuditLogActionTypesQueryVariables>;
+export function useGetAuditLogActionTypesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetAuditLogActionTypesQuery, GetAuditLogActionTypesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetAuditLogActionTypesQuery, GetAuditLogActionTypesQueryVariables>(GetAuditLogActionTypesDocument, options);
+        }
+export type GetAuditLogActionTypesQueryHookResult = ReturnType<typeof useGetAuditLogActionTypesQuery>;
+export type GetAuditLogActionTypesLazyQueryHookResult = ReturnType<typeof useGetAuditLogActionTypesLazyQuery>;
+export type GetAuditLogActionTypesSuspenseQueryHookResult = ReturnType<typeof useGetAuditLogActionTypesSuspenseQuery>;
+export type GetAuditLogActionTypesQueryResult = Apollo.QueryResult<GetAuditLogActionTypesQuery, GetAuditLogActionTypesQueryVariables>;
 export const GetAuditLogsDocument = gql`
     query GetAuditLogs($employeeId: String, $benefitId: String, $actionType: String, $fromDate: String, $toDate: String, $limit: Int) {
   auditLogs(

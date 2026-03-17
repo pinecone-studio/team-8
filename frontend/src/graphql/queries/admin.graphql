@@ -39,6 +39,10 @@ query GetAdminBenefits {
   }
 }
 
+query GetAuditLogActionTypes {
+  auditLogActionTypes
+}
+
 query GetAuditLogs(
   $employeeId: String
   $benefitId: String

@@ -12,6 +12,7 @@ import { getAdminDashboardSummary } from "./getAdminDashboardSummary";
 import { getAdminBenefits } from "./getAdminBenefits";
 import { getEligibilityRules } from "./getEligibilityRules";
 import { getAuditLogs } from "./getAuditLogs";
+import { getAuditLogActionTypes } from "./getAuditLogActionTypes";
 import { getContractAcceptances } from "./getContractAcceptances";
 import { getEnrollments } from "./getEnrollments";
 import { getDepartments } from "./getDepartments";
@@ -33,6 +34,7 @@ export const queries = {
   session: getSession,
   eligibilityRules: getEligibilityRules,
   auditLogs: getAuditLogs,
+  auditLogActionTypes: getAuditLogActionTypes,
   contractAcceptances: getContractAcceptances,
   enrollments: getEnrollments,
   getDepartments,
