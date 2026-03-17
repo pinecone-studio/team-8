@@ -11,6 +11,7 @@ import {
   GetEmployeeBenefitsDocument,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
+import { useUser } from "@clerk/nextjs";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
 
 // ── Status badge ─────────────────────────────────────────────────────────────
@@ -260,6 +261,7 @@ interface OverrideFormState {
 
 export default function EligibilityInspector() {
   const { employee: me } = useCurrentEmployee();
+  const { user, isLoaded: isUserLoaded } = useUser();
   const isHr = isHrAdmin(me);
   const canOverride = isHr;
 
@@ -297,6 +299,7 @@ export default function EligibilityInspector() {
 
   const departments = departmentsData?.getDepartments ?? [];
   const eligibilities = eligibilityData?.getEmployeeBenefits ?? [];
+  const clerkEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? null;
 
   if (!isHr) {
     return (
@@ -361,19 +364,48 @@ export default function EligibilityInspector() {
         {selectedEmployee && (
           <div className="rounded-2xl border border-slate-200 bg-white p-5 mb-6">
             <h2 className="text-sm font-semibold text-gray-900">Employee Profile</h2>
+            {/*
+              Clerk only exposes the signed-in user on the client. If the selected
+              employee matches the signed-in user, show their Clerk avatar.
+            */}
+            {(() => {
+              const matchesClerkUser =
+                isUserLoaded &&
+                !!clerkEmail &&
+                selectedEmployee.email?.toLowerCase() === clerkEmail &&
+                !!user?.imageUrl;
+              const nameValue = (
+                <div className="flex items-center gap-2">
+                  {matchesClerkUser ? (
+                    <img
+                      src={user.imageUrl}
+                      alt={selectedEmployee.name}
+                      className="h-7 w-7 shrink-0 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
+                      {selectedEmployee.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span>{selectedEmployee.name}</span>
+                </div>
+              );
+              return (
             <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {[
-                { label: "Name",       value: selectedEmployee.name },
+                { label: "Name",       value: nameValue },
                 { label: "Role",       value: selectedEmployee.role ?? "—" },
                 { label: "Department", value: selectedEmployee.department ?? "—" },
                 { label: "Status",     value: selectedEmployee.employmentStatus ?? "—" },
               ].map((item) => (
                 <div key={item.label}>
                   <p className="text-xs text-slate-400">{item.label}</p>
-                  <p className="mt-0.5 text-sm font-medium text-slate-900">{item.value}</p>
+                  <div className="mt-0.5 text-sm font-medium text-slate-900">{item.value}</div>
                 </div>
               ))}
             </div>
+              );
+            })()}
           </div>
         )}
 
