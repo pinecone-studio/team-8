@@ -53,75 +53,140 @@ function StatCard({
   );
 }
 
-// ── Queue action card ────────────────────────────────────────────────────────
+// ── Alert card (contract health) ────────────────────────────────────────────
 
-function QueueCard({
+function AlertCard({
   label,
   count,
   href,
   tone,
   hint,
+  countLabel,
   loading,
 }: {
   label: string;
   count: number;
   href: string;
-  tone: "blue" | "teal" | "amber" | "green";
+  tone: "amber" | "rose" | "blue";
   hint: string;
+  countLabel: string;
   loading?: boolean;
 }) {
   const tones = {
-    blue: {
-      bg: "bg-blue-50",
-      border: "border-blue-100",
-      badge: "bg-blue-100 text-blue-700",
-      text: "text-blue-700",
-      link: "text-blue-600",
-    },
-    teal: {
-      bg: "bg-teal-50",
-      border: "border-teal-100",
-      badge: "bg-teal-100 text-teal-700",
-      text: "text-teal-700",
-      link: "text-teal-600",
-    },
     amber: {
-      bg: "bg-amber-50",
-      border: "border-amber-100",
-      badge: "bg-amber-100 text-amber-700",
-      text: "text-amber-700",
-      link: "text-amber-600",
+      iconBg: "bg-amber-50",
+      iconText: "text-amber-700",
+      pill: "bg-amber-100 text-amber-700",
     },
-    green: {
-      bg: "bg-green-50",
-      border: "border-green-100",
-      badge: "bg-green-100 text-green-700",
-      text: "text-green-700",
-      link: "text-green-600",
+    rose: {
+      iconBg: "bg-rose-50",
+      iconText: "text-rose-700",
+      pill: "bg-rose-100 text-rose-700",
+    },
+    blue: {
+      iconBg: "bg-blue-50",
+      iconText: "text-blue-700",
+      pill: "bg-blue-100 text-blue-700",
     },
   };
   const t = tones[tone];
 
   if (loading) {
     return (
-      <div className="h-[88px] animate-pulse rounded-2xl border border-slate-200 bg-white" />
+      <div className="h-[116px] animate-pulse rounded-2xl border border-slate-200 bg-white" />
     );
   }
 
   return (
     <Link
       href={href}
-      className={`flex items-center justify-between gap-4 rounded-2xl border ${t.border} ${t.bg} px-5 py-4 transition hover:brightness-95`}
+      className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4 transition hover:border-slate-300 hover:shadow-sm"
     >
-      <div>
-        <p className={`text-sm font-semibold ${t.text}`}>{label}</p>
-        <p className="mt-0.5 text-xs text-slate-500">{hint}</p>
-      </div>
-      <span
-        className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-bold ${t.badge}`}
+      <div
+        className={`flex h-12 w-12 items-center justify-center rounded-2xl ${t.iconBg}`}
       >
-        {count}
-      </span>
+        <span className={`text-lg ${t.iconText}`}>!</span>
+      </div>
+      <div className="flex-1">
+        <p className="text-sm font-semibold text-slate-900">{label}</p>
+        <p className="mt-0.5 text-xs text-slate-500">{hint}</p>
+        <span
+          className={`mt-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${t.pill}`}
+        >
+          {count} {countLabel}
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+// ── Action queue card ───────────────────────────────────────────────────────
+
+function ActionQueueCard({
+  label,
+  count,
+  href,
+  tone,
+  hint,
+  maxCount,
+  loading,
+}: {
+  label: string;
+  count: number;
+  href: string;
+  tone: "blue" | "amber" | "rose" | "green";
+  hint: string;
+  maxCount: number;
+  loading?: boolean;
+}) {
+  const tones = {
+    blue: {
+      accent: "text-blue-700",
+      bar: "bg-blue-500",
+    },
+    amber: {
+      accent: "text-amber-700",
+      bar: "bg-amber-500",
+    },
+    rose: {
+      accent: "text-rose-600",
+      bar: "bg-rose-500",
+    },
+    green: {
+      accent: "text-emerald-700",
+      bar: "bg-emerald-500",
+    },
+  };
+  const t = tones[tone];
+  const safeMax = Math.max(maxCount, 1);
+  const width = Math.min((count / safeMax) * 100, 100);
+
+  if (loading) {
+    return (
+      <div className="h-[128px] animate-pulse rounded-2xl border border-slate-200 bg-white" />
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className="rounded-2xl border border-slate-200 bg-white px-5 py-4 transition hover:border-slate-300 hover:shadow-sm"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">{label}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{hint}</p>
+        </div>
+        <span className={`text-2xl font-semibold ${t.accent}`}>
+          {count}
+        </span>
+      </div>
+      <div className="mt-4 h-2 w-full rounded-full bg-slate-100">
+        <div
+          className={`h-2 rounded-full ${t.bar}`}
+          style={{ width: `${width}%` }}
+        />
+      </div>
     </Link>
   );
 }
@@ -291,28 +356,31 @@ export default function Dashboard() {
                   Contract Health &amp; Enrollment Alerts
                 </h2>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <QueueCard
-                    label="Contracts Expiring Soon"
+                  <AlertCard
+                    label="Contracts expiring soon"
                     count={summary?.contractsExpiringSoon ?? 0}
                     href="/admin-panel/vendor-contracts"
                     tone="amber"
                     hint="Active contracts expiring within 60 days"
+                    countLabel="contracts"
                     loading={isLoading}
                   />
-                  <QueueCard
-                    label="Missing Active Contracts"
+                  <AlertCard
+                    label="Missing active contracts"
                     count={summary?.benefitsMissingContracts ?? 0}
                     href="/admin-panel/vendor-contracts"
-                    tone="amber"
+                    tone="rose"
                     hint="Benefits that need a contract uploaded"
+                    countLabel="benefits"
                     loading={isLoading}
                   />
-                  <QueueCard
-                    label="Suspended Enrollments"
+                  <AlertCard
+                    label="Suspended enrollments"
                     count={summary?.suspendedEnrollments ?? 0}
                     href="/admin-panel/eligibility-inspector"
-                    tone="amber"
-                    hint="Enrollments suspended pending re-evaluation"
+                    tone="blue"
+                    hint="Enrollments pending re-evaluation"
+                    countLabel="enrollments"
                     loading={isLoading}
                   />
                 </div>
@@ -327,42 +395,64 @@ export default function Dashboard() {
               <div
                 className={`grid gap-3 ${isHr ? "sm:grid-cols-2 xl:grid-cols-4" : "sm:grid-cols-2"}`}
               >
-                {isHr && (
-                  <QueueCard
-                    label="HR Review Queue"
-                    count={summary?.hrQueueCount ?? 0}
-                    href="/admin-panel/pending-requests"
-                    tone="blue"
-                    hint="Requests awaiting HR decision"
-                    loading={isLoading}
-                  />
-                )}
-                <QueueCard
-                  label="Finance Review Queue"
-                  count={summary?.financeQueueCount ?? 0}
-                  href="/admin-panel/pending-requests"
-                  tone="teal"
-                  hint="Requests awaiting Finance decision"
-                  loading={isLoading}
-                />
-                {isHr && (
-                  <QueueCard
-                    label="Contract Acceptance"
-                    count={summary?.awaitingContractCount ?? 0}
-                    href="/admin-panel/pending-requests"
-                    tone="amber"
-                    hint="Employees yet to accept contract"
-                    loading={isLoading}
-                  />
-                )}
-                <QueueCard
-                  label="Approved This Week"
-                  count={summary?.approvedThisWeekCount ?? 0}
-                  href="/admin-panel/pending-requests"
-                  tone="green"
-                  hint="Requests approved in the last 7 days"
-                  loading={isLoading}
-                />
+                {(() => {
+                  const hrCount = summary?.hrQueueCount ?? 0;
+                  const financeCount = summary?.financeQueueCount ?? 0;
+                  const contractCount = summary?.awaitingContractCount ?? 0;
+                  const approvedCount = summary?.approvedThisWeekCount ?? 0;
+                  const maxCount = Math.max(
+                    hrCount,
+                    financeCount,
+                    contractCount,
+                    approvedCount,
+                    1,
+                  );
+
+                  return (
+                    <>
+                      {isHr && (
+                        <ActionQueueCard
+                          label="HR review"
+                          count={hrCount}
+                          href="/admin-panel/pending-requests"
+                          tone="blue"
+                          hint="Awaiting HR decision"
+                          maxCount={maxCount}
+                          loading={isLoading}
+                        />
+                      )}
+                      <ActionQueueCard
+                        label="Finance review"
+                        count={financeCount}
+                        href="/admin-panel/pending-requests"
+                        tone="amber"
+                        hint="Awaiting Finance decision"
+                        maxCount={maxCount}
+                        loading={isLoading}
+                      />
+                      {isHr && (
+                        <ActionQueueCard
+                          label="Contract acceptance"
+                          count={contractCount}
+                          href="/admin-panel/pending-requests"
+                          tone="rose"
+                          hint="Yet to accept contract"
+                          maxCount={maxCount}
+                          loading={isLoading}
+                        />
+                      )}
+                      <ActionQueueCard
+                        label="Approved this week"
+                        count={approvedCount}
+                        href="/admin-panel/pending-requests"
+                        tone="green"
+                        hint="Last 7 days"
+                        maxCount={maxCount}
+                        loading={isLoading}
+                      />
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
