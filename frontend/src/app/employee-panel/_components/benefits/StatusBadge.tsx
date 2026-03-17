@@ -5,8 +5,8 @@ type Props = {
 };
 
 const styles: Record<string, string> = {
-  ACTIVE:   "bg-emerald-500 text-white",
-  ELIGIBLE: "bg-emerald-500 text-white",
+  ACTIVE:   "bg-emerald-100 text-emerald-700",
+  ELIGIBLE: "bg-blue-100 text-blue-700",
   PENDING:  "bg-amber-400 text-white",
   LOCKED:   "bg-gray-300 text-gray-700",
 };
