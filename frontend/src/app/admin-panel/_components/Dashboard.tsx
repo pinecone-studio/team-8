@@ -126,9 +126,9 @@ function QueueCard({
   );
 }
 
-// ── Category bar chart (simple inline bars) ─────────────────────────────────
+// ── Category donut chart ────────────────────────────────────────────────────
 
-function CategoryBars({
+function CategoryDonuts({
   data,
 }: {
   data: Array<{ label: string; value: number }>;
@@ -140,25 +140,63 @@ function CategoryBars({
       </div>
     );
   }
-  const max = Math.max(...data.map((d) => d.value), 1);
+
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+  const safeTotal = Math.max(total, 1);
+  const size = 96;
+  const stroke = 10;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+
   return (
-    <div className="space-y-3">
-      {data.slice(0, 6).map((item) => (
-        <div key={item.label} className="flex items-center gap-3">
-          <p className="w-32 shrink-0 truncate text-xs text-slate-600">
-            {item.label}
-          </p>
-          <div className="flex-1 overflow-hidden rounded-full bg-slate-100 h-2">
-            <div
-              className="h-2 rounded-full bg-blue-500"
-              style={{ width: `${(item.value / max) * 100}%` }}
-            />
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      {data.slice(0, 8).map((item) => {
+        const progress = item.value / safeTotal;
+        const dashOffset = circumference * (1 - progress);
+        return (
+          <div key={item.label} className="flex flex-col items-center gap-2">
+            <div className="relative h-24 w-24">
+              <svg
+                className="h-24 w-24 -rotate-90"
+                viewBox={`0 0 ${size} ${size}`}
+              >
+                <circle
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  fill="none"
+                  strokeWidth={stroke}
+                  className="stroke-slate-200"
+                />
+                <circle
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  fill="none"
+                  strokeWidth={stroke}
+                  strokeLinecap="round"
+                  className="stroke-blue-500"
+                  style={{
+                    strokeDasharray: circumference,
+                    strokeDashoffset: dashOffset,
+                  }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-700">
+                <span className="text-2xl font-semibold">
+                  {item.value}
+                </span>
+                <span className="text-xs text-slate-400">
+                  {item.value}/{safeTotal}
+                </span>
+              </div>
+            </div>
+            <p className="text-xs font-semibold text-slate-600">
+              {item.label}
+            </p>
           </div>
-          <span className="w-6 shrink-0 text-right text-xs font-semibold text-slate-700">
-            {item.value}
-          </span>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -376,7 +414,7 @@ export default function Dashboard() {
                   {isLoading ? (
                     <div className="h-40 animate-pulse rounded-xl bg-slate-100" />
                   ) : (
-                    <CategoryBars data={summary?.usageByCategory ?? []} />
+                    <CategoryDonuts data={summary?.usageByCategory ?? []} />
                   )}
                 </div>
               </div>
