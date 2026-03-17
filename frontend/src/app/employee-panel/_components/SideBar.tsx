@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useClerk } from "@clerk/nextjs";
+import { useClerk, useUser } from "@clerk/nextjs";
 import { useRef, useEffect, useState } from "react";
 import {
   LayoutGrid,
@@ -13,11 +13,11 @@ import {
   Gift,
   ClipboardList,
   FlaskConical,
-
 } from "lucide-react";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isAdminEmployee } from "@/app/admin-panel/_lib/access";
 import NotificationBell from "@/app/_components/NotificationBell";
+import PineconeLogo from "@/app/_components/_icons/PineconeLogo";
 
 function formatLabel(value: string | null | undefined) {
   if (!value) return "Employee";
@@ -43,6 +43,7 @@ const devNavItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { signOut } = useClerk();
+  const { user, isLoaded: isUserLoaded } = useUser();
   const { employee, loading } = useCurrentEmployee();
   const hasAdminAccess = isAdminEmployee(employee);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -53,18 +54,24 @@ export default function Sidebar() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target as Node)
+      ) {
         setProfileOpen(false);
       }
     }
     if (profileOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [profileOpen]);
 
   const isActive = (href: string) =>
-    href === "/employee-panel/dashboard" ? pathname === href : pathname.startsWith(href);
+    href === "/employee-panel/dashboard"
+      ? pathname === href
+      : pathname.startsWith(href);
 
   const navLinkClass = (href: string) =>
     `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition active:scale-[0.98] ${
@@ -77,9 +84,12 @@ export default function Sidebar() {
     <>
       <aside className="fixed left-0 top-0 z-10 flex h-screen w-[260px] flex-col border-r border-gray-100 bg-white">
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-100 px-4">
-          <Link href="/employee-panel/dashboard" className="flex items-center gap-2">
+          <Link
+            href="/employee-panel/dashboard"
+            className="flex items-center gap-2"
+          >
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900">
-              <Gift className="h-4 w-4 text-white" />
+              <PineconeLogo />
             </div>
             <span className="font-semibold text-gray-900">Employee</span>
           </Link>
@@ -93,8 +103,14 @@ export default function Sidebar() {
               onClick={() => setProfileOpen((o) => !o)}
               className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-gray-50 active:scale-[0.99]"
             >
-              {loading ? (
+              {loading || !isUserLoaded ? (
                 <div className="h-9 w-9 shrink-0 rounded-full bg-gray-200 animate-pulse" />
+              ) : user?.imageUrl ? (
+                <img
+                  src={user.imageUrl}
+                  alt={profileName}
+                  className="h-9 w-9 shrink-0 rounded-full object-cover"
+                />
               ) : (
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-800 text-sm font-semibold text-white">
                   {profileName.charAt(0).toUpperCase()}
@@ -108,19 +124,27 @@ export default function Sidebar() {
                   </>
                 ) : (
                   <>
-                    <p className="truncate text-sm font-medium text-gray-900">{profileName}</p>
-                    <p className="truncate text-xs text-gray-400">{profileRole}</p>
+                    <p className="truncate text-sm font-medium text-gray-900">
+                      {profileName}
+                    </p>
+                    <p className="truncate text-xs text-gray-400">
+                      {profileRole}
+                    </p>
                   </>
                 )}
               </div>
-              <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`} />
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`}
+              />
             </button>
             <div
               className={`absolute left-0 right-0 top-full z-20 mt-1.5 origin-top rounded-lg border border-gray-100 bg-white py-1 shadow-lg transition-all duration-200 ease-out ${
-                profileOpen ? "visible scale-100 opacity-100" : "invisible scale-95 opacity-0 pointer-events-none"
+                profileOpen
+                  ? "visible scale-100 opacity-100"
+                  : "invisible scale-95 opacity-0 pointer-events-none"
               }`}
             >
-{hasAdminAccess && (
+              {hasAdminAccess && (
                 <Link
                   href="/admin-panel"
                   onClick={() => setProfileOpen(false)}
@@ -145,11 +169,17 @@ export default function Sidebar() {
           </div>
 
           <nav className="space-y-0.5">
-            <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">Menu</p>
+            <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">
+              Menu
+            </p>
             {mainNavItems.map((item) => {
               const Icon = item.icon;
               return (
-                <Link key={item.href} href={item.href} className={navLinkClass(item.href)}>
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={navLinkClass(item.href)}
+                >
                   <Icon className="h-5 w-5 shrink-0" />
                   <span>{item.label}</span>
                 </Link>
@@ -158,11 +188,17 @@ export default function Sidebar() {
           </nav>
 
           <nav className="mt-6 space-y-0.5 border-t border-gray-100 pt-4">
-            <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">Dev</p>
+            <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">
+              Dev
+            </p>
             {devNavItems.map((item) => {
               const Icon = item.icon;
               return (
-                <Link key={item.href} href={item.href} className={navLinkClass(item.href)}>
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={navLinkClass(item.href)}
+                >
                   <Icon className="h-5 w-5 shrink-0" />
                   <span>{item.label}</span>
                 </Link>

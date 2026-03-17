@@ -6,6 +6,7 @@ import { useGetAuditLogsQuery } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
 import PageLoading from "@/app/_components/PageLoading";
+import { UserAvatar } from "@clerk/nextjs";
 
 const ACTION_TYPE_LABELS: Record<string, string> = {
   REQUEST_SUBMITTED: "Request Submitted",
@@ -863,15 +864,14 @@ export default function AuditLogs() {
           ) : (
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
               <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
+                <table className="min-w-full text-left text-sm table-fixed">
                   <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
                     <tr>
-                      <th className="px-5 py-3">Time</th>
+                      <th className="px-5 py-3">Name</th>
+                      <th className="px-5 py-3">Position</th>
                       <th className="px-5 py-3">Action</th>
-                      <th className="px-5 py-3">Actor</th>
-                      <th className="px-5 py-3">Entity</th>
-                      <th className="px-5 py-3">Reason</th>
-                      <th className="px-5 py-3 w-20" />
+                      <th className="px-5 py-3 w-44">Date</th>
+                      <th className="px-5 py-3 w-full">Reason</th>
                     </tr>
                   </thead>
                   <tbody>

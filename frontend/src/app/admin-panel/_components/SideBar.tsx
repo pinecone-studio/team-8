@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useClerk } from "@clerk/nextjs";
+import { useClerk, useUser } from "@clerk/nextjs";
 import { useRef, useEffect, useState } from "react";
 import {
   CheckCircle,
@@ -16,6 +16,7 @@ import {
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { getAdminRoleLabel, isAdminEmployee, isHrAdmin } from "../_lib/access";
 import NotificationBell from "@/app/_components/NotificationBell";
+import PineconeLogo from "@/app/_components/_icons/PineconeLogo";
 
 const ALL_NAV_ITEMS = [
   {
@@ -53,26 +54,33 @@ const ALL_NAV_ITEMS = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { signOut } = useClerk();
+  const { user, isLoaded: isUserLoaded } = useUser();
   const { employee, loading } = useCurrentEmployee();
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const hasAdminAccess = isAdminEmployee(employee);
   const hasHrAccess = isHrAdmin(employee);
   const profileName = employee?.name ?? "Employee";
-  const profileRole = hasAdminAccess ? getAdminRoleLabel(employee) : "No admin access";
+  const profileRole = hasAdminAccess
+    ? getAdminRoleLabel(employee)
+    : "No admin access";
 
   // Finance-only admins must not see HR-governance pages
   const navItems = ALL_NAV_ITEMS.filter((item) => !item.hrOnly || hasHrAccess);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target as Node)
+      ) {
         setProfileOpen(false);
       }
     }
     if (profileOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [profileOpen]);
 
@@ -92,7 +100,7 @@ export default function Sidebar() {
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-100 px-4">
           <Link href="/admin-panel" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900">
-              <ShieldCheck className="h-4 w-4 text-white" />
+              <PineconeLogo />
             </div>
             {loading ? (
               <div className="h-4 w-20 rounded bg-gray-200 animate-pulse" />
@@ -112,8 +120,14 @@ export default function Sidebar() {
               onClick={() => setProfileOpen((o) => !o)}
               className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-gray-50 active:scale-[0.99]"
             >
-              {loading ? (
+              {loading || !isUserLoaded ? (
                 <div className="h-9 w-9 shrink-0 rounded-full bg-gray-200 animate-pulse" />
+              ) : user?.imageUrl ? (
+                <img
+                  src={user.imageUrl}
+                  alt={profileName}
+                  className="h-9 w-9 shrink-0 rounded-full object-cover"
+                />
               ) : (
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-800 text-sm font-semibold text-white">
                   {profileName.charAt(0).toUpperCase()}
@@ -127,19 +141,27 @@ export default function Sidebar() {
                   </>
                 ) : (
                   <>
-                    <p className="truncate text-sm font-medium text-gray-900">{profileName}</p>
-                    <p className="truncate text-xs text-gray-400">{profileRole}</p>
+                    <p className="truncate text-sm font-medium text-gray-900">
+                      {profileName}
+                    </p>
+                    <p className="truncate text-xs text-gray-400">
+                      {profileRole}
+                    </p>
                   </>
                 )}
               </div>
-              <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`} />
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`}
+              />
             </button>
             <div
               className={`absolute left-0 right-0 top-full z-20 mt-1.5 origin-top rounded-lg border border-gray-100 bg-white py-1 shadow-lg transition-all duration-200 ease-out ${
-                profileOpen ? "visible scale-100 opacity-100" : "invisible scale-95 opacity-0 pointer-events-none"
+                profileOpen
+                  ? "visible scale-100 opacity-100"
+                  : "invisible scale-95 opacity-0 pointer-events-none"
               }`}
             >
-<Link
+              <Link
                 href="/employee-panel/dashboard"
                 onClick={() => setProfileOpen(false)}
                 className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
@@ -162,11 +184,17 @@ export default function Sidebar() {
           </div>
 
           <nav className="space-y-0.5">
-            <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">Menu</p>
+            <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">
+              Menu
+            </p>
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
-                <Link key={item.href} href={item.href} className={navLinkClass(item.href)}>
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={navLinkClass(item.href)}
+                >
                   <Icon className="h-5 w-5 shrink-0" />
                   <span>{item.label}</span>
                 </Link>
