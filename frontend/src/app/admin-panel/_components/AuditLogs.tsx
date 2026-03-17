@@ -9,6 +9,7 @@ import {
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
 import PageLoading from "@/app/_components/PageLoading";
+import { UserAvatar } from "@clerk/nextjs";
 
 const ACTION_TYPE_OPTIONS = [
   { value: "", label: "All Actions" },
@@ -563,12 +564,17 @@ export default function AuditLogs() {
                           onClick={() => setSelectedLog(log)}
                         >
                           <td className="px-5 py-3 text-slate-700">
-                            <span className="font-medium">{actorName}</span>
-                            {actorEmployee?.email && (
-                              <span className="ml-1.5 text-xs text-slate-400">
-                                {actorEmployee.email}
-                              </span>
-                            )}
+                            <div className="flex items-center gap-3">
+                              <UserAvatar />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{actorName}</span>
+                                {actorEmployee?.email && (
+                                  <span className="text-xs text-slate-400">
+                                    {actorEmployee.email}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </td>
                           <td className="px-5 py-3 text-slate-700">
                             {formatRole(log.actorRole)}
