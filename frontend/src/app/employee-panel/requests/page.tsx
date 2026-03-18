@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowRight, Eye, ExternalLink, FileCheck, X } from "lucide-react";
+import { Check, Eye, ExternalLink, FileCheck, X } from "lucide-react";
 import Sidebar from "../_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
 import {
@@ -16,6 +16,8 @@ import {
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 
+// ── Constants ──────────────────────────────────────────────────────────────
+
 const CANCELLABLE_STATUSES = new Set([
   "pending",
   "awaiting_contract_acceptance",
@@ -23,42 +25,79 @@ const CANCELLABLE_STATUSES = new Set([
   "awaiting_finance_review",
 ]);
 
-function getStatusTone(status: string): string {
-  const s = status.toLowerCase();
-  if (s === "approved") return "bg-green-50 text-green-700 border-green-200";
-  if (s === "rejected" || s === "declined") return "bg-red-50 text-red-600 border-red-200";
-  if (s === "cancelled") return "bg-gray-100 text-gray-500 border-gray-200";
-  if (s === "hr_approved" || s === "finance_approved") return "bg-teal-50 text-teal-700 border-teal-200";
-  if (s === "awaiting_contract_acceptance") return "bg-amber-50 text-amber-700 border-amber-200";
-  return "bg-orange-50 text-orange-600 border-orange-200";
+// ── Status helpers ─────────────────────────────────────────────────────────
+
+function normalizeRequestStatus(status: string): string {
+  return status.toLowerCase().trim();
+}
+
+type StatusBadgeConfig = {
+  label: string;
+  className: string;
+};
+
+function getStatusBadgeConfig(status: string): StatusBadgeConfig {
+  const s = normalizeRequestStatus(status);
+  switch (s) {
+    case "approved":
+      return { label: "Approved", className: "bg-emerald-50 text-emerald-700 border border-emerald-200" };
+    case "rejected":
+      return { label: "Rejected", className: "bg-red-50 text-red-600 border border-red-200" };
+    case "declined":
+      return { label: "Declined", className: "bg-red-50 text-red-600 border border-red-200" };
+    case "cancelled":
+      return { label: "Cancelled", className: "bg-gray-100 text-gray-500 border border-gray-200" };
+    case "hr_approved":
+      return { label: "HR Approved", className: "bg-teal-50 text-teal-700 border border-teal-200" };
+    case "finance_approved":
+      return { label: "Finance Approved", className: "bg-teal-50 text-teal-700 border border-teal-200" };
+    case "awaiting_contract_acceptance":
+      return { label: "Contract Pending", className: "bg-amber-50 text-amber-700 border border-amber-200" };
+    case "awaiting_hr_review":
+      return { label: "HR Review", className: "bg-amber-50 text-amber-700 border border-amber-200" };
+    case "awaiting_finance_review":
+      return { label: "Finance Review", className: "bg-amber-50 text-amber-700 border border-amber-200" };
+    case "pending":
+      return { label: "Pending", className: "bg-amber-50 text-amber-700 border border-amber-200" };
+    default:
+      return {
+        label: status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " "),
+        className: "bg-gray-50 text-gray-600 border border-gray-200",
+      };
+  }
+}
+
+function getCardAccentClass(status: string): string {
+  const s = normalizeRequestStatus(status);
+  if (s === "approved" || s === "finance_approved") return "border-l-emerald-400";
+  if (s === "rejected" || s === "declined" || s === "cancelled") return "border-l-red-300";
+  if (s === "hr_approved") return "border-l-teal-400";
+  if (s === "awaiting_contract_acceptance") return "border-l-amber-400";
+  return "border-l-amber-400";
+}
+
+function canCancelRequest(status: string): boolean {
+  return CANCELLABLE_STATUSES.has(normalizeRequestStatus(status));
 }
 
 function getStatusTooltip(status: string): string | null {
-  switch (status.toLowerCase()) {
-    case "awaiting_hr_review": return "Your request is in the HR review queue. The HR team will process it shortly — no action needed from you.";
-    case "awaiting_finance_review": return "Your request is in the Finance review queue. The Finance team will process it — no action needed from you.";
-    case "hr_approved": return "HR has approved your request. It is now awaiting Finance review.";
-    case "finance_approved": return "Finance has approved your request. It is being finalised.";
-    case "cancelled": return "This request was cancelled.";
-    default: return null;
+  switch (normalizeRequestStatus(status)) {
+    case "awaiting_hr_review":
+      return "Your request is in the HR review queue. The HR team will process it shortly — no action needed from you.";
+    case "awaiting_finance_review":
+      return "Your request is in the Finance review queue. The Finance team will process it — no action needed from you.";
+    case "hr_approved":
+      return "HR has approved your request. It is now awaiting Finance review.";
+    case "finance_approved":
+      return "Finance has approved your request. It is being finalised.";
+    case "cancelled":
+      return "This request was cancelled.";
+    default:
+      return null;
   }
 }
 
-function formatStatusLabel(status: string): string {
-  switch (status.toLowerCase()) {
-    case "awaiting_contract_acceptance": return "Contract Pending";
-    case "awaiting_hr_review": return "HR Review";
-    case "awaiting_finance_review": return "Finance Review";
-    case "hr_approved": return "HR Approved";
-    case "finance_approved": return "Finance Approved";
-    case "approved": return "Approved";
-    case "rejected": return "Rejected";
-    case "cancelled": return "Cancelled";
-    default: return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
-  }
-}
-
-// ── Request Timeline ───────────────────────────────────────────────────────
+// ── Timeline ───────────────────────────────────────────────────────────────
 
 type StepState = "done" | "active" | "waiting" | "failed";
 type TimelineStep = { id: string; label: string; state: StepState };
@@ -71,8 +110,9 @@ function buildTimeline(
   const p = (policy ?? "hr").toLowerCase();
   const rc = requiresContract ?? false;
   const isRejected = status === "rejected";
+  const isDeclined = status === "declined";
   const isCancelled = status === "cancelled";
-  const isTerminal = isRejected || isCancelled;
+  const isTerminal = isRejected || isDeclined || isCancelled;
 
   const stepIds: string[] = ["submitted"];
   if (rc) stepIds.push("contract");
@@ -99,23 +139,33 @@ function buildTimeline(
       break;
     case "approved":
     case "rejected":
+    case "declined":
     case "cancelled":
       activeIdx = stepIds.length;
       break;
     default:
-      activeIdx = Math.max(1,
+      activeIdx = Math.max(
+        1,
         stepIds.indexOf("hr_review") >= 0
           ? stepIds.indexOf("hr_review")
           : stepIds.indexOf("finance_review"),
       );
   }
 
+  const doneLabel = isRejected
+    ? "Rejected"
+    : isDeclined
+      ? "Declined"
+      : isCancelled
+        ? "Cancelled"
+        : "Approved";
+
   const LABELS: Record<string, string> = {
     submitted: "Submitted",
     contract: "Contract",
     hr_review: "HR Review",
     finance_review: "Finance",
-    done: isRejected ? "Rejected" : isCancelled ? "Cancelled" : "Approved",
+    done: doneLabel,
   };
 
   return stepIds.map((id, idx): TimelineStep => {
@@ -136,26 +186,41 @@ function buildTimeline(
 }
 
 function TimelineDot({ state }: { state: StepState }) {
-  if (state === "done")
+  if (state === "done") {
     return (
-      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gray-300 text-white text-[9px] font-bold shrink-0">
-        ✓
+      <span
+        aria-hidden="true"
+        className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shrink-0"
+      >
+        <Check className="h-2.5 w-2.5" strokeWidth={2.5} />
       </span>
     );
-  if (state === "active")
+  }
+  if (state === "active") {
     return (
-      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 shrink-0">
+      <span
+        aria-hidden="true"
+        className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 ring-2 ring-amber-100 shrink-0"
+      >
         <span className="h-1.5 w-1.5 rounded-full bg-white" />
       </span>
     );
-  if (state === "failed")
+  }
+  if (state === "failed") {
     return (
-      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-red-400 text-white text-[9px] font-bold shrink-0">
-        ✕
+      <span
+        aria-hidden="true"
+        className="flex h-5 w-5 items-center justify-center rounded-full bg-red-100 text-red-500 shrink-0"
+      >
+        <X className="h-2.5 w-2.5" strokeWidth={2.5} />
       </span>
     );
+  }
   return (
-    <span className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-gray-200 bg-white shrink-0" />
+    <span
+      aria-hidden="true"
+      className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-gray-200 bg-white shrink-0"
+    />
   );
 }
 
@@ -172,28 +237,36 @@ function RequestTimeline({
     () => buildTimeline(status, policy, requiresContract),
     [status, policy, requiresContract],
   );
+
   return (
-    <div className="flex items-center gap-1 flex-wrap">
+    <div className="flex items-start">
       {steps.map((step, i) => (
-        <div key={step.id} className="flex items-center gap-1">
-          <div className="flex items-center gap-1.5">
+        <Fragment key={step.id}>
+          <div className="flex flex-col items-center gap-1 shrink-0">
             <TimelineDot state={step.state} />
             <span
-              className={`text-xs font-medium whitespace-nowrap ${
+              className={`text-[9px] font-medium whitespace-nowrap leading-tight text-center ${
                 step.state === "active"
                   ? "text-amber-600"
-                  : step.state === "failed"
-                    ? "text-red-500"
-                    : "text-gray-400"
+                  : step.state === "done"
+                    ? "text-emerald-500"
+                    : step.state === "failed"
+                      ? "text-red-500"
+                      : "text-gray-400"
               }`}
             >
               {step.label}
             </span>
           </div>
           {i < steps.length - 1 && (
-            <ArrowRight className="h-3 w-3 text-gray-200 shrink-0" />
+            <div
+              aria-hidden="true"
+              className={`flex-1 h-px mt-2.5 mx-1.5 rounded-full ${
+                step.state === "done" ? "bg-emerald-200" : "bg-gray-200"
+              }`}
+            />
           )}
-        </div>
+        </Fragment>
       ))}
     </div>
   );
@@ -228,7 +301,10 @@ function ContractAcceptModal({
       aria-modal="true"
       onClick={onClose}
     >
-      <div className="flex w-full max-w-2xl flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="flex w-full max-w-2xl flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-4">
           <div>
             <h2 className="text-base font-semibold text-gray-900">Review & Accept Contract</h2>
@@ -263,7 +339,6 @@ function ContractAcceptModal({
             </div>
           </div>
         ) : state.requiresContract ? (
-          /* Benefit requires a contract but none is active — block acceptance */
           <div className="flex flex-col items-center justify-center gap-3 px-6 py-10 bg-red-50 border-b border-red-100">
             <div className="rounded-full bg-red-100 p-4">
               <X className="h-7 w-7 text-red-400" />
@@ -285,8 +360,7 @@ function ContractAcceptModal({
           </div>
         )}
 
-        {/* Only show acceptance controls when a contract can actually be reviewed */}
-        {(!state.requiresContract || state.viewContractUrl) ? (
+        {!state.requiresContract || state.viewContractUrl ? (
           <div className="border-t border-gray-100 px-6 py-4 bg-white">
             <label className="flex cursor-pointer items-start gap-3 text-sm text-gray-700">
               <input
@@ -295,7 +369,10 @@ function ContractAcceptModal({
                 onChange={(e) => setAccepted(e.target.checked)}
                 className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-blue-600"
               />
-              <span>I have read and agree to the contract terms and conditions. This acceptance will be legally recorded.</span>
+              <span>
+                I have read and agree to the contract terms and conditions. This acceptance will be
+                legally recorded.
+              </span>
             </label>
 
             <div className="mt-4 flex gap-3">
@@ -344,7 +421,10 @@ function RequestsContent() {
   const { data: benefitsData } = useGetBenefitsQuery();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [contractModal, setContractModal] = useState<ContractModalState | null>(null);
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const [cancelRequest] = useCancelBenefitRequestMutation({
     refetchQueries: [{ query: GetBenefitRequestsDocument }],
@@ -364,19 +444,23 @@ function RequestsContent() {
     refetchQueries: [{ query: GetBenefitRequestsDocument }],
     onCompleted: () => {
       setContractModal(null);
-      setFeedback({ type: "success", message: "Contract accepted. Your request is now under review." });
+      setFeedback({
+        type: "success",
+        message: "Contract accepted. Your request is now under review.",
+      });
       setTimeout(() => setFeedback(null), 5000);
     },
     onError: (err) => {
       setContractModal(null);
-      setFeedback({ type: "error", message: err.message ?? "Failed to accept contract. Please try again." });
+      setFeedback({
+        type: "error",
+        message: err.message ?? "Failed to accept contract. Please try again.",
+      });
       setTimeout(() => setFeedback(null), 6000);
     },
   });
 
-  const benefitsById = new Map(
-    (benefitsData?.benefits ?? []).map((b) => [b.id, b]),
-  );
+  const benefitsById = new Map((benefitsData?.benefits ?? []).map((b) => [b.id, b]));
 
   const REQUEST_STATUS_ORDER: Record<string, number> = {
     awaiting_hr_review: 0,
@@ -391,24 +475,29 @@ function RequestsContent() {
     approved: 2,
   };
 
-  const requests = (requestsData?.benefitRequests ?? []).map((req) => {
-    const benefit = benefitsById.get(req.benefitId);
-    const name = benefit?.name ?? req.benefitId;
-    const vendor = benefit?.vendorName ?? "";
-    return {
-      id: req.id,
-      benefitId: req.benefitId,
-      benefitLabel: vendor ? `${name} · ${vendor}` : name,
-      status: req.status,
-      requestDate: req.createdAt?.split("T")[0] ?? "—",
-      updatedDate: req.updatedAt?.split("T")[0] ?? null,
-      reviewer: req.reviewedBy,
-      declineReason: req.declineReason,
-      viewContractUrl: req.viewContractUrl,
-      approvalPolicy: benefit?.approvalPolicy ?? "hr",
-      requiresContract: benefit?.requiresContract ?? false,
-    };
-  }).sort((a, b) => (REQUEST_STATUS_ORDER[a.status] ?? 1) - (REQUEST_STATUS_ORDER[b.status] ?? 1));
+  const requests = (requestsData?.benefitRequests ?? [])
+    .map((req) => {
+      const benefit = benefitsById.get(req.benefitId);
+      const name = benefit?.name ?? req.benefitId;
+      const vendor = benefit?.vendorName ?? "";
+      return {
+        id: req.id,
+        benefitId: req.benefitId,
+        benefitLabel: vendor ? `${name} · ${vendor}` : name,
+        status: req.status,
+        requestDate: req.createdAt?.split("T")[0] ?? "—",
+        updatedDate: req.updatedAt?.split("T")[0] ?? null,
+        reviewer: req.reviewedBy,
+        declineReason: req.declineReason,
+        viewContractUrl: req.viewContractUrl,
+        approvalPolicy: benefit?.approvalPolicy ?? "hr",
+        requiresContract: benefit?.requiresContract ?? false,
+      };
+    })
+    .sort(
+      (a, b) =>
+        (REQUEST_STATUS_ORDER[a.status] ?? 1) - (REQUEST_STATUS_ORDER[b.status] ?? 1),
+    );
 
   const loading = employeeLoading || requestsLoading;
 
@@ -419,7 +508,9 @@ function RequestsContent() {
           state={contractModal}
           onClose={() => setContractModal(null)}
           onConfirm={() => {
-            confirmContract({ variables: { requestId: contractModal.requestId, contractAccepted: true } });
+            confirmContract({
+              variables: { requestId: contractModal.requestId, contractAccepted: true },
+            });
           }}
           confirming={confirming}
         />
@@ -450,15 +541,17 @@ function RequestsContent() {
               </div>
             )}
 
-            <div className="mt-6 space-y-3">
+            <div className="mt-6 space-y-4">
               {loading ? (
-                <div className="rounded-xl border border-gray-100 bg-white px-6 py-12 text-center">
+                <div className="rounded-2xl border border-gray-100 bg-white px-6 py-12 text-center">
                   <PageLoading inline message="Loading your requests…" />
                 </div>
               ) : requests.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-gray-200 bg-white px-6 py-14 text-center">
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-14 text-center">
                   <p className="text-sm font-medium text-gray-600">No requests yet</p>
-                  <p className="mt-1 text-xs text-gray-400">Once you request a benefit, it will appear here.</p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Once you request a benefit, it will appear here.
+                  </p>
                   <Link
                     href="/employee-panel/mybenefits"
                     className="mt-4 inline-block text-sm font-medium text-blue-600 hover:underline"
@@ -468,42 +561,56 @@ function RequestsContent() {
                 </div>
               ) : (
                 requests.map((req) => {
-                  const isCancellable = CANCELLABLE_STATUSES.has(req.status.toLowerCase());
-                  const isContractPending = req.status.toLowerCase() === "awaiting_contract_acceptance";
-                  const isDeclined = req.status === "rejected" || req.status === "declined";
+                  const isCancellable = canCancelRequest(req.status);
+                  const isContractPending =
+                    normalizeRequestStatus(req.status) === "awaiting_contract_acceptance";
+                  const isDeclined =
+                    req.status === "rejected" || req.status === "declined";
+                  const badge = getStatusBadgeConfig(req.status);
+                  const accentClass = getCardAccentClass(req.status);
+                  const tooltip = getStatusTooltip(req.status);
 
                   return (
                     <div
                       key={req.id}
-                      className="overflow-hidden rounded-xl border border-gray-200 bg-white transition hover:border-gray-300 hover:shadow-sm"
+                      className={`overflow-hidden rounded-2xl border border-gray-200 border-l-4 ${accentClass} bg-white shadow-sm hover:shadow-md transition-shadow`}
                     >
-                      {/* Header */}
-                      <div className="flex items-start justify-between gap-4 px-5 pt-4 pb-3">
-                        <div className="min-w-0">
-                          <p className="font-medium text-gray-900 truncate">{req.benefitLabel}</p>
-                          <p className="mt-0.5 text-xs text-gray-400">
-                            Submitted {req.requestDate}
-                            {req.updatedDate && req.updatedDate !== req.requestDate && (
-                              <span className="ml-2 text-gray-300">· Updated {req.updatedDate}</span>
+                      {/* Top row: title · status badge · reviewer · date */}
+                      <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-3">
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
+                          <h2 className="text-base font-semibold text-gray-900">
+                            {req.benefitLabel}
+                          </h2>
+                          <div className="relative group">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold cursor-default ${badge.className}`}
+                            >
+                              {badge.label}
+                            </span>
+                            {tooltip && (
+                              <div className="absolute left-0 top-full mt-1.5 z-10 hidden group-hover:block w-64 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 shadow-lg">
+                                {tooltip}
+                              </div>
                             )}
-                          </p>
-                        </div>
-                        <div className="relative group shrink-0">
-                          <span className={`inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium cursor-default ${getStatusTone(req.status)}`}>
-                            {formatStatusLabel(req.status)}
-                          </span>
-                          {getStatusTooltip(req.status) && (
-                            <div className="absolute right-0 top-full mt-1.5 z-10 hidden group-hover:block w-64 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 shadow-lg">
-                              {getStatusTooltip(req.status)}
-                            </div>
+                          </div>
+                          {req.reviewer && (
+                            <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-500">
+                              Reviewed by {req.reviewer}
+                            </span>
                           )}
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-xs text-gray-400 whitespace-nowrap">
+                            Submitted {req.requestDate}
+                          </p>
                         </div>
                       </div>
 
                       {/* Decline reason */}
                       {isDeclined && req.declineReason && (
                         <div className="mx-5 mb-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700">
-                          <span className="font-medium">Reason: </span>{req.declineReason}
+                          <span className="font-medium">Reason: </span>
+                          {req.declineReason}
                         </div>
                       )}
 
@@ -511,7 +618,8 @@ function RequestsContent() {
                       {isContractPending && (
                         <div className="mx-5 mb-3 flex items-center justify-between gap-3 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2">
                           <p className="text-xs text-amber-700">
-                            Action required — please review and accept the vendor contract to continue.
+                            Action required — please review and accept the vendor contract to
+                            continue.
                           </p>
                           <button
                             type="button"
@@ -525,43 +633,44 @@ function RequestsContent() {
                             }
                             className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-amber-700"
                           >
-                            <FileCheck className="h-3.5 w-3.5" />
+                            <FileCheck className="h-3.5 w-3.5" aria-hidden="true" />
                             Review & Accept
                           </button>
                         </div>
                       )}
 
-                      {/* Footer */}
-                      <div className="flex items-center gap-2 border-t border-gray-50 px-5 py-2.5">
-                        <Link
-                          href={`/employee-panel/benefits/${req.benefitId}`}
-                          className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-800"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          View Benefit
-                        </Link>
-                        {req.reviewer && (
-                          <>
-                            <span className="text-xs text-gray-200">·</span>
-                            <span className="text-xs text-gray-400">Reviewed by {req.reviewer}</span>
-                          </>
-                        )}
-                        <div className="flex-1" />
-                        {isCancellable && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!window.confirm("Cancel this benefit request?")) return;
-                              setCancellingId(req.id);
-                              cancelRequest({ variables: { requestId: req.id } });
-                            }}
-                            disabled={cancellingId === req.id}
-                            className="inline-flex items-center gap-1 rounded px-2 py-1.5 text-xs font-medium text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
+                      {/* Timeline + actions — single row */}
+                      <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-4 py-3">
+                        <div className="flex-1 min-w-[160px]">
+                          <RequestTimeline
+                            status={req.status}
+                            policy={req.approvalPolicy}
+                            requiresContract={req.requiresContract}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {isCancellable && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!window.confirm("Cancel this benefit request?")) return;
+                                setCancellingId(req.id);
+                                cancelRequest({ variables: { requestId: req.id } });
+                              }}
+                              disabled={cancellingId === req.id}
+                              className="inline-flex items-center justify-center rounded-md border border-red-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 shadow-sm transition hover:bg-red-50 hover:border-red-300 disabled:opacity-50 whitespace-nowrap"
+                            >
+                              {cancellingId === req.id ? "Cancelling…" : "Cancel Request"}
+                            </button>
+                          )}
+                          <Link
+                            href={`/employee-panel/benefits/${req.benefitId}`}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-md border border-gray-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-600 shadow-sm transition hover:bg-gray-50 hover:border-gray-300 whitespace-nowrap"
                           >
-                            <X className="h-3.5 w-3.5" />
-                            {cancellingId === req.id ? "Cancelling…" : "Cancel Request"}
-                          </button>
-                        )}
+                            <Eye className="h-3 w-3" aria-hidden="true" />
+                            View Benefit
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   );
