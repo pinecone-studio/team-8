@@ -105,6 +105,7 @@ query GetBenefitRequests {
     repaymentMonths
     employeeApprovedAt
     declineReason
+    employeeContractKey
     createdAt
     updatedAt
     viewContractUrl

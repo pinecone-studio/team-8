@@ -69,6 +69,7 @@ export const benefitTypeDefs = gql`
     repaymentMonths: Int
     employeeApprovedAt: String
     declineReason: String
+    employeeContractKey: String
     createdAt: String!
     updatedAt: String!
     viewContractUrl: String
@@ -154,6 +155,7 @@ export const benefitTypeDefs = gql`
     benefitId: String!
     requestedAmount: Int
     repaymentMonths: Int
+    employeeContractKey: String
   }
 
   input CreateEligibilityRuleInput {

@@ -7,6 +7,7 @@ import { AlertTriangle, CheckCircle2, Clock, ExternalLink, Upload, X } from "luc
 import PageLoading from "@/app/_components/PageLoading";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
+import { getContractProxyUrl } from "@/lib/contracts";
 
 const GET_CONTRACTS = gql`
   query Contracts {
@@ -203,7 +204,7 @@ export default function VendorContracts() {
       <section className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold text-white">
+            <h1 className="text-xl font-semibold text-gray-900">
               Vendor Contract Management
             </h1>
             <p className="mt-1 text-sm text-gray-500">
@@ -405,7 +406,7 @@ export default function VendorContracts() {
                       <td className="px-5 py-4">
                         {row.viewUrl ? (
                           <a
-                            href={row.viewUrl}
+                            href={getContractProxyUrl(row.viewUrl) ?? row.viewUrl}
                             target="_blank"
                             rel="noreferrer"
                             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition active:scale-95 ${

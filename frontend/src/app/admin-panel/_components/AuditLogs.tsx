@@ -65,7 +65,7 @@ const ACTION_TONE: Record<string, string> = {
   OKR_SYNC: "bg-lime-50 text-lime-700",
 };
 
-// ── DateRangePicker helpers ───────────────────────────────────────────────────
+
 
 const MONTH_NAMES = [
   "January",

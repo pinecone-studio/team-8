@@ -134,7 +134,7 @@ export default function DashboardPage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
 
-      <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
+      <div className="flex flex-1 flex-col items-center">
         <main className="w-full max-w-7xl px-8 py-8">
           <PageHeader
             title={`Good to see you, ${employee?.name ?? "Employee"}`}

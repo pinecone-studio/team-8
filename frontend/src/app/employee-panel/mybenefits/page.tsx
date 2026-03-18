@@ -114,9 +114,9 @@ export default function Mybenefits({ params }: PageProps) {
     <div className="flex min-h-screen bg-background">
       <Sidebar />
 
-      <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
+      <div className="flex flex-1 flex-col items-center">
         <main className="w-full max-w-7xl p-8">
-          <h1 className="text-xl font-semibold text-white">My Benefits</h1>
+          <h1 className="text-xl font-semibold text-gray-900">My Benefits</h1>
           <p className="mt-1 text-sm text-gray-500">
             Benefits you are currently enrolled in.
           </p>

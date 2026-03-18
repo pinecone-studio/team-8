@@ -14,6 +14,7 @@ import {
   GetBenefitRequestsDocument,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
+import { getContractProxyUrl } from "@/lib/contracts";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -348,6 +349,7 @@ function ContractAcceptModal({
   confirming: boolean;
 }) {
   const [accepted, setAccepted] = useState(false);
+  const contractUrl = getContractProxyUrl(state.viewContractUrl);
 
   return (
     <div
@@ -374,16 +376,16 @@ function ContractAcceptModal({
           </button>
         </div>
 
-        {state.viewContractUrl ? (
+        {contractUrl ? (
           <div className="flex flex-col flex-1 overflow-hidden">
             <iframe
-              src={state.viewContractUrl}
+              src={contractUrl}
               className="flex-1 min-h-[400px] border-none bg-gray-50"
               title="Contract"
             />
             <div className="px-6 py-2 border-t border-gray-100">
               <a
-                href={state.viewContractUrl}
+                href={contractUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
@@ -539,6 +541,28 @@ function RequestsContent() {
       const benefit = benefitsById.get(req.benefitId);
       const name = benefit?.name ?? req.benefitId;
       const vendor = benefit?.vendorName ?? "";
+
+      // Compute payment info for approved requests
+      let paymentInfo: {
+        total: string;
+        companyPays: string;
+        employeePays: string;
+        subsidyPercent: number;
+      } | null = null;
+      if (benefit?.unitPrice && benefit.subsidyPercent !== undefined) {
+        const unitPrice = benefit.unitPrice;
+        const subsidyPercent = benefit.subsidyPercent;
+        const companyAmount = Math.round(unitPrice * subsidyPercent / 100);
+        const employeeAmount = unitPrice - companyAmount;
+        const fmt = (n: number) => n.toLocaleString("mn-MN") + "₮";
+        paymentInfo = {
+          total: fmt(unitPrice),
+          companyPays: fmt(companyAmount),
+          employeePays: fmt(employeeAmount),
+          subsidyPercent,
+        };
+      }
+
       return {
         id: req.id,
         benefitId: req.benefitId,
@@ -551,6 +575,7 @@ function RequestsContent() {
         viewContractUrl: req.viewContractUrl,
         approvalPolicy: benefit?.approvalPolicy ?? "hr",
         requiresContract: benefit?.requiresContract ?? false,
+        paymentInfo,
       };
     })
     .sort(
@@ -577,7 +602,7 @@ function RequestsContent() {
 
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
+        <div className="flex flex-1 flex-col items-center">
           <main className="w-full max-w-5xl p-8">
             {loading ? (
               <div>
@@ -691,6 +716,27 @@ function RequestsContent() {
                         <div className="mx-5 mb-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700">
                           <span className="font-medium">Reason: </span>
                           {req.declineReason}
+                        </div>
+                      )}
+
+                      {/* Payment section — shown only when approved */}
+                      {normalizeRequestStatus(req.status) === "approved" && req.paymentInfo && (
+                        <div className="mx-5 mb-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-blue-500 mb-2">Payment Breakdown</p>
+                          <dl className="space-y-1.5 text-xs">
+                            <div className="flex justify-between">
+                              <dt className="text-blue-700">Total Amount</dt>
+                              <dd className="font-semibold text-blue-900">{req.paymentInfo.total}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt className="text-blue-700">Company Pays ({req.paymentInfo.subsidyPercent}%)</dt>
+                              <dd className="font-semibold text-emerald-700">{req.paymentInfo.companyPays}</dd>
+                            </div>
+                            <div className="flex justify-between border-t border-blue-100 pt-1.5">
+                              <dt className="font-medium text-blue-800">Your Payment</dt>
+                              <dd className="font-bold text-blue-900">{req.paymentInfo.employeePays}</dd>
+                            </div>
+                          </dl>
                         </div>
                       )}
 

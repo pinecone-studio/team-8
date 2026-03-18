@@ -33,12 +33,13 @@ export const requestBenefit = async (
       benefitId: string;
       requestedAmount?: number | null;
       repaymentMonths?: number | null;
+      employeeContractKey?: string | null;
     };
   },
   { db, env, baseUrl, currentEmployee }: GraphQLContext,
 ) => {
   const employee = requireAuth(currentEmployee);
-  const { benefitId, requestedAmount, repaymentMonths } = input;
+  const { benefitId, requestedAmount, repaymentMonths, employeeContractKey } = input;
 
   const benefitRows = await db
     .select()
@@ -101,6 +102,7 @@ export const requestBenefit = async (
       status: initialStatus,
       requestedAmount: requestedAmount ?? null,
       repaymentMonths: repaymentMonths ?? null,
+      employeeContractKey: employeeContractKey ?? null,
     })
     .returning();
 

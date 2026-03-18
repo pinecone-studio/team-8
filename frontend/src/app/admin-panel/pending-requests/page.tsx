@@ -12,6 +12,7 @@ import {
   GetAllBenefitRequestsDocument,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
+import { getContractProxyUrl } from "@/lib/contracts";
 import {
   isAdminEmployee,
   isHrAdmin,
@@ -237,7 +238,7 @@ export default function PendingRequestsPage() {
     return (
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar />
-        <div className="flex flex-1 flex-col items-center justify-center bg-[linear-gradient(180deg,#0a116d_0%,#ffffff_100%)]">
+        <div className="flex flex-1 flex-col items-center justify-center">
           <p className="text-muted-foreground">Admin access required.</p>
         </div>
       </div>
@@ -296,7 +297,7 @@ export default function PendingRequestsPage() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#0a116d_0%,#ffffff_100%)]">
+      <div className="flex flex-1 flex-col items-center">
         <main className="w-full max-w-7xl p-8">
           <div className="flex items-end justify-between gap-4">
             {requestsLoading ? (
@@ -646,7 +647,9 @@ function RequestDetailModal({
 
   const activeContract =
     contractsData?.contracts?.find((c) => c.isActive) ?? null;
-  const contractUrl = req.viewContractUrl ?? activeContract?.viewUrl ?? null;
+  const contractUrl = getContractProxyUrl(
+    req.viewContractUrl ?? activeContract?.viewUrl ?? null,
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

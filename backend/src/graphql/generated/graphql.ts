@@ -137,6 +137,7 @@ export type BenefitRequest = {
   createdAt: Scalars['String']['output'];
   declineReason?: Maybe<Scalars['String']['output']>;
   employeeApprovedAt?: Maybe<Scalars['String']['output']>;
+  employeeContractKey?: Maybe<Scalars['String']['output']>;
   employeeId: Scalars['String']['output'];
   id: Scalars['String']['output'];
   repaymentMonths?: Maybe<Scalars['Int']['output']>;
@@ -572,6 +573,7 @@ export type QueryRuleProposalsArgs = {
 
 export type RequestBenefitInput = {
   benefitId: Scalars['String']['input'];
+  employeeContractKey?: InputMaybe<Scalars['String']['input']>;
   repaymentMonths?: InputMaybe<Scalars['Int']['input']>;
   requestedAmount?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -898,6 +900,7 @@ export type BenefitRequestResolvers<ContextType = GraphQLContext, ParentType ext
   createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   declineReason?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   employeeApprovedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  employeeContractKey?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   employeeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   repaymentMonths?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
