@@ -19,6 +19,8 @@ import { isAdminEmployee } from "@/app/admin-panel/_lib/access";
 import NotificationBell from "@/app/_components/NotificationBell";
 import PineconeLogo from "@/app/_components/_icons/PineconeLogo";
 
+const SIDEBAR_STORAGE_KEY = "ui.employeeSidebarCollapsed.v1";
+
 function formatLabel(value: string | null | undefined) {
   if (!value) return "Employee";
   return value
@@ -47,7 +49,8 @@ export default function Sidebar() {
   const { employee, loading } = useCurrentEmployee();
   const hasAdminAccess = isAdminEmployee(employee);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
   const profileName = employee?.name ?? "Employee";
@@ -69,6 +72,37 @@ export default function Sidebar() {
     }
   }, [profileOpen]);
 
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(SIDEBAR_STORAGE_KEY);
+      if (saved === "1") setCollapsed(true);
+      if (saved === "0") setCollapsed(false);
+    } catch {
+      // ignore storage errors (e.g. blocked)
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SIDEBAR_STORAGE_KEY, collapsed ? "1" : "0");
+    } catch {
+      // ignore
+    }
+  }, [collapsed]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setMobileOpen(false);
+        setProfileOpen(false);
+      }
+    }
+    if (mobileOpen) {
+      window.addEventListener("keydown", onKeyDown);
+      return () => window.removeEventListener("keydown", onKeyDown);
+    }
+  }, [mobileOpen]);
+
   const isActive = (href: string) =>
     href === "/employee-panel/dashboard"
       ? pathname === href
@@ -85,10 +119,42 @@ export default function Sidebar() {
 
   return (
     <>
+      {/* Mobile: clickable left edge to open sidebar when closed */}
+      {!mobileOpen && (
+        <button
+          type="button"
+          className="fixed left-0 top-0 z-[9] hidden h-full w-5 cursor-pointer border-0 bg-transparent md:hidden"
+          aria-label="Open sidebar"
+          aria-expanded={false}
+          onClick={() => {
+            setMobileOpen(true);
+            setCollapsed(false);
+            setProfileOpen(false);
+          }}
+        />
+      )}
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-10 bg-black/40 backdrop-blur-[1px] md:hidden"
+          onClick={() => {
+            setMobileOpen(false);
+            setProfileOpen(false);
+          }}
+          aria-hidden
+        />
+      )}
+
       <aside
-        className={`fixed left-0 top-0 z-10 flex h-screen flex-col border-r border-gray-100 bg-white transition-all duration-200 ${sidebarW}`}
-        onMouseEnter={() => setCollapsed(false)}
-        onMouseLeave={() => { setCollapsed(true); setProfileOpen(false); }}
+        role={collapsed ? "button" : undefined}
+        tabIndex={collapsed ? 0 : undefined}
+        aria-label={collapsed ? "Expand sidebar" : undefined}
+        onClick={collapsed ? () => { setCollapsed(false); setProfileOpen(false); } : undefined}
+        onKeyDown={collapsed ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCollapsed(false); setProfileOpen(false); } } : undefined}
+        className={`fixed left-0 top-0 z-[11] flex h-screen flex-col border-r border-gray-100 bg-white transition-all duration-200 ${sidebarW} ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0 ${collapsed ? "cursor-pointer" : ""}`}
       >
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-100 px-4">
           <Link
@@ -100,7 +166,24 @@ export default function Sidebar() {
             </div>
             {!collapsed && <span className="font-semibold text-gray-900">Employee</span>}
           </Link>
-          {!collapsed && <NotificationBell />}
+          <div className={`flex items-center ${collapsed ? "justify-center" : "gap-1"}`}>
+            {!collapsed && <NotificationBell />}
+            {!collapsed && (
+              <button
+                type="button"
+                aria-label="Collapse sidebar"
+                aria-pressed={false}
+                onClick={() => {
+                  setCollapsed(true);
+                  setProfileOpen(false);
+                }}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 active:scale-[0.98]"
+                title="Collapse"
+              >
+                <ChevronDown className="h-4 w-4 rotate-90" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-2 py-4">
@@ -115,6 +198,10 @@ export default function Sidebar() {
                   key={item.href}
                   href={item.href}
                   title={collapsed ? item.label : undefined}
+                  onClick={() => {
+                    setMobileOpen(false);
+                    setProfileOpen(false);
+                  }}
                   className={`flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm font-medium transition active:scale-[0.98] ${collapsed ? "justify-center" : "gap-3"} ${
                     isActive(item.href)
                       ? "bg-gray-100 text-gray-900"
@@ -139,6 +226,10 @@ export default function Sidebar() {
                   key={item.href}
                   href={item.href}
                   title={collapsed ? item.label : undefined}
+                  onClick={() => {
+                    setMobileOpen(false);
+                    setProfileOpen(false);
+                  }}
                   className={`flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm font-medium transition active:scale-[0.98] ${collapsed ? "justify-center" : "gap-3"} ${
                     isActive(item.href)
                       ? "bg-gray-100 text-gray-900"
@@ -159,6 +250,8 @@ export default function Sidebar() {
               type="button"
               onClick={() => setProfileOpen((o) => !o)}
               className={`flex w-full items-center rounded-xl px-2 py-2.5 text-left transition hover:bg-gray-50 active:scale-[0.99] ${collapsed ? "justify-center" : "gap-2.5"}`}
+              aria-haspopup="menu"
+              aria-expanded={profileOpen}
             >
               {loading || !isUserLoaded ? (
                 <div className="h-9 w-9 shrink-0 rounded-full bg-gray-200 animate-pulse" />
@@ -200,6 +293,7 @@ export default function Sidebar() {
                   ? "visible scale-100 opacity-100"
                   : "invisible scale-95 opacity-0 pointer-events-none"
               }`}
+              role="menu"
             >
               {hasAdminAccess && (
                 <Link
@@ -218,6 +312,7 @@ export default function Sidebar() {
                   signOut({ redirectUrl: "/sign-in" });
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                role="menuitem"
               >
                 <LogOut className="h-4 w-4" />
                 <span>Sign out</span>
@@ -226,7 +321,7 @@ export default function Sidebar() {
           </div>
         </div>
       </aside>
-      <div className={`shrink-0 transition-all duration-200 ${sidebarW}`} aria-hidden />
+      <div className={`hidden shrink-0 transition-all duration-200 md:block ${sidebarW}`} aria-hidden />
     </>
   );
 }

@@ -664,8 +664,16 @@ function RequestDetailModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl max-h-[90vh]">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="flex w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-start justify-between border-b border-gray-100 px-6 py-4">
           <div>
@@ -873,13 +881,6 @@ function RequestDetailModal({
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-6 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-          >
-            Close
-          </button>
           <button
             type="button"
             onClick={onDecline}
