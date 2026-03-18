@@ -39,6 +39,21 @@ export const BenefitRequest = {
     const token = await createContractViewToken(env.CONTRACT_VIEW_TOKENS, active.r2ObjectKey);
     return getContractViewUrl(baseUrl, token);
   },
+
+  async employeeDocumentUrl(
+    parent: { employeeDocumentKey?: string | null },
+    _: unknown,
+    { env, baseUrl }: GraphQLContext,
+  ): Promise<string | null> {
+    if (!parent.employeeDocumentKey) return null;
+    if (!env.CONTRACT_VIEW_TOKENS) return null;
+    try {
+      const token = await createContractViewToken(env.CONTRACT_VIEW_TOKENS, parent.employeeDocumentKey);
+      return getContractViewUrl(baseUrl, token);
+    } catch {
+      return null;
+    }
+  },
 };
 
 /** Resolve BenefitEligibility.benefit from benefitId — D1 first, static config fallback */

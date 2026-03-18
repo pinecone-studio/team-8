@@ -65,6 +65,7 @@ query GetBenefitRequests {
     createdAt
     updatedAt
     viewContractUrl
+    employeeDocumentUrl
   }
 }
 
@@ -84,6 +85,7 @@ query GetAllBenefitRequests($status: String, $queue: String) {
     createdAt
     updatedAt
     viewContractUrl
+    employeeDocumentUrl
   }
 }
 

@@ -13,6 +13,7 @@ export const benefitRequests = sqliteTable("benefit_requests", {
   repaymentMonths: integer("repayment_months"),
   employeeApprovedAt: text("employee_approved_at"),
   declineReason: text("decline_reason"),
+  employeeDocumentKey: text("employee_document_key"),
   createdAt: text("created_at")
     .notNull()
     .$defaultFn(() => new Date().toISOString()),

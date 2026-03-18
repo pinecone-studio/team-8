@@ -18,6 +18,7 @@ import {
   Send,
   Shield,
   Trash2,
+  Upload,
   UserCheck,
   Wallet,
   Zap,
@@ -28,6 +29,8 @@ import {
   useProposeRuleChangeMutation,
   GetAdminBenefitsDocument,
 } from "@/graphql/generated/graphql";
+import { graphqlUri } from "@/lib/apollo-client";
+import { useAuth } from "@clerk/nextjs";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "../../_lib/access";
 
@@ -293,6 +296,7 @@ const CATEGORIES = ["wellness", "equipment", "financial", "career", "flexibility
 
 export default function CreateBenefitPage() {
   const router = useRouter();
+  const { getToken } = useAuth();
   const { employee } = useCurrentEmployee();
   const canCreate = isHrAdmin(employee);
 
@@ -304,6 +308,11 @@ export default function CreateBenefitPage() {
     vendorName: "",
   });
   const [rules, setRules] = useState<RuleRow[]>([]);
+  const [contract, setContract] = useState<{
+    file: File | null;
+    effectiveDate: string;
+    expiryDate: string;
+  }>({ file: null, effectiveDate: "", expiryDate: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -378,6 +387,25 @@ export default function CreateBenefitPage() {
         },
       });
       const benefitId = result.data?.createBenefit.id;
+
+      // Upload contract if provided
+      if (benefitId && contract.file && contract.effectiveDate && contract.expiryDate) {
+        const token = await getToken();
+        const baseUrl = graphqlUri.replace(/\/graphql\/?$/, "").replace(/\/$/, "");
+        const fd = new FormData();
+        fd.append("benefitId", benefitId);
+        fd.append("version", "1.0");
+        fd.append("effectiveDate", contract.effectiveDate);
+        fd.append("expiryDate", contract.expiryDate);
+        fd.append("vendorName", form.vendorName.trim() || "Vendor");
+        fd.append("file", contract.file);
+        await fetch(`${baseUrl}/api/contracts/upload`, {
+          method: "POST",
+          body: fd,
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+      }
+
       if (benefitId && rules.length > 0) {
         for (const rule of rules) {
           const fieldCfg = RULE_FIELDS.find((f) => f.key === rule.fieldKey)!;
@@ -700,6 +728,80 @@ export default function CreateBenefitPage() {
                     </p>
                   </div>
                 )}
+              </div>
+
+              {/* Step 4: Contract upload */}
+              <div className={`rounded-2xl border bg-white p-6 transition-opacity ${!selectedType ? "opacity-40 pointer-events-none" : "border-gray-100"}`}>
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">4</span>
+                  <h2 className="text-base font-semibold text-gray-900">Contract Upload</h2>
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">optional</span>
+                </div>
+                <p className="mb-5 ml-8 text-sm text-gray-400">
+                  Upload the vendor contract PDF. Employees will be able to view it from the benefit page.
+                </p>
+
+                <div className="flex flex-col gap-4">
+                  {/* File upload */}
+                  <label className={`flex cursor-pointer items-center gap-4 rounded-xl border-2 border-dashed p-5 transition hover:bg-gray-50 ${contract.file ? "border-gray-300 bg-gray-50" : "border-gray-200"}`}>
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${contract.file ? "bg-gray-200" : "bg-gray-100"}`}>
+                      <Upload className="h-5 w-5 text-gray-500" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      {contract.file ? (
+                        <>
+                          <p className="truncate text-sm font-medium text-gray-800">{contract.file.name}</p>
+                          <p className="text-xs text-gray-400">{(contract.file.size / 1024).toFixed(0)} KB</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm font-medium text-gray-700">Click to upload PDF</p>
+                          <p className="text-xs text-gray-400">Vendor contract document</p>
+                        </>
+                      )}
+                    </div>
+                    {contract.file && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); setContract((c) => ({ ...c, file: null })); }}
+                        className="shrink-0 rounded-lg px-2.5 py-1 text-xs text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                      >
+                        Remove
+                      </button>
+                    )}
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      className="sr-only"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] ?? null;
+                        setContract((c) => ({ ...c, file: f }));
+                      }}
+                    />
+                  </label>
+
+                  {/* Dates */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                      <p className="mb-1.5 text-xs font-medium text-gray-500">Effective Date</p>
+                      <input
+                        type="date"
+                        value={contract.effectiveDate}
+                        onChange={(e) => setContract((c) => ({ ...c, effectiveDate: e.target.value }))}
+                        className="w-full bg-transparent text-sm text-gray-800 focus:outline-none"
+                      />
+                    </div>
+                    <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                      <p className="mb-1.5 text-xs font-medium text-gray-500">Expiry Date</p>
+                      <input
+                        type="date"
+                        value={contract.expiryDate}
+                        onChange={(e) => setContract((c) => ({ ...c, expiryDate: e.target.value }))}
+                        className="w-full bg-transparent text-sm text-gray-800 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Submit */}

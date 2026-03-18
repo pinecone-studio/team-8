@@ -38,37 +38,42 @@ export const getContracts = async (
         .orderBy(desc(schema.contracts.effectiveDate));
 
   if (!canViewAllContracts) {
-    // Scope to contracts for benefits the employee is actively enrolled in
-    // or has a relevant in-flight / historical request for
-    const [enrollmentRows, requestRows] = await Promise.all([
-      db
-        .select({ benefitId: schema.employeeBenefitEnrollments.benefitId })
-        .from(schema.employeeBenefitEnrollments)
-        .where(
-          and(
-            eq(schema.employeeBenefitEnrollments.employeeId, employee.id),
-            eq(schema.employeeBenefitEnrollments.status, "active"),
+    // If querying a specific benefit, any authenticated employee can see its active contract
+    if (benefitId) {
+      rows = rows.filter((row) => row.isActive);
+    } else {
+      // Without benefitId: scope to contracts for benefits the employee is enrolled in
+      // or has a relevant in-flight / historical request for
+      const [enrollmentRows, requestRows] = await Promise.all([
+        db
+          .select({ benefitId: schema.employeeBenefitEnrollments.benefitId })
+          .from(schema.employeeBenefitEnrollments)
+          .where(
+            and(
+              eq(schema.employeeBenefitEnrollments.employeeId, employee.id),
+              eq(schema.employeeBenefitEnrollments.status, "active"),
+            ),
           ),
-        ),
-      db
-        .select({ benefitId: schema.benefitRequests.benefitId, status: schema.benefitRequests.status })
-        .from(schema.benefitRequests)
-        .where(eq(schema.benefitRequests.employeeId, employee.id)),
-    ]);
+        db
+          .select({ benefitId: schema.benefitRequests.benefitId, status: schema.benefitRequests.status })
+          .from(schema.benefitRequests)
+          .where(eq(schema.benefitRequests.employeeId, employee.id)),
+      ]);
 
-    const allowedBenefitIds = new Set<string>();
-    for (const row of enrollmentRows) {
-      allowedBenefitIds.add(row.benefitId);
-    }
-    for (const row of requestRows) {
-      if (CONTRACT_RELEVANT_STATUSES.has(row.status)) {
+      const allowedBenefitIds = new Set<string>();
+      for (const row of enrollmentRows) {
         allowedBenefitIds.add(row.benefitId);
       }
-    }
+      for (const row of requestRows) {
+        if (CONTRACT_RELEVANT_STATUSES.has(row.status)) {
+          allowedBenefitIds.add(row.benefitId);
+        }
+      }
 
-    rows = rows.filter(
-      (row) => row.isActive && allowedBenefitIds.has(row.benefitId),
-    );
+      rows = rows.filter(
+        (row) => row.isActive && allowedBenefitIds.has(row.benefitId),
+      );
+    }
   }
 
   // Preload benefit names from D1 for all benefitIds

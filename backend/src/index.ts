@@ -281,6 +281,107 @@ async function handleContractUpload(
   );
 }
 
+/** Employee upload: multipart form (requestId, file). */
+async function handleEmployeeDocumentUpload(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/api/requests/employee-document" || request.method !== "POST")
+    return null;
+
+  const db = createDb(env.DB);
+  const currentUser = await getCurrentUserFromRequest(request, env, db);
+
+  if (!currentUser.employee) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Authentication required." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return withCors(request, new Response("Invalid form", { status: 400 }));
+  }
+
+  const requestId = formData.get("requestId")?.toString();
+  const file = formData.get("file") as File | null;
+
+  if (!requestId || !file?.size) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Missing required fields: requestId, file" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (!env.CONTRACTS_BUCKET) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "R2 not configured." }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  // Verify the request belongs to this employee
+  const requestRows = await db
+    .select()
+    .from(schema.benefitRequests)
+    .where(eq(schema.benefitRequests.id, requestId));
+  const benefitRequest = requestRows[0];
+
+  if (!benefitRequest) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Request not found." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (benefitRequest.employeeId !== currentUser.employee.id) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Access denied." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const safe = (s: string) => s.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const filename = safe(file.name || "document.pdf");
+  const r2Key = `employee-docs/${safe(requestId)}/${filename}`;
+  const fileBuffer = await file.arrayBuffer();
+  await putContract(env.CONTRACTS_BUCKET, r2Key, fileBuffer, {
+    contentType: file.type || "application/pdf",
+  });
+
+  await db
+    .update(schema.benefitRequests)
+    .set({ employeeDocumentKey: r2Key, updatedAt: new Date().toISOString() })
+    .where(eq(schema.benefitRequests.id, requestId));
+
+  return withCors(
+    request,
+    new Response(JSON.stringify({ r2Key }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+}
+
 export default {
   async fetch(
     request: Request,
@@ -298,6 +399,8 @@ export default {
     if (contractView !== null) return contractView;
     const upload = await handleContractUpload(request, env);
     if (upload !== null) return upload;
+    const empDocUpload = await handleEmployeeDocumentUpload(request, env);
+    if (empDocUpload !== null) return empDocUpload;
     return withCors(request, await handler(request, env, ctx));
   },
 };

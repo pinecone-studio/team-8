@@ -68,6 +68,7 @@ export const benefitTypeDefs = gql`
     createdAt: String!
     updatedAt: String!
     viewContractUrl: String
+    employeeDocumentUrl: String
   }
 
   type Contract {

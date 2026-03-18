@@ -8,7 +8,7 @@ import StatusBadge from "../../_components/benefits/StatusBadge";
 import Sidebar from "../../_components/SideBar";
 import BenefitRequestModal from "../../_components/benefits/BenefitRequestModal";
 import PageLoading from "@/app/_components/PageLoading";
-import { useGetMyBenefitsQuery, useGetBenefitRequestsQuery } from "@/graphql/generated/graphql";
+import { useGetMyBenefitsQuery, useGetBenefitRequestsQuery, useGetContractsForBenefitQuery } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 
 function formatRuleLabel(value: string) {
@@ -240,6 +240,7 @@ export default function BenefitDetailPage() {
   const { loading: employeeLoading } = useCurrentEmployee();
   const { data, error, loading } = useGetMyBenefitsQuery();
   const { data: requestsData } = useGetBenefitRequestsQuery();
+  const { data: contractsData } = useGetContractsForBenefitQuery({ variables: { benefitId: id } });
 
   const benefitEligibility = data?.myBenefits.find((item) => item.benefitId === id);
 
@@ -369,6 +370,37 @@ export default function BenefitDetailPage() {
                   )}
                 </div>
               </div>
+
+              {/* Contract */}
+              {(() => {
+                const activeContract = contractsData?.contracts.find((c) => c.isActive);
+                if (!activeContract) return null;
+                return (
+                  <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                    <h2 className="text-base font-semibold text-gray-900">Contract</h2>
+                    <div className="mt-4 flex items-start justify-between gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-gray-800">{activeContract.vendorName}</p>
+                        <p className="text-xs text-gray-400">Version {activeContract.version}</p>
+                        <p className="text-xs text-gray-400">
+                          {activeContract.effectiveDate} — {activeContract.expiryDate}
+                        </p>
+                      </div>
+                      {activeContract.viewUrl && (
+                        <a
+                          href={activeContract.viewUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                          View PDF
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Right: action panel */}
