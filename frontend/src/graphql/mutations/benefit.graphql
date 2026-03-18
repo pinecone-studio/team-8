@@ -8,6 +8,7 @@ mutation RequestBenefit($input: RequestBenefitInput!) {
     requestedAmount
     repaymentMonths
     declineReason
+    employeeContractKey
     createdAt
     updatedAt
     viewContractUrl

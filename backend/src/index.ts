@@ -465,6 +465,78 @@ async function handleContractExpiryCheck(
 }
 
 /**
+ * Employee signed contract upload: POST /api/contracts/employee-upload
+ *
+ * Accepts multipart/form-data with `benefitId` and `file` fields.
+ * Stores the employee's signed contract in R2 under employee-contracts/{benefitId}/{employeeId}/.
+ * Returns the R2 key so the frontend can include it in the requestBenefit mutation.
+ * Auth: any authenticated employee.
+ */
+async function handleEmployeeContractUpload(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/api/contracts/employee-upload" || request.method !== "POST")
+    return null;
+
+  const db = createDb(env.DB);
+  const currentUser = await getCurrentUserFromRequest(request, env, db);
+
+  if (!currentUser.employee) {
+    return withCors(request, new Response(JSON.stringify({ error: "Authentication required." }), {
+      status: 401, headers: { "Content-Type": "application/json" },
+    }));
+  }
+
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return withCors(request, new Response("Invalid form", { status: 400 }));
+  }
+
+  const benefitId = formData.get("benefitId")?.toString();
+  const file = formData.get("file") as File | null;
+
+  if (!benefitId || !file?.size) {
+    return withCors(request, new Response(
+      JSON.stringify({ error: "Missing required fields: benefitId, file" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    ));
+  }
+
+  if (!env.CONTRACTS_BUCKET) {
+    return withCors(request, new Response(
+      JSON.stringify({ error: "R2 not configured." }),
+      { status: 503, headers: { "Content-Type": "application/json" } },
+    ));
+  }
+
+  const ext = file.name.split(".").pop() ?? "pdf";
+  const r2Key = `employee-contracts/${benefitId}/${currentUser.employee.id}/${Date.now()}.${ext}`;
+  const buffer = await file.arrayBuffer();
+  await env.CONTRACTS_BUCKET.put(r2Key, buffer, {
+    httpMetadata: { contentType: file.type || "application/pdf" },
+  });
+
+  await writeAuditLog({
+    db,
+    actor: currentUser.employee,
+    actionType: "CONTRACT_UPLOADED",
+    entityType: "employee_contract",
+    entityId: r2Key,
+    targetEmployeeId: currentUser.employee.id,
+    benefitId,
+    metadata: { r2Key, fileName: file.name },
+  });
+
+  return withCors(request, new Response(JSON.stringify({ key: r2Key }), {
+    status: 201, headers: { "Content-Type": "application/json" },
+  }));
+}
+
+/**
  * HR benefit image upload: POST /api/benefits/upload-image
  *
  * Accepts multipart/form-data with `benefitId` and `file` fields.
@@ -699,6 +771,8 @@ export default {
     if (contractView !== null) return contractView;
     const upload = await handleContractUpload(request, env);
     if (upload !== null) return upload;
+    const employeeUpload = await handleEmployeeContractUpload(request, env);
+    if (employeeUpload !== null) return employeeUpload;
     const imageUpload = await handleBenefitImageUpload(request, env);
     if (imageUpload !== null) return imageUpload;
     const imageView = await handleBenefitImageView(request, env);

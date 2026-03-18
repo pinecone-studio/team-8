@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { X, ExternalLink, FileText, CheckCircle } from "lucide-react";
+import { useState, useRef } from "react";
+import { X, ExternalLink, FileText, CheckCircle, UploadCloud, CheckCircle2 } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
 import Stepper from "./Stepper";
 import PageLoading from "@/app/_components/PageLoading";
 import {
@@ -15,6 +16,14 @@ import {
 } from "@/graphql/generated/graphql";
 import { getContractProxyUrl } from "@/lib/contracts";
 
+function getApiBase(): string {
+  const base =
+    typeof process !== "undefined" && process.env?.NEXT_PUBLIC_GRAPHQL_URL
+      ? process.env.NEXT_PUBLIC_GRAPHQL_URL
+      : "https://team8-api.team8pinequest.workers.dev/";
+  return base.replace(/\/$/, "");
+}
+
 type Props = {
   benefitId: string;
   onClose: () => void;
@@ -22,13 +31,18 @@ type Props = {
 };
 
 export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: Props) {
+  const { getToken } = useAuth();
   const { data, error, loading } = useGetMyBenefitsQuery();
   const [requestBenefit, { loading: submitting }] = useRequestBenefitMutation();
   const [confirmBenefitRequest, { loading: confirming }] = useConfirmBenefitRequestMutation();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [accepted, setAccepted] = useState(false);
+  const [employeeContractKey, setEmployeeContractKey] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const benefitEligibility = data?.myBenefits.find((item) => item.benefitId === benefitId);
   const benefit = benefitEligibility?.benefit;
@@ -44,29 +58,55 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
   const hasReviewableContract = Boolean(activeContract?.viewUrl);
   const contractStepBlocked = requiresContract && !contractsLoading && !hasReviewableContract;
 
-  const isWorking = submitting || confirming;
+  const isWorking = submitting || confirming || uploading;
 
+  // ── Employee contract upload ─────────────────────────────────────────────
+  const handleFileUpload = async (file: File) => {
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const token = await getToken();
+      const fd = new FormData();
+      fd.append("benefitId", benefitId);
+      fd.append("file", file);
+      const res = await fetch(`${getApiBase()}/api/contracts/employee-upload`, {
+        method: "POST",
+        body: fd,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Upload failed" }));
+        throw new Error((err as { error?: string }).error ?? "Upload failed");
+      }
+      const json = await res.json() as { key: string };
+      setEmployeeContractKey(json.key);
+      setUploadedFileName(file.name);
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // ── Submit request ───────────────────────────────────────────────────────
   const submitRequest = async () => {
     if (!benefitEligibility || !benefit) return;
     setSubmitMessage(null);
 
-    if (requiresContract && !hasReviewableContract) {
-      setSubmitMessage(
-        "This benefit requires an active contract before you can submit. Please contact HR.",
-      );
-      setStep(2);
-      return;
-    }
-
-    if (requiresContract && !accepted) {
-      setSubmitMessage("Please review and accept the contract before submitting.");
+    if (requiresContract && !employeeContractKey) {
+      setSubmitMessage("Please upload your signed contract before submitting.");
       setStep(2);
       return;
     }
 
     try {
       const result = await requestBenefit({
-        variables: { input: { benefitId: benefit.id } },
+        variables: {
+          input: {
+            benefitId: benefit.id,
+            employeeContractKey: employeeContractKey ?? undefined,
+          },
+        },
         refetchQueries: [{ query: GetBenefitRequestsDocument }],
       });
 
@@ -82,11 +122,7 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
         return;
       }
 
-      if (
-        requiresContract &&
-        accepted &&
-        createdRequest.status === "awaiting_contract_acceptance"
-      ) {
+      if (requiresContract && createdRequest.status === "awaiting_contract_acceptance") {
         const confirmResult = await confirmBenefitRequest({
           variables: { requestId: createdRequest.id, contractAccepted: true },
           refetchQueries: [{ query: GetBenefitRequestsDocument }],
@@ -104,14 +140,10 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
     }
   };
 
+  // ── Guards ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-        role="dialog"
-        aria-modal="true"
-        onClick={onClose}
-      >
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" onClick={onClose}>
         <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-8 shadow-xl" onClick={(e) => e.stopPropagation()}>
           <PageLoading message="Loading..." />
         </div>
@@ -121,24 +153,12 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
 
   if (error || !benefitEligibility || !benefit) {
     return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-        role="dialog"
-        aria-modal="true"
-        onClick={onClose}
-      >
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" onClick={onClose}>
         <div className="relative w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-8 shadow-xl" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition hover:bg-accent hover:text-foreground"
-            aria-label="Close"
-          >
+          <button type="button" onClick={onClose} className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition hover:bg-accent hover:text-foreground" aria-label="Close">
             <X className="h-4 w-4" />
           </button>
-          <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive">
-            This benefit could not be loaded.
-          </div>
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive">This benefit could not be loaded.</div>
         </div>
       </div>
     );
@@ -146,24 +166,12 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
 
   if (benefitEligibility.status !== BenefitEligibilityStatus.Eligible) {
     return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-        role="dialog"
-        aria-modal="true"
-        onClick={onClose}
-      >
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" onClick={onClose}>
         <div className="relative w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-8 shadow-xl" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition hover:bg-accent hover:text-foreground"
-            aria-label="Close"
-          >
+          <button type="button" onClick={onClose} className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition hover:bg-accent hover:text-foreground" aria-label="Close">
             <X className="h-4 w-4" />
           </button>
-          <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive">
-            This benefit is not currently requestable.
-          </div>
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive">This benefit is not currently requestable.</div>
         </div>
       </div>
     );
@@ -171,24 +179,12 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
 
   if (isSelfService) {
     return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-        role="dialog"
-        aria-modal="true"
-        onClick={onClose}
-      >
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" onClick={onClose}>
         <div className="relative w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-8 shadow-xl" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition hover:bg-accent hover:text-foreground"
-            aria-label="Close"
-          >
+          <button type="button" onClick={onClose} className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition hover:bg-accent hover:text-foreground" aria-label="Close">
             <X className="h-4 w-4" />
           </button>
-          <div className="rounded-2xl border border-border bg-card p-6 text-muted-foreground">
-            This benefit is self-service and does not require a request.
-          </div>
+          <div className="rounded-2xl border border-border bg-card p-6 text-muted-foreground">This benefit is self-service and does not require a request.</div>
         </div>
       </div>
     );
@@ -202,7 +198,7 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
       onClick={onClose}
     >
       <div
-        className="relative flex w-full max-w-2xl flex-col gap-6 rounded-2xl bg-gray-50 p-6 shadow-2xl ring-1 ring-black/5"
+        className="relative flex w-full max-w-2xl flex-col gap-6 rounded-2xl bg-gray-50 p-6 shadow-2xl ring-1 ring-black/5 max-h-[95vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -217,178 +213,202 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
         <Stepper currentStep={step} requiresContract={requiresContract} />
 
         <div className="rounded-2xl border border-gray-200/80 bg-white p-8 shadow-sm">
-          {/* Step 1: Confirm Eligibility */}
+
+          {/* ── Step 1: Contract Review ── */}
           {step === 1 && (
             <>
-              <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-                Confirm Eligibility
-              </h1>
-              <p className="mt-2 text-sm text-gray-600">
-                Please review your eligibility for {benefit.name} before proceeding.
+              <h1 className="text-xl font-bold tracking-tight text-gray-900">Contract Review</h1>
+              <p className="mt-1 text-sm text-gray-600">
+                Review the benefit details and the contract provided by HR.
               </p>
 
-              <div className="mt-6 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-5">
-                <CheckCircle className="h-6 w-6 shrink-0 text-green-600" />
+              {/* Eligibility banner */}
+              <div className="mt-5 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4">
+                <CheckCircle className="h-5 w-5 shrink-0 text-green-600 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-green-800">
-                    You are eligible for this benefit
-                  </p>
-                  <p className="mt-1 text-sm text-green-700">
-                    All eligibility requirements have been met.
-                  </p>
+                  <p className="text-sm font-semibold text-green-800">You are eligible for this benefit</p>
+                  <p className="mt-0.5 text-xs text-green-700">All eligibility requirements have been met.</p>
                 </div>
               </div>
 
-              <div className="mt-8 grid grid-cols-[1fr_auto] gap-x-8 gap-y-4 text-base">
-                <span className="text-gray-700">Benefit Name</span>
-                <span className="font-semibold text-gray-900 text-right">{benefit.name}</span>
-                <span className="text-gray-700">Vendor</span>
-                <span className="font-semibold text-gray-900 text-right">
-                  {benefit.vendorName ?? "Internal Benefit"}
-                </span>
-                <span className="text-gray-700">Subsidy</span>
-                <span className="font-semibold text-gray-900 text-right">
-                  {benefit.subsidyPercent}%
-                </span>
-                <span className="text-gray-700">Approval Required</span>
-                <span className="font-semibold capitalize text-gray-900 text-right">
-                  {benefit.approvalPolicy ?? "HR"}
-                </span>
+              {/* Benefit details */}
+              <div className="mt-5 grid grid-cols-[1fr_auto] gap-x-8 gap-y-3 text-sm">
+                <span className="text-gray-500">Benefit Name</span>
+                <span className="font-medium text-gray-900 text-right">{benefit.name}</span>
+                <span className="text-gray-500">Vendor</span>
+                <span className="font-medium text-gray-900 text-right">{benefit.vendorName ?? "Internal Benefit"}</span>
+                <span className="text-gray-500">Company Subsidy</span>
+                <span className="font-medium text-emerald-700 text-right">{benefit.subsidyPercent}%</span>
+                <span className="text-gray-500">Employee Contribution</span>
+                <span className="font-medium text-gray-900 text-right">{benefit.employeePercent}%</span>
+                <span className="text-gray-500">Approval Required</span>
+                <span className="font-medium capitalize text-gray-900 text-right">{benefit.approvalPolicy ?? "HR"}</span>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setStep(requiresContract ? 2 : 3)}
-                className="mt-8 h-12 w-full rounded-xl bg-gray-900 text-base font-medium text-white shadow-md transition hover:bg-gray-800 active:scale-[0.99] active:bg-gray-900"
-              >
-                Continue
-              </button>
-            </>
-          )}
-
-          {/* Step 2: Contract Acceptance */}
-          {step === 2 && requiresContract && (
-            <>
-              <h1 className="text-xl font-semibold text-gray-900">Contract Acceptance</h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Please review and accept the contract terms for {benefit.name}.
-              </p>
-
-              <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1.4fr_1fr]">
-                <div className="flex flex-col">
+              {/* HR Contract iframe */}
+              {requiresContract && (
+                <div className="mt-6">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">HR Contract</p>
                   {contractsLoading ? (
-                    <div className="flex h-[320px] items-center justify-center rounded-2xl border border-gray-200 bg-gray-50">
+                    <div className="flex h-[280px] items-center justify-center rounded-2xl border border-gray-200 bg-gray-50">
                       <PageLoading inline message="Loading contract…" />
                     </div>
                   ) : contractUrl ? (
                     <>
                       <iframe
                         src={contractUrl}
-                        className="h-[320px] w-full rounded-2xl border border-gray-200 bg-gray-50"
+                        className="h-[280px] w-full rounded-2xl border border-gray-200 bg-gray-50"
                         title={`${benefit.vendorName ?? benefit.name} Contract`}
                       />
-                      <a
-                        href={contractUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-2 inline-flex items-center gap-1.5 self-start text-xs text-blue-600 hover:underline"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        Open in new tab
-                      </a>
+                      <div className="mt-2 flex items-center gap-4">
+                        <a href={contractUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline">
+                          <ExternalLink className="h-3 w-3" />
+                          Open in new tab
+                        </a>
+                        {activeContract?.version && <span className="text-xs text-gray-400">Version {activeContract.version}</span>}
+                        {activeContract?.effectiveDate && <span className="text-xs text-gray-400">Effective {activeContract.effectiveDate}</span>}
+                      </div>
                     </>
                   ) : (
-                    <div className="flex h-[320px] flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 px-6 text-center">
-                      <div className="rounded-full bg-gray-100 p-4">
-                        <FileText className="h-7 w-7 text-gray-400" />
+                    <div className="flex h-[160px] flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 px-6 text-center">
+                      <div className="rounded-full bg-gray-100 p-3">
+                        <FileText className="h-6 w-6 text-gray-400" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          {activeContract ? "Preview Unavailable" : "No Active Contract Found"}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-400">
-                          {activeContract
-                            ? `Version ${activeContract.version} · ${benefit.vendorName ?? "Vendor"}`
-                            : "Contact your HR team for contract details"}
-                        </p>
+                        <p className="text-sm font-medium text-gray-600">{activeContract ? "Preview Unavailable" : "No Active Contract Found"}</p>
+                        <p className="mt-0.5 text-xs text-gray-400">Contact your HR team for contract details</p>
                       </div>
                     </div>
                   )}
                 </div>
+              )}
 
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Contract Information</h2>
-                  <div className="mt-6 space-y-5 text-sm">
-                    <div>
-                      <p className="text-gray-500">Vendor</p>
-                      <p className="font-medium text-gray-900">{benefit.vendorName ?? benefit.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Contract Version</p>
-                      <p className="font-medium text-gray-900">
-                        {activeContract?.version ?? "Active version"}
-                      </p>
-                    </div>
-                    {activeContract?.effectiveDate && (
-                      <div>
-                        <p className="text-gray-500">Effective</p>
-                        <p className="font-medium text-gray-900">{activeContract.effectiveDate}</p>
-                      </div>
-                    )}
-                    {activeContract?.expiryDate && (
-                      <div>
-                        <p className="text-gray-500">Expires</p>
-                        <p className="font-medium text-gray-900">{activeContract.expiryDate}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {contractStepBlocked ? (
-                    <>
-                      <div className="mt-8 rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700">
-                        {activeContract
-                          ? "An active contract exists, but it cannot be previewed right now. Please contact HR before continuing."
-                          : "No active contract has been uploaded for this benefit yet. Please contact HR before continuing."}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setStep(1)}
-                        className="mt-5 h-12 w-full rounded-xl border border-gray-200 bg-white text-base font-medium text-gray-700 transition hover:bg-gray-50 active:scale-[0.99]"
-                      >
-                        Back
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="mt-8 rounded-xl border border-amber-100 bg-amber-50 p-4 text-xs text-amber-700">
-                        By accepting, you confirm you have read and understood all contract terms.
-                        This acceptance is legally recorded.
-                      </div>
-                      <label className="mt-6 flex cursor-pointer items-start gap-3 text-sm text-gray-700">
-                        <input
-                          type="checkbox"
-                          checked={accepted}
-                          onChange={(e) => setAccepted(e.target.checked)}
-                          className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-blue-600"
-                        />
-                        I have read and agree to the contract terms and conditions
-                      </label>
-                      <button
-                        type="button"
-                        disabled={!accepted}
-                        onClick={() => setStep(3)}
-                        className="mt-5 h-12 w-full rounded-xl bg-blue-600 text-base font-medium text-white transition hover:bg-blue-700 active:scale-[0.99] active:bg-blue-800 disabled:bg-gray-300 disabled:active:scale-100"
-                      >
-                        Accept & Continue
-                      </button>
-                    </>
-                  )}
+              {contractStepBlocked ? (
+                <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700">
+                  No active contract has been uploaded for this benefit yet. Please contact HR before continuing.
                 </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setStep(requiresContract ? 2 : 3)}
+                  className="mt-6 h-12 w-full rounded-xl bg-gray-900 text-base font-medium text-white shadow-md transition hover:bg-gray-800 active:scale-[0.99]"
+                >
+                  Continue
+                </button>
+              )}
+            </>
+          )}
+
+          {/* ── Step 2: Upload Contract ── */}
+          {step === 2 && requiresContract && (
+            <>
+              <h1 className="text-xl font-semibold text-gray-900">Upload Your Signed Contract</h1>
+              <p className="mt-1 text-sm text-gray-500">
+                Sign the HR contract and upload it here before submitting your request.
+              </p>
+
+              {/* Upload area */}
+              <div
+                className={`mt-6 relative flex flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed p-10 text-center transition ${
+                  employeeContractKey
+                    ? "border-emerald-300 bg-emerald-50"
+                    : uploadError
+                      ? "border-red-300 bg-red-50"
+                      : "border-gray-200 bg-gray-50 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer"
+                }`}
+                onClick={() => !employeeContractKey && !uploading && fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setEmployeeContractKey(null);
+                      setUploadedFileName(null);
+                      handleFileUpload(file);
+                    }
+                    e.target.value = "";
+                  }}
+                />
+
+                {uploading ? (
+                  <>
+                    <div className="h-10 w-10 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin" />
+                    <p className="text-sm font-medium text-blue-700">Uploading…</p>
+                  </>
+                ) : employeeContractKey ? (
+                  <>
+                    <CheckCircle2 className="h-11 w-11 text-emerald-500" />
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-700">Contract uploaded successfully</p>
+                      {uploadedFileName && <p className="mt-0.5 text-xs text-emerald-600">{uploadedFileName}</p>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEmployeeContractKey(null);
+                        setUploadedFileName(null);
+                        fileInputRef.current?.click();
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-50"
+                    >
+                      Replace file
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="rounded-full bg-gray-100 p-4">
+                      <UploadCloud className="h-7 w-7 text-gray-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700">Click to upload your signed contract</p>
+                      <p className="mt-1 text-xs text-gray-400">PDF, DOC, DOCX, PNG, JPG supported</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                    >
+                      <UploadCloud className="h-4 w-4" />
+                      Select File
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {uploadError && (
+                <div className="mt-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700">{uploadError}</div>
+              )}
+
+              <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-700">
+                Make sure your signed contract matches the HR contract shown in the previous step.
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="h-12 flex-1 rounded-xl border border-gray-200 bg-white text-base font-medium text-gray-700 transition hover:bg-gray-50 active:scale-[0.99]"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  disabled={!employeeContractKey || uploading}
+                  onClick={() => setStep(3)}
+                  className="h-12 flex-[2] rounded-xl bg-blue-600 text-base font-medium text-white transition hover:bg-blue-700 active:scale-[0.99] disabled:bg-gray-300 disabled:active:scale-100"
+                >
+                  Continue
+                </button>
               </div>
             </>
           )}
 
-          {/* Step 3: Submit */}
+          {/* ── Step 3: Submit ── */}
           {step === 3 && (
             <>
               <h1 className="text-xl font-semibold text-gray-900">Submit Request</h1>
@@ -407,21 +427,19 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Subsidy</dt>
-                    <dd className="font-medium text-gray-900">{benefit.subsidyPercent}%</dd>
+                    <dd className="font-medium text-emerald-700">{benefit.subsidyPercent}%</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Approval</dt>
-                    <dd className="font-medium capitalize text-gray-900">
-                      {benefit.approvalPolicy ?? "HR"}
-                    </dd>
+                    <dd className="font-medium capitalize text-gray-900">{benefit.approvalPolicy ?? "HR"}</dd>
                   </div>
                   {requiresContract && (
                     <div className="flex justify-between">
-                      <dt className="text-gray-500">Contract</dt>
-                      <dd
-                        className={`font-medium ${accepted ? "text-green-700" : "text-orange-600"}`}
-                      >
-                        {accepted ? "✓ Accepted" : "Pending acceptance"}
+                      <dt className="text-gray-500">Your Contract</dt>
+                      <dd className={`font-medium ${employeeContractKey ? "text-emerald-700" : "text-orange-600"}`}>
+                        {employeeContractKey
+                          ? `✓ Uploaded${uploadedFileName ? ` (${uploadedFileName})` : ""}`
+                          : "Not uploaded"}
                       </dd>
                     </div>
                   )}
@@ -434,16 +452,23 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={submitRequest}
-                disabled={
-                  isWorking || (requiresContract && (!accepted || !hasReviewableContract))
-                }
-                className="mt-6 h-10 w-full rounded-lg bg-gray-900 text-sm font-medium text-white transition hover:bg-gray-800 active:scale-[0.99] disabled:bg-gray-300 disabled:active:scale-100"
-              >
-                {isWorking ? "Submitting…" : "Submit Request"}
-              </button>
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStep(requiresContract ? 2 : 1)}
+                  className="h-10 flex-1 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 transition hover:bg-gray-50 active:scale-[0.99]"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={submitRequest}
+                  disabled={isWorking || (requiresContract && !employeeContractKey)}
+                  className="h-10 flex-[2] rounded-lg bg-gray-900 text-sm font-medium text-white transition hover:bg-gray-800 active:scale-[0.99] disabled:bg-gray-300 disabled:active:scale-100"
+                >
+                  {isWorking ? "Submitting…" : "Submit Request"}
+                </button>
+              </div>
             </>
           )}
         </div>
