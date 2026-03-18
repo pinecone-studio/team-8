@@ -206,3 +206,142 @@ query GetEligibilityRules($benefitId: String!) {
     isActive
   }
 }
+
+query GetMyScreenTimeMonth($benefitId: String!, $monthKey: String) {
+  myScreenTimeMonth(benefitId: $benefitId, monthKey: $monthKey) {
+    benefitId
+    benefitStatus
+    failedRuleMessage
+    todayLocalDate
+    activeSlotDate
+    isUploadOpenToday
+    program {
+      benefitId
+      screenshotRetentionDays
+      isActive
+      tiers {
+        id
+        benefitId
+        label
+        maxDailyMinutes
+        salaryUpliftPercent
+        displayOrder
+      }
+    }
+    month {
+      id
+      benefitId
+      employeeId
+      monthKey
+      requiredSlotDates
+      dueSlotDates
+      missingDueSlotDates
+      requiredSlotCount
+      submittedSlotCount
+      approvedSlotCount
+      monthlyAvgDailyMinutes
+      awardedSalaryUpliftPercent
+      status
+      approvedByEmployeeId
+      approvedAt
+      decisionNote
+      submissions {
+        id
+        benefitId
+        employeeId
+        monthKey
+        slotDate
+        avgDailyMinutes
+        confidenceScore
+        platform
+        periodType
+        extractionStatus
+        reviewStatus
+        reviewNote
+        submittedAt
+        reviewedAt
+        fileName
+        viewUrl
+      }
+    }
+  }
+}
+
+query GetAdminScreenTimeMonth($benefitId: String!, $monthKey: String) {
+  adminScreenTimeMonth(benefitId: $benefitId, monthKey: $monthKey) {
+    benefitId
+    monthKey
+    slotDates
+    program {
+      benefitId
+      screenshotRetentionDays
+      isActive
+      tiers {
+        id
+        benefitId
+        label
+        maxDailyMinutes
+        salaryUpliftPercent
+        displayOrder
+      }
+    }
+    rows {
+      employeeId
+      employeeName
+      employeeEmail
+      result {
+        id
+        benefitId
+        employeeId
+        monthKey
+        requiredSlotDates
+        dueSlotDates
+        missingDueSlotDates
+        requiredSlotCount
+        submittedSlotCount
+        approvedSlotCount
+        monthlyAvgDailyMinutes
+        awardedSalaryUpliftPercent
+        status
+        approvedByEmployeeId
+        approvedAt
+        decisionNote
+        submissions {
+          id
+          benefitId
+          employeeId
+          monthKey
+          slotDate
+          avgDailyMinutes
+          confidenceScore
+          platform
+          periodType
+          extractionStatus
+          reviewStatus
+          reviewNote
+          submittedAt
+          reviewedAt
+          fileName
+          viewUrl
+        }
+      }
+    }
+  }
+}
+
+query GetScreenTimeLeaderboard($benefitId: String!, $monthKey: String) {
+  screenTimeLeaderboard(benefitId: $benefitId, monthKey: $monthKey) {
+    rank
+    employeeId
+    employeeName
+    employeeEmail
+    monthKey
+    status
+    avgDailyMinutes
+    awardedSalaryUpliftPercent
+    approvedSlotCount
+    dueSlotCount
+    requiredSlotCount
+    isProvisional
+  }
+}

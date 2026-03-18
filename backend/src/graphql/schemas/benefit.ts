@@ -24,6 +24,103 @@ export const benefitTypeDefs = gql`
     normal
     down_payment
     self_service
+    screen_time
+  }
+
+  type ScreenTimeTier {
+    id: String!
+    benefitId: String!
+    label: String!
+    maxDailyMinutes: Int!
+    salaryUpliftPercent: Int!
+    displayOrder: Int!
+  }
+
+  type ScreenTimeProgram {
+    benefitId: String!
+    screenshotRetentionDays: Int!
+    isActive: Boolean!
+    tiers: [ScreenTimeTier!]!
+  }
+
+  type ScreenTimeSubmission {
+    id: String!
+    benefitId: String!
+    employeeId: String!
+    monthKey: String!
+    slotDate: String!
+    avgDailyMinutes: Int
+    confidenceScore: Int
+    platform: String
+    periodType: String
+    extractionStatus: String!
+    reviewStatus: String!
+    reviewNote: String
+    submittedAt: String!
+    reviewedAt: String
+    fileName: String
+    viewUrl: String
+  }
+
+  type ScreenTimeMonthlyResult {
+    id: String!
+    benefitId: String!
+    employeeId: String!
+    monthKey: String!
+    requiredSlotDates: [String!]!
+    dueSlotDates: [String!]!
+    missingDueSlotDates: [String!]!
+    requiredSlotCount: Int!
+    submittedSlotCount: Int!
+    approvedSlotCount: Int!
+    monthlyAvgDailyMinutes: Int
+    awardedSalaryUpliftPercent: Int!
+    status: String!
+    approvedByEmployeeId: String
+    approvedAt: String
+    decisionNote: String
+    submissions: [ScreenTimeSubmission!]!
+  }
+
+  type MyScreenTimeMonth {
+    benefitId: String!
+    benefitStatus: BenefitEligibilityStatus!
+    failedRuleMessage: String
+    todayLocalDate: String!
+    activeSlotDate: String
+    isUploadOpenToday: Boolean!
+    program: ScreenTimeProgram
+    month: ScreenTimeMonthlyResult!
+  }
+
+  type AdminScreenTimeMonthRow {
+    employeeId: String!
+    employeeName: String!
+    employeeEmail: String!
+    result: ScreenTimeMonthlyResult!
+  }
+
+  type AdminScreenTimeMonthBoard {
+    benefitId: String!
+    monthKey: String!
+    slotDates: [String!]!
+    program: ScreenTimeProgram
+    rows: [AdminScreenTimeMonthRow!]!
+  }
+
+  type ScreenTimeLeaderboardRow {
+    rank: Int
+    employeeId: String!
+    employeeName: String!
+    employeeEmail: String!
+    monthKey: String!
+    status: String!
+    avgDailyMinutes: Int
+    awardedSalaryUpliftPercent: Int!
+    approvedSlotCount: Int!
+    dueSlotCount: Int!
+    requiredSlotCount: Int!
+    isProvisional: Boolean!
   }
 
   type Benefit {
@@ -139,6 +236,9 @@ export const benefitTypeDefs = gql`
     contracts(benefitId: String): [Contract!]!
     eligibilityRules(benefitId: String!): [EligibilityRule!]!
     ruleProposals(benefitId: String, status: String): [RuleProposal!]!
+    myScreenTimeMonth(benefitId: String!, monthKey: String): MyScreenTimeMonth!
+    adminScreenTimeMonth(benefitId: String!, monthKey: String): AdminScreenTimeMonthBoard!
+    screenTimeLeaderboard(benefitId: String!, monthKey: String): [ScreenTimeLeaderboardRow!]!
   }
 
   input CreateBenefitInput {
@@ -148,6 +248,7 @@ export const benefitTypeDefs = gql`
     subsidyPercent: Int!
     vendorName: String
     requiresContract: Boolean
+    flowType: BenefitFlowType
     approvalPolicy: String
     amount: Int
     location: String
@@ -161,10 +262,24 @@ export const benefitTypeDefs = gql`
     subsidyPercent: Int
     vendorName: String
     requiresContract: Boolean
+    flowType: BenefitFlowType
     approvalPolicy: String
     amount: Int
     location: String
     imageUrl: String
+  }
+
+  input ScreenTimeTierInput {
+    label: String!
+    maxDailyMinutes: Int!
+    salaryUpliftPercent: Int!
+    displayOrder: Int
+  }
+
+  input UpsertScreenTimeProgramInput {
+    benefitId: String!
+    screenshotRetentionDays: Int
+    tiers: [ScreenTimeTierInput!]!
   }
 
   input RequestBenefitInput {
@@ -213,6 +328,7 @@ export const benefitTypeDefs = gql`
     createBenefit(input: CreateBenefitInput!): Benefit!
     updateBenefit(id: String!, input: UpdateBenefitInput!): Benefit!
     deleteBenefit(id: String!): Boolean!
+    upsertScreenTimeProgram(input: UpsertScreenTimeProgramInput!): ScreenTimeProgram!
     requestBenefit(input: RequestBenefitInput!): BenefitRequest!
     confirmBenefitRequest(requestId: String!, contractAccepted: Boolean!): BenefitRequest!
     approveBenefitRequest(requestId: String!): BenefitRequest!

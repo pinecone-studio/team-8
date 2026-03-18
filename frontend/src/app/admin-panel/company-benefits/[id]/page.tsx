@@ -1,18 +1,21 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { gql, useQuery } from "@apollo/client";
 import { useAuth } from "@clerk/nextjs";
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowRight,
   Check,
   CheckCircle2,
   ChevronDown,
   Clock,
   ExternalLink,
   FileText,
+  Monitor,
   Pencil,
   Plus,
   Trash2,
@@ -119,6 +122,35 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
       </div>
       {children}
     </div>
+  );
+}
+
+function ScreenTimeProgramLinkSection({ benefitId }: { benefitId: string }) {
+  const { data, loading } = useGetAdminBenefitsQuery();
+  const benefit = data?.adminBenefits?.find((item) => item.id === benefitId);
+
+  if (loading || benefit?.flowType !== "screen_time") return null;
+
+  return (
+    <Section title="Screen Time Program" icon={<Monitor className="h-4 w-4 text-fuchsia-500" />}>
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-fuchsia-100 bg-fuchsia-50 p-4">
+        <div>
+          <p className="text-sm font-semibold text-gray-900">
+            Weekly screenshot tracker and automatic monthly salary uplift
+          </p>
+          <p className="mt-1 text-sm text-gray-600">
+            Manage Monday slots, Gemini extraction, and automatic month-end payout rules from the dedicated screen time program page.
+          </p>
+        </div>
+        <Link
+          href={`/admin-panel/screen-time/${benefitId}`}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-fuchsia-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-fuchsia-700"
+        >
+          Open program
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+    </Section>
   );
 }
 
@@ -712,6 +744,7 @@ export default function BenefitDetailPage() {
 
           <div className="space-y-6">
             <BenefitDetails benefitId={benefitId} isHr={isHr} />
+            {isHr && <ScreenTimeProgramLinkSection benefitId={benefitId} />}
             {isHr && <RuleConfigSection benefitId={benefitId} />}
             {isHr && <VendorContractSection benefitId={benefitId} />}
           </div>

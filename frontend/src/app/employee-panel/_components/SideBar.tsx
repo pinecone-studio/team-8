@@ -10,9 +10,9 @@ import {
   LogOut,
   ChevronDown,
   ShieldCheck,
-  Gift,
   ClipboardList,
   FlaskConical,
+  Smartphone,
 } from "lucide-react";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isAdminEmployee } from "@/app/admin-panel/_lib/access";
@@ -32,6 +32,7 @@ function formatLabel(value: string | null | undefined) {
 
 const mainNavItems = [
   { href: "/employee-panel/dashboard", label: "Dashboard", icon: LayoutGrid },
+  { href: "/employee-panel/screen-time", label: "Screen Time", icon: Smartphone },
   { href: "/employee-panel/requests", label: "Requests", icon: ClipboardList },
   { href: "/employee-panel/contracts", label: "Contracts", icon: FileText },
 ];

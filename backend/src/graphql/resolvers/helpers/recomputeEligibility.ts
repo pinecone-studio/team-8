@@ -147,12 +147,12 @@ export interface RecomputeResult {
 /**
  * KV cache key for a given employeeId.
  *
- * Version bumped to v2 to invalidate stale employee benefit snapshots created
- * before catalog-change cache invalidation was added. This lets newly created
- * benefits appear immediately after deploy instead of waiting for the old TTL
- * window to expire.
+ * Version bumped to v3 to invalidate stale employee benefit snapshots created
+ * before explicit flow_type support was added to the benefit catalog. This lets
+ * screen-time benefits and corrected self-service/down-payment flows appear
+ * immediately after deploy instead of waiting for the old TTL window to expire.
  */
-export const eligibilityCacheKey = (employeeId: string) => `eligibility:v2:${employeeId}`;
+export const eligibilityCacheKey = (employeeId: string) => `eligibility:v3:${employeeId}`;
 
 export async function recomputeEligibilityForEmployees(
   db: Database,

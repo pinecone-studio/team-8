@@ -26,6 +26,11 @@ export interface Env {
   // OKR integration adapter
   OKR_WEBHOOK_SECRET?: string;
   OKR_API_URL?: string;
+  // Gemini image extraction for screen-time screenshots.
+  GEMINI_API_KEY?: string;
+  GEMINI_MODEL?: string;
+  // Local/dev-only override for testing Monday slot flows on non-Monday days.
+  SCREEN_TIME_DEBUG_TODAY_LOCAL_DATE?: string;
 }
 
 export interface GraphQLContext {

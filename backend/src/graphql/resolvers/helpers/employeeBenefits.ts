@@ -7,7 +7,7 @@ type GraphqlBenefit = {
   category: string;
   description: string | null;
   employeePercent: number;
-  flowType: "contract" | "normal";
+  flowType: "contract" | "normal" | "down_payment" | "self_service" | "screen_time";
   id: string;
   name: string;
   nameEng: string | null;
@@ -61,7 +61,15 @@ export function mapBenefitRecordToGraphql(benefit: Benefit): GraphqlBenefit {
     category: benefit.category,
     description: benefit.description ?? null,
     employeePercent: 100 - benefit.subsidyPercent,
-    flowType: benefit.requiresContract ? "contract" : "normal",
+    flowType:
+      benefit.flowType === "contract" ||
+      benefit.flowType === "down_payment" ||
+      benefit.flowType === "self_service" ||
+      benefit.flowType === "screen_time"
+        ? benefit.flowType
+        : benefit.requiresContract
+          ? "contract"
+          : "normal",
     id: benefit.id,
     name: benefit.name,
     nameEng: null,

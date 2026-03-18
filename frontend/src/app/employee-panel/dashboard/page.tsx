@@ -49,7 +49,9 @@ export default function DashboardPage() {
     loading: benefitsLoading,
   } = useGetMyBenefitsFullQuery();
 
-  const myBenefits = benefitsData?.myBenefits ?? [];
+  const myBenefits = (benefitsData?.myBenefits ?? []).filter(
+    (benefit) => benefit.benefit.flowType !== "screen_time",
+  );
 
   const filteredBenefits = myBenefits
     .filter((b) => {

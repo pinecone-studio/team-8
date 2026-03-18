@@ -109,6 +109,22 @@ mutation DeleteBenefit($id: String!) {
   deleteBenefit(id: $id)
 }
 
+mutation UpsertScreenTimeProgram($input: UpsertScreenTimeProgramInput!) {
+  upsertScreenTimeProgram(input: $input) {
+    benefitId
+    screenshotRetentionDays
+    isActive
+    tiers {
+      id
+      benefitId
+      label
+      maxDailyMinutes
+      salaryUpliftPercent
+      displayOrder
+    }
+  }
+}
+
 mutation CreateEligibilityRule($input: CreateEligibilityRuleInput!) {
   createEligibilityRule(input: $input) {
     id

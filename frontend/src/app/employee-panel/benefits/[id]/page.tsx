@@ -8,7 +8,7 @@ import StatusBadge from "../../_components/benefits/StatusBadge";
 import Sidebar from "../../_components/SideBar";
 import BenefitRequestModal from "../../_components/benefits/BenefitRequestModal";
 import PageLoading from "@/app/_components/PageLoading";
-import { useGetMyBenefitsFullQuery, useGetBenefitRequestsQuery, useGetContractsForBenefitQuery } from "@/graphql/generated/graphql";
+import { BenefitFlowType, useGetMyBenefitsFullQuery, useGetBenefitRequestsQuery, useGetContractsForBenefitQuery } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 import { getContractProxyUrl } from "@/lib/contracts";
 
@@ -120,6 +120,7 @@ function NextStepsBox({
   failedRuleError,
   approvalPolicy,
   requiresContract,
+  flowType,
   awaitingContract,
   onRequestBenefit,
 }: {
@@ -128,10 +129,12 @@ function NextStepsBox({
   failedRuleError?: string | null;
   approvalPolicy?: string | null;
   requiresContract: boolean;
+  flowType?: BenefitFlowType | null;
   awaitingContract?: boolean;
   onRequestBenefit?: () => void;
 }) {
   const p = (approvalPolicy ?? "hr").toLowerCase();
+  const isScreenTime = flowType === BenefitFlowType.ScreenTime;
 
   // Pending sub-state: employee must accept a contract before review can proceed
   if (status === "PENDING" && awaitingContract) {
@@ -161,11 +164,20 @@ function NextStepsBox({
       <div className="space-y-3">
         <p className="text-sm text-gray-500">
           You meet all eligibility requirements.{" "}
-          {requiresContract
+          {isScreenTime
+            ? "Open the monthly tracker and upload your 7-day average screenshot on each Monday slot."
+            : requiresContract
             ? "You will be asked to accept a vendor contract as part of the request."
             : "Your request will go through an approval process."}
         </p>
-        {onRequestBenefit ? (
+        {isScreenTime ? (
+          <Link
+            href={`/employee-panel/screen-time/${benefitId}`}
+            className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-fuchsia-600 text-sm font-semibold text-white transition hover:bg-fuchsia-700 active:scale-[0.98]"
+          >
+            Open Monthly Tracker
+          </Link>
+        ) : onRequestBenefit ? (
           <button
             type="button"
             onClick={onRequestBenefit}
@@ -485,6 +497,7 @@ export default function BenefitDetailPage() {
                   failedRuleError={benefitEligibility.failedRule?.errorMessage}
                   approvalPolicy={policy}
                   requiresContract={benefit.requiresContract}
+                  flowType={benefit.flowType}
                   awaitingContract={awaitingContract}
                   onRequestBenefit={() => setRequestModalOpen(true)}
                 />
@@ -505,7 +518,7 @@ export default function BenefitDetailPage() {
           </div>
         </main>
       </div>
-      {requestModalOpen && (
+      {requestModalOpen && benefit.flowType !== BenefitFlowType.ScreenTime && (
         <BenefitRequestModal
           benefitId={id}
           onClose={() => setRequestModalOpen(false)}

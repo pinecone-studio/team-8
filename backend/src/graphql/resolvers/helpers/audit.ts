@@ -28,7 +28,11 @@ export type AuditActionType =
   | "OKR_SYNC"
   | "OKR_EVENT"
   | "CONTRACT_EXPIRY_ALERT"
-  | "CONTRACT_VIEWED";
+  | "CONTRACT_VIEWED"
+  | "SCREEN_TIME_PROGRAM_UPSERTED"
+  | "SCREEN_TIME_SUBMITTED"
+  | "SCREEN_TIME_SUBMISSION_REVIEWED"
+  | "SCREEN_TIME_MONTH_REVIEWED";
 
 export type AuditEntityType =
   | "benefit_request"
@@ -37,7 +41,10 @@ export type AuditEntityType =
   | "contract"
   | "employee_contract"
   | "enrollment"
-  | "rule_proposal";
+  | "rule_proposal"
+  | "screen_time_program"
+  | "screen_time_submission"
+  | "screen_time_result";
 
 export interface WriteAuditLogParams {
   db: Database;

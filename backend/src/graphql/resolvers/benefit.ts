@@ -85,6 +85,16 @@ export const EmployeeSignedContract = {
   },
 };
 
+export const ScreenTimeSubmission = {
+  viewUrl(
+    parent: { id: string },
+    _: unknown,
+    { baseUrl }: GraphQLContext,
+  ) {
+    return `${baseUrl}/screen-time/submission-view?id=${encodeURIComponent(parent.id)}`;
+  },
+};
+
 /** Resolve BenefitEligibility.benefit from benefitId — D1 first, static config fallback */
 export const BenefitEligibility = {
   async benefit(

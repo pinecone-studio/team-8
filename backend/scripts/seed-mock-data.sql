@@ -26,6 +26,8 @@ INSERT INTO employees (
 
   ('emp_eng_ariunbat',    'ariunbat.eng@pinequest.mn',     'Ariunbat',      'Ariunbat',      'frontend_engineer',   'Engineering',     1, 'active',     '2024-01-15T00:00:00.000Z', 1, 1, '2026-03-12T09:00:00.000Z', '2026-03-16T00:00:00.000Z', '2026-03-16T00:00:00.000Z'),
   ('emp_eng_erdene',      'erdene.eng@pinequest.mn',       'Erdene Munkh',  'Erdene Munkh',  'senior_engineer',     'Engineering',     2, 'active',     '2022-11-07T00:00:00.000Z', 1, 0, '2026-03-12T09:00:00.000Z', '2026-03-16T00:00:00.000Z', '2026-03-16T00:00:00.000Z'),
+  ('emp_demo_ariunbatbumba','ariunbatbumba@gmail.com',     'Ariunbat Bumba','Ariunbat Bumba','mobile_engineer',     'Engineering',     2, 'active',     '2024-05-06T00:00:00.000Z', 1, 0, '2026-03-12T09:00:00.000Z', '2026-03-16T00:00:00.000Z', '2026-03-16T00:00:00.000Z'),
+  ('emp_demo_bumbaariunbat','bumbaariunbat@gmail.com',     'Bumba Ariunbat','Bumba Ariunbat','product_engineer',    'Engineering',     2, 'active',     '2024-07-22T00:00:00.000Z', 1, 1, '2026-03-12T09:00:00.000Z', '2026-03-16T00:00:00.000Z', '2026-03-16T00:00:00.000Z'),
   ('emp_design_naraa',    'naraa.design@pinequest.mn',     'Naraa Sainaa',  'Naraa Sainaa',  'ux_engineer',         'Design',          2, 'active',     '2023-02-20T00:00:00.000Z', 1, 0, '2026-03-12T09:00:00.000Z', '2026-03-16T00:00:00.000Z', '2026-03-16T00:00:00.000Z'),
   ('emp_ops_bolor',       'bolor.ops@pinequest.mn',        'Bolor Tsetseg', 'Bolor Tsetseg', 'operations_associate','Operations',      1, 'leave',      '2023-08-14T00:00:00.000Z', 0, 2, '2026-03-12T09:00:00.000Z', '2026-03-16T00:00:00.000Z', '2026-03-16T00:00:00.000Z'),
   ('emp_sales_tselmeg',   'tselmeg.sales@pinequest.mn',    'Tselmeg Bat',   'Tselmeg Bat',   'sales_manager',       'Sales',           3, 'active',     '2021-09-01T00:00:00.000Z', 1, 1, '2026-03-12T09:00:00.000Z', '2026-03-16T00:00:00.000Z', '2026-03-16T00:00:00.000Z');
@@ -36,20 +38,20 @@ INSERT INTO employees (
 -- Benefits: 11 canonical TDD benefit IDs matching eligibility-rules.json.
 -- IDs are the single source of truth shared between D1 (runtime) and static config (engine/tests).
 INSERT INTO benefits (
-  id, name, category, subsidy_percent, vendor_name, requires_contract,
+  id, name, category, subsidy_percent, vendor_name, requires_contract, flow_type,
   active_contract_id, is_active, approval_policy
 ) VALUES
-  ('gym_pinefit',          'Gym — PineFit 50%',          'wellness',    50,  'PineFit',              1, NULL, 1, 'hr'),
-  ('private_insurance',    'Private Insurance 50%',       'wellness',    50,  'Insurance Partner',    1, NULL, 1, 'hr'),
-  ('digital_wellness',     'Digital Wellness',            'wellness',   100,  NULL,                   0, NULL, 1, 'hr'),
-  ('macbook',              'MacBook 50%',                 'equipment',   50,  'Apple',                1, NULL, 1, 'hr'),
-  ('extra_responsibility', 'Extra Responsibility',        'career',       0,  NULL,                   0, NULL, 1, 'hr'),
-  ('ux_engineer_tools',    'UX Engineer Tools',           'career',     100,  NULL,                   0, NULL, 1, 'hr'),
-  ('down_payment',         'Down Payment Assistance',     'financial',    0,  NULL,                   0, NULL, 1, 'finance'),
-  ('shit_happened_days',   'Shit Happened Days',          'flexibility', 100,  NULL,                   0, NULL, 1, 'hr'),
-  ('remote_work',          'Remote Work',                 'flexibility',  0,  NULL,                   0, NULL, 1, 'hr'),
-  ('travel',               'Travel 50%',                  'flexibility', 50,  NULL,                   1, NULL, 1, 'dual'),
-  ('bonus_okr',            'Bonus Based on OKR',          'financial',    0,  NULL,                   0, NULL, 1, 'finance');
+  ('gym_pinefit',          'Gym — PineFit 50%',          'wellness',    50,  'PineFit',              1, 'contract',     NULL, 1, 'hr'),
+  ('private_insurance',    'Private Insurance 50%',       'wellness',    50,  'Insurance Partner',    1, 'contract',     NULL, 1, 'hr'),
+  ('digital_wellness',     'Digital Wellness',            'wellness',   100,  NULL,                   0, 'self_service', NULL, 1, 'hr'),
+  ('macbook',              'MacBook 50%',                 'equipment',   50,  'Apple',                1, 'contract',     NULL, 1, 'hr'),
+  ('extra_responsibility', 'Extra Responsibility',        'career',       0,  NULL,                   0, 'normal',       NULL, 1, 'hr'),
+  ('ux_engineer_tools',    'UX Engineer Tools',           'career',     100,  NULL,                   0, 'normal',       NULL, 1, 'hr'),
+  ('down_payment',         'Down Payment Assistance',     'financial',    0,  NULL,                   0, 'down_payment', NULL, 1, 'finance'),
+  ('shit_happened_days',   'Shit Happened Days',          'flexibility', 100,  NULL,                   0, 'self_service', NULL, 1, 'hr'),
+  ('remote_work',          'Remote Work',                 'flexibility',  0,  NULL,                   0, 'self_service', NULL, 1, 'hr'),
+  ('travel',               'Travel 50%',                  'flexibility', 50,  NULL,                   1, 'contract',     NULL, 1, 'dual'),
+  ('bonus_okr',            'Bonus Based on OKR',          'financial',    0,  NULL,                   0, 'self_service', NULL, 1, 'finance');
 
 INSERT INTO eligibility_rules (
   id, benefit_id, rule_type, operator, value, error_message, priority, is_active
@@ -125,6 +127,8 @@ INSERT INTO benefit_requests (
 ) VALUES
   ('req_digital_ariunbat',   'emp_eng_ariunbat', 'digital_wellness',    'approved',                    NULL, NULL, 'emp_hr_oyuna',  NULL,     NULL, NULL, NULL, '2026-03-05T09:00:00.000Z', '2026-03-05T11:00:00.000Z'),
   ('req_remote_erdene',      'emp_eng_erdene',   'remote_work',         'approved',                    NULL, NULL, 'emp_hr_otgon',  NULL,     NULL, NULL, NULL, '2026-03-06T10:30:00.000Z', '2026-03-06T12:00:00.000Z'),
+  ('req_digital_ariunbatbumba','emp_demo_ariunbatbumba', 'digital_wellness','approved',                 NULL, NULL, 'emp_hr_oyuna',  NULL,     NULL, NULL, NULL, '2026-03-07T09:40:00.000Z', '2026-03-07T10:15:00.000Z'),
+  ('req_remote_bumbaariunbat','emp_demo_bumbaariunbat', 'remote_work',    'approved',                  NULL, NULL, 'emp_hr_otgon',  NULL,     NULL, NULL, NULL, '2026-03-07T13:20:00.000Z', '2026-03-07T14:05:00.000Z'),
   ('req_travel_naraa',       'emp_design_naraa', 'travel',              'hr_approved',                 NULL, NULL, 'emp_hr_otgon',  NULL,     NULL, NULL, NULL, '2026-03-13T10:00:00.000Z', '2026-03-13T15:00:00.000Z'),
   ('req_macbook_naraa',      'emp_design_naraa', 'macbook',             'awaiting_contract_acceptance', NULL, NULL, NULL,           NULL,     NULL, NULL, NULL, '2026-03-14T11:30:00.000Z', '2026-03-14T11:30:00.000Z'),
   ('req_insurance_ariunbat', 'emp_eng_ariunbat', 'private_insurance',   'awaiting_contract_acceptance', NULL, NULL, NULL,           NULL,     NULL, NULL, NULL, '2026-03-14T14:20:00.000Z', '2026-03-14T14:20:00.000Z'),
@@ -137,7 +141,9 @@ INSERT INTO employee_benefit_enrollments (
   started_at, ended_at, metadata_json, created_at, updated_at
 ) VALUES
   ('enroll_digital_ariunbat', 'emp_eng_ariunbat', 'digital_wellness', 'req_digital_ariunbat', 'active', 100, 0,   'emp_hr_oyuna', '2026-03-05T11:00:00.000Z', NULL, '{"source":"seed","note":"auto-approved universal wellness benefit"}', '2026-03-05T11:00:00.000Z', '2026-03-05T11:00:00.000Z'),
-  ('enroll_remote_erdene',    'emp_eng_erdene',   'remote_work',      'req_remote_erdene',    'active',   0, 100, 'emp_hr_otgon', '2026-03-06T12:00:00.000Z', NULL, '{"source":"seed","note":"remote setup granted"}',                    '2026-03-06T12:00:00.000Z', '2026-03-06T12:00:00.000Z');
+  ('enroll_remote_erdene',    'emp_eng_erdene',   'remote_work',      'req_remote_erdene',    'active',   0, 100, 'emp_hr_otgon', '2026-03-06T12:00:00.000Z', NULL, '{"source":"seed","note":"remote setup granted"}',                    '2026-03-06T12:00:00.000Z', '2026-03-06T12:00:00.000Z'),
+  ('enroll_digital_ariunbatbumba', 'emp_demo_ariunbatbumba', 'digital_wellness', 'req_digital_ariunbatbumba', 'active', 100, 0, 'emp_hr_oyuna', '2026-03-07T10:15:00.000Z', NULL, '{"source":"seed","note":"gmail demo persona with approved wellness"}', '2026-03-07T10:15:00.000Z', '2026-03-07T10:15:00.000Z'),
+  ('enroll_remote_bumbaariunbat',  'emp_demo_bumbaariunbat', 'remote_work',      'req_remote_bumbaariunbat', 'active',   0, 100, 'emp_hr_otgon', '2026-03-07T14:05:00.000Z', NULL, '{"source":"seed","note":"gmail demo persona with remote setup"}',      '2026-03-07T14:05:00.000Z', '2026-03-07T14:05:00.000Z');
 
 INSERT INTO audit_logs (
   id, actor_employee_id, actor_role, action_type, entity_type, entity_id,
@@ -147,6 +153,10 @@ INSERT INTO audit_logs (
   ('audit_req_digital_submit', 'emp_eng_ariunbat', 'employee',    'REQUEST_SUBMITTED',        'benefit_request',    'req_digital_ariunbat',        'emp_eng_ariunbat', 'digital_wellness',    'req_digital_ariunbat', NULL, NULL, NULL, '{"status":"approved"}', '{"approvalPolicy":"hr"}', NULL, '2026-03-05T09:00:00.000Z'),
   ('audit_req_digital_approve','emp_hr_oyuna',     'hr_admin',    'REQUEST_APPROVED',         'benefit_request',    'req_digital_ariunbat',        'emp_eng_ariunbat', 'digital_wellness',    'req_digital_ariunbat', NULL, NULL, '{"status":"awaiting_hr_review"}', '{"status":"approved"}', '{"queue":"hr"}', NULL, '2026-03-05T11:00:00.000Z'),
   ('audit_enroll_digital',     'emp_hr_oyuna',     'hr_admin',    'ENROLLMENT_CREATED',       'enrollment',         'enroll_digital_ariunbat',     'emp_eng_ariunbat', 'digital_wellness',    'req_digital_ariunbat', NULL, NULL, NULL, '{"status":"active"}', '{"requestId":"req_digital_ariunbat"}', NULL, '2026-03-05T11:00:00.000Z'),
+  ('audit_req_digital_submit_demo_1', 'emp_demo_ariunbatbumba', 'employee', 'REQUEST_SUBMITTED', 'benefit_request', 'req_digital_ariunbatbumba', 'emp_demo_ariunbatbumba', 'digital_wellness', 'req_digital_ariunbatbumba', NULL, NULL, NULL, '{"status":"approved"}', '{"approvalPolicy":"hr"}', NULL, '2026-03-07T09:40:00.000Z'),
+  ('audit_enroll_digital_demo_1', 'emp_hr_oyuna', 'hr_admin', 'ENROLLMENT_CREATED', 'enrollment', 'enroll_digital_ariunbatbumba', 'emp_demo_ariunbatbumba', 'digital_wellness', 'req_digital_ariunbatbumba', NULL, NULL, NULL, '{"status":"active"}', '{"requestId":"req_digital_ariunbatbumba"}', NULL, '2026-03-07T10:15:00.000Z'),
+  ('audit_req_remote_submit_demo_2', 'emp_demo_bumbaariunbat', 'employee', 'REQUEST_SUBMITTED', 'benefit_request', 'req_remote_bumbaariunbat', 'emp_demo_bumbaariunbat', 'remote_work', 'req_remote_bumbaariunbat', NULL, NULL, NULL, '{"status":"approved"}', '{"approvalPolicy":"hr"}', NULL, '2026-03-07T13:20:00.000Z'),
+  ('audit_enroll_remote_demo_2', 'emp_hr_otgon', 'hr_manager', 'ENROLLMENT_CREATED', 'enrollment', 'enroll_remote_bumbaariunbat', 'emp_demo_bumbaariunbat', 'remote_work', 'req_remote_bumbaariunbat', NULL, NULL, NULL, '{"status":"active"}', '{"requestId":"req_remote_bumbaariunbat"}', NULL, '2026-03-07T14:05:00.000Z'),
   ('audit_travel_hr',          'emp_hr_otgon',     'hr_manager',  'REQUEST_HR_APPROVED',      'benefit_request',    'req_travel_naraa',            'emp_design_naraa', 'travel',              'req_travel_naraa',     NULL, NULL, '{"status":"awaiting_hr_review"}', '{"status":"hr_approved"}', '{"approvalPolicy":"dual"}', NULL, '2026-03-13T15:00:00.000Z'),
   ('audit_down_reject',        'emp_fin_munkh',    'finance_manager','REQUEST_REJECTED',       'benefit_request',    'req_down_erdene',             'emp_eng_erdene',   'down_payment',        'req_down_erdene',      NULL, 'Budget ceiling reached for this quarter.', '{"status":"awaiting_finance_review"}', '{"status":"rejected"}', '{"requestedAmount":18000000,"repaymentMonths":24}', NULL, '2026-03-09T16:10:00.000Z'),
   ('audit_override_hr_intern', 'emp_hr_otgon',     'hr_manager',  'ELIGIBILITY_OVERRIDE_SET', 'benefit_eligibility','emp_hr_nomin:extra_responsibility','emp_hr_nomin',  'extra_responsibility', NULL,                  NULL, 'Approved as a short-term shadowing exception for intern development.', '{"overrideStatus":null}', '{"overrideStatus":"eligible","expiresAt":"2026-04-30T23:59:59.000Z"}', '{"reason":"manager-track shadowing"}', NULL, '2026-03-10T13:00:00.000Z'),
