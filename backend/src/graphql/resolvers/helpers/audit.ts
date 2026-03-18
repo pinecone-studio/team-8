@@ -34,6 +34,7 @@ export type AuditEntityType =
   | "benefit_eligibility"
   | "eligibility_rule"
   | "contract"
+  | "employee_contract"
   | "enrollment"
   | "rule_proposal";
 
