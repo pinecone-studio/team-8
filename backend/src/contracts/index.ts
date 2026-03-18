@@ -9,6 +9,7 @@ export {
 export {
   createContractViewToken,
   getContractViewUrl,
+  getEmployeeSignedContractViewUrl,
   resolveContractViewToken,
   type ContractViewEnv,
 } from "./view-token";
