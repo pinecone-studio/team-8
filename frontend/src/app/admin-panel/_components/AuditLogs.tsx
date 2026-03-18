@@ -1,8 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Download, X } from "lucide-react";
-import { useGetAuditLogsQuery } from "@/graphql/generated/graphql";
+import {
+  CalendarDays,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  X,
+} from "lucide-react";
+import {
+  useGetAuditLogsQuery,
+  useGetEmployeesQuery,
+} from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
 import PageLoading from "@/app/_components/PageLoading";
@@ -59,10 +69,20 @@ const ACTION_TONE: Record<string, string> = {
 // ── DateRangePicker helpers ───────────────────────────────────────────────────
 
 const MONTH_NAMES = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
-const DAY_ABBRS = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+const DAY_ABBRS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 function isoToLocal(iso: string): Date | null {
   if (!iso) return null;
@@ -108,7 +128,14 @@ function buildGrid(year: number, month: number): (Date | null)[] {
 // ── MonthCalendar ─────────────────────────────────────────────────────────────
 
 function MonthCalendar({
-  year, month, start, end, hover, phase, onDayClick, onDayHover,
+  year,
+  month,
+  start,
+  end,
+  hover,
+  phase,
+  onDayClick,
+  onDayHover,
 }: {
   year: number;
   month: number;
@@ -127,15 +154,20 @@ function MonthCalendar({
 
   // Use hover preview as effective end while user is picking
   const previewEnd = end ?? (phase === "end" && hover ? hover : null);
-  const lo = start && previewEnd ? (start <= previewEnd ? start : previewEnd) : start;
-  const hi = start && previewEnd ? (start <= previewEnd ? previewEnd : start) : null;
+  const lo =
+    start && previewEnd ? (start <= previewEnd ? start : previewEnd) : start;
+  const hi =
+    start && previewEnd ? (start <= previewEnd ? previewEnd : start) : null;
   const single = lo && hi && sameDay(lo, hi);
 
   return (
     <div className="w-56">
       <div className="mb-1 grid grid-cols-7">
         {DAY_ABBRS.map((a) => (
-          <div key={a} className="flex h-7 items-center justify-center text-[11px] font-semibold text-slate-400">
+          <div
+            key={a}
+            className="flex h-7 items-center justify-center text-[11px] font-semibold text-slate-400"
+          >
             {a}
           </div>
         ))}
@@ -146,24 +178,35 @@ function MonthCalendar({
 
           const isLo = lo !== null && sameDay(d, lo);
           const isHi = hi !== null && sameDay(d, hi);
-          const inRange = !single && lo !== null && hi !== null && d > lo && d < hi;
+          const inRange =
+            !single && lo !== null && hi !== null && d > lo && d < hi;
           const isToday = sameDay(d, today);
 
           // Continuous stripe background between start and end
-          const bg =
-            single ? "" :
-            isLo && hi ? "bg-gradient-to-r from-transparent to-blue-50" :
-            isHi && lo ? "bg-gradient-to-r from-blue-50 to-transparent" :
-            inRange    ? "bg-blue-50" : "";
+          const bg = single
+            ? ""
+            : isLo && hi
+              ? "bg-gradient-to-r from-transparent to-blue-50"
+              : isHi && lo
+                ? "bg-gradient-to-r from-blue-50 to-transparent"
+                : inRange
+                  ? "bg-blue-50"
+                  : "";
 
           const btnColor =
-            isLo || isHi ? "bg-blue-600 text-white" :
-            inRange      ? "text-blue-700 hover:bg-blue-100" :
-            isToday      ? "text-slate-900 ring-1 ring-blue-400 ring-offset-1 hover:bg-slate-100" :
-                           "text-slate-700 hover:bg-slate-100";
+            isLo || isHi
+              ? "bg-blue-600 text-white"
+              : inRange
+                ? "text-blue-700 hover:bg-blue-100"
+                : isToday
+                  ? "text-slate-900 ring-1 ring-blue-400 ring-offset-1 hover:bg-slate-100"
+                  : "text-slate-700 hover:bg-slate-100";
 
           return (
-            <div key={d.toISOString()} className={`flex h-8 items-center justify-center ${bg}`}>
+            <div
+              key={d.toISOString()}
+              className={`flex h-8 items-center justify-center ${bg}`}
+            >
               <button
                 type="button"
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors ${btnColor}`}
@@ -184,7 +227,10 @@ function MonthCalendar({
 // ── DateRangePicker ───────────────────────────────────────────────────────────
 
 function DateRangePicker({
-  fromDate, toDate, onChange, onClear,
+  fromDate,
+  toDate,
+  onChange,
+  onClear,
 }: {
   fromDate: string;
   toDate: string;
@@ -192,10 +238,13 @@ function DateRangePicker({
   onClear: () => void;
 }) {
   const now = new Date();
-  const [open, setOpen]   = useState(false);
+  const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<"idle" | "end">("idle");
   const [hover, setHover] = useState<Date | null>(null);
-  const [view, setView]   = useState({ year: now.getFullYear(), month: now.getMonth() });
+  const [view, setView] = useState({
+    year: now.getFullYear(),
+    month: now.getMonth(),
+  });
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -212,7 +261,7 @@ function DateRangePicker({
   }, [open]);
 
   const start = isoToLocal(fromDate);
-  const end   = isoToLocal(toDate);
+  const end = isoToLocal(toDate);
   const right = shiftMonth(view.year, view.month, 1);
 
   function handleDayClick(d: Date) {
@@ -258,13 +307,19 @@ function DateRangePicker({
         {hasRange && (
           <span
             role="button"
-            onClick={(e) => { e.stopPropagation(); onClear(); setPhase("idle"); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClear();
+              setPhase("idle");
+            }}
             className="ml-0.5 cursor-pointer rounded p-0.5 text-slate-400 hover:text-slate-600"
           >
             <X className="h-3 w-3" />
           </span>
         )}
-        <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+        <ChevronDown
+          className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
       </button>
 
       {open && (
@@ -298,15 +353,25 @@ function DateRangePicker({
           {/* Two-month grid */}
           <div className="flex gap-6">
             <MonthCalendar
-              year={view.year} month={view.month}
-              start={start} end={end} hover={hover} phase={phase}
-              onDayClick={handleDayClick} onDayHover={setHover}
+              year={view.year}
+              month={view.month}
+              start={start}
+              end={end}
+              hover={hover}
+              phase={phase}
+              onDayClick={handleDayClick}
+              onDayHover={setHover}
             />
             <div className="w-px bg-slate-100" />
             <MonthCalendar
-              year={right.year} month={right.month}
-              start={start} end={end} hover={hover} phase={phase}
-              onDayClick={handleDayClick} onDayHover={setHover}
+              year={right.year}
+              month={right.month}
+              start={start}
+              end={end}
+              hover={hover}
+              phase={phase}
+              onDayClick={handleDayClick}
+              onDayHover={setHover}
             />
           </div>
 
@@ -678,7 +743,10 @@ export default function AuditLogs() {
   useEffect(() => {
     if (!dropdownOpen) return;
     function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setDropdownOpen(false);
       }
     }
@@ -696,11 +764,18 @@ export default function AuditLogs() {
     },
     skip: !isHr,
   });
+  const { data: employeesData } = useGetEmployeesQuery({ skip: !isHr });
 
   const fullLogs = useMemo(() => (data?.auditLogs ?? []) as AuditLog[], [data]);
+  const employeesById = useMemo(
+    () => new Map((employeesData?.getEmployees ?? []).map((e) => [e.id, e])),
+    [employeesData],
+  );
 
   const actionTypeOptions = useMemo(() => {
-    const unique = Array.from(new Set(fullLogs.map((log) => log.actionType))).sort();
+    const unique = Array.from(
+      new Set(fullLogs.map((log) => log.actionType)),
+    ).sort();
     return [
       { value: "", label: "All Actions" },
       ...unique.map((t) => ({ value: t, label: ACTION_TYPE_LABELS[t] ?? t })),
@@ -708,7 +783,10 @@ export default function AuditLogs() {
   }, [fullLogs]);
 
   const logs = useMemo(
-    () => (actionType ? fullLogs.filter((log) => log.actionType === actionType) : fullLogs),
+    () =>
+      actionType
+        ? fullLogs.filter((log) => log.actionType === actionType)
+        : fullLogs,
     [fullLogs, actionType],
   );
 
@@ -775,7 +853,9 @@ export default function AuditLogs() {
                 onClick={() => setDropdownOpen((o) => !o)}
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50"
               >
-                {actionType ? (ACTION_TYPE_LABELS[actionType] ?? actionType) : "All Actions"}
+                {actionType
+                  ? (ACTION_TYPE_LABELS[actionType] ?? actionType)
+                  : "All Actions"}
                 <ChevronDown
                   className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
                 />
@@ -805,15 +885,34 @@ export default function AuditLogs() {
                                 className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
                                   ACTION_TONE[opt.value]?.includes("blue")
                                     ? "bg-blue-400"
-                                    : ACTION_TONE[opt.value]?.includes("green") || ACTION_TONE[opt.value]?.includes("emerald") || ACTION_TONE[opt.value]?.includes("teal")
-                                    ? "bg-green-400"
-                                    : ACTION_TONE[opt.value]?.includes("red")
-                                    ? "bg-red-400"
-                                    : ACTION_TONE[opt.value]?.includes("orange") || ACTION_TONE[opt.value]?.includes("amber")
-                                    ? "bg-orange-400"
-                                    : ACTION_TONE[opt.value]?.includes("purple") || ACTION_TONE[opt.value]?.includes("violet") || ACTION_TONE[opt.value]?.includes("indigo")
-                                    ? "bg-purple-400"
-                                    : "bg-slate-300"
+                                    : ACTION_TONE[opt.value]?.includes(
+                                          "green",
+                                        ) ||
+                                        ACTION_TONE[opt.value]?.includes(
+                                          "emerald",
+                                        ) ||
+                                        ACTION_TONE[opt.value]?.includes("teal")
+                                      ? "bg-green-400"
+                                      : ACTION_TONE[opt.value]?.includes("red")
+                                        ? "bg-red-400"
+                                        : ACTION_TONE[opt.value]?.includes(
+                                              "orange",
+                                            ) ||
+                                            ACTION_TONE[opt.value]?.includes(
+                                              "amber",
+                                            )
+                                          ? "bg-orange-400"
+                                          : ACTION_TONE[opt.value]?.includes(
+                                                "purple",
+                                              ) ||
+                                              ACTION_TONE[opt.value]?.includes(
+                                                "violet",
+                                              ) ||
+                                              ACTION_TONE[opt.value]?.includes(
+                                                "indigo",
+                                              )
+                                            ? "bg-purple-400"
+                                            : "bg-slate-300"
                                 }`}
                               />
                             )}
@@ -829,8 +928,14 @@ export default function AuditLogs() {
             <DateRangePicker
               fromDate={fromDate}
               toDate={toDate}
-              onChange={(from, to) => { setFromDate(from); setToDate(to); }}
-              onClear={() => { setFromDate(""); setToDate(""); }}
+              onChange={(from, to) => {
+                setFromDate(from);
+                setToDate(to);
+              }}
+              onClear={() => {
+                setFromDate("");
+                setToDate("");
+              }}
             />
             {(actionType || fromDate || toDate) && (
               <button
@@ -875,46 +980,61 @@ export default function AuditLogs() {
                     </tr>
                   </thead>
                   <tbody>
-                    {logs.map((log) => (
-                      <tr
-                        key={log.id}
-                        className={`border-b border-slate-100 last:border-b-0 cursor-pointer transition-colors hover:bg-slate-50 ${
-                          selectedLog?.id === log.id ? "bg-blue-50/40" : ""
-                        }`}
-                        onClick={() => setSelectedLog(log)}
-                      >
-                        <td className="whitespace-nowrap px-5 py-3 text-slate-500">
-                          {formatDate(log.createdAt)}
-                        </td>
-                        <td className="px-5 py-3">
-                          <span
-                            className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
-                              ACTION_TONE[log.actionType] ??
-                              "bg-gray-100 text-gray-600"
-                            }`}
-                          >
-                            {log.actionType}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3 text-slate-700">
-                          {formatRole(log.actorRole)}
-                        </td>
-                        <td className="px-5 py-3 text-slate-700">
-                          <span className="font-medium">{log.entityType}</span>
-                          <span className="ml-1.5 font-mono text-xs text-slate-400">
-                            {log.entityId.slice(0, 8)}…
-                          </span>
-                        </td>
-                        <td className="px-5 py-3 max-w-[180px] truncate text-slate-500">
-                          {log.reason ?? "—"}
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          <span className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
-                            <ChevronRight className="h-4 w-4" />
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {logs.map((log) => {
+                      const actorEmployee = log.actorEmployeeId
+                        ? employeesById.get(log.actorEmployeeId) ?? null
+                        : null;
+                      const actorName =
+                        actorEmployee?.name ??
+                        (log.actorEmployeeId ? log.actorEmployeeId : "System");
+                      return (
+                        <tr
+                          key={log.id}
+                          className={`border-b border-slate-100 last:border-b-0 cursor-pointer transition-colors hover:bg-slate-50 ${
+                            selectedLog?.id === log.id ? "bg-blue-50/40" : ""
+                          }`}
+                          onClick={() => setSelectedLog(log)}
+                        >
+                          <td className="px-5 py-3 text-slate-700">
+                            <div className="flex items-center gap-3">
+                              <UserAvatar />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{actorName}</span>
+                                {actorEmployee?.email && (
+                                  <span className="text-xs text-slate-400">
+                                    {actorEmployee.email}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3 text-slate-700">
+                            {formatRole(log.actorRole)}
+                          </td>
+                          <td className="px-5 py-3">
+                            <span
+                              className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
+                                ACTION_TONE[log.actionType] ??
+                                "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {log.actionType}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-5 py-3 text-slate-500">
+                            {formatDate(log.createdAt)}
+                          </td>
+                          <td className="px-5 py-3 max-w-[180px] truncate text-slate-500">
+                            {log.reason ?? "—"}
+                          </td>
+                          <td className="px-5 py-3 text-right">
+                            <span className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
+                              <ChevronRight className="h-4 w-4" />
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
