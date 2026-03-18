@@ -94,6 +94,7 @@ export type Benefit = {
   flowType: BenefitFlowType;
   id: Scalars['String']['output'];
   imageUrl?: Maybe<Scalars['String']['output']>;
+  isActive: Scalars['Boolean']['output'];
   location?: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
   nameEng?: Maybe<Scalars['String']['output']>;
@@ -625,6 +626,7 @@ export type UpdateBenefitInput = {
   category?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
   location?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   requiresContract?: InputMaybe<Scalars['Boolean']['input']>;
@@ -889,6 +891,7 @@ export type BenefitResolvers<ContextType = GraphQLContext, ParentType extends Re
   flowType?: Resolver<ResolversTypes['BenefitFlowType'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   imageUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  isActive?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   location?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   nameEng?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
