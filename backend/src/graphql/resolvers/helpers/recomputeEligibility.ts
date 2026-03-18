@@ -144,8 +144,15 @@ export interface RecomputeResult {
  * - Writes a single ELIGIBILITY_RECOMPUTED audit entry per employee.
  * - Designed to be called from attendance import, OKR sync, or manual triggers.
  */
-/** KV cache key for a given employeeId — must stay in sync with getMyBenefits.ts. */
-export const eligibilityCacheKey = (employeeId: string) => `eligibility:v1:${employeeId}`;
+/**
+ * KV cache key for a given employeeId.
+ *
+ * Version bumped to v2 to invalidate stale employee benefit snapshots created
+ * before catalog-change cache invalidation was added. This lets newly created
+ * benefits appear immediately after deploy instead of waiting for the old TTL
+ * window to expire.
+ */
+export const eligibilityCacheKey = (employeeId: string) => `eligibility:v2:${employeeId}`;
 
 export async function recomputeEligibilityForEmployees(
   db: Database,

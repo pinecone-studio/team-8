@@ -3,6 +3,7 @@ import { schema } from "../../../db";
 import type { GraphQLContext } from "../../context";
 import { mapBenefitRecordToGraphql } from "../helpers/employeeBenefits";
 import { requireHrAdmin } from "../../../auth";
+import { invalidateAllEmployeeEligibilityCaches } from "../helpers/benefitCatalogRefresh";
 
 export const updateBenefit = async (
   _: unknown,
@@ -24,7 +25,7 @@ export const updateBenefit = async (
       imageUrl?: string | null;
     };
   },
-  { db, currentEmployee }: GraphQLContext,
+  { db, env, currentEmployee }: GraphQLContext,
 ) => {
   requireHrAdmin(currentEmployee);
 
@@ -47,5 +48,19 @@ export const updateBenefit = async (
     .returning();
 
   if (!row) throw new Error("Benefit not found");
+
+  try {
+    await invalidateAllEmployeeEligibilityCaches(
+      db,
+      env.ELIGIBILITY_CACHE,
+      "updateBenefit",
+    );
+  } catch (err) {
+    console.error(
+      `[updateBenefit] Failed to invalidate employee eligibility caches for benefit ${id}:`,
+      err,
+    );
+  }
+
   return mapBenefitRecordToGraphql(row);
 };

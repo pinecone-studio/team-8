@@ -4,11 +4,12 @@ import type { Database } from "../../../db";
 import type { GraphQLContext } from "../../context";
 import { requireHrAdmin } from "../../../auth";
 import { writeAuditLog } from "../helpers/audit";
+import { recomputeAllEmployeeEligibilities } from "../helpers/benefitCatalogRefresh";
 
 export const approveRuleProposal = async (
   _: unknown,
   { id, reason }: { id: string; reason?: string | null },
-  { db, currentEmployee }: GraphQLContext & { db: Database },
+  { db, env, currentEmployee }: GraphQLContext & { db: Database },
 ) => {
   const admin = requireHrAdmin(currentEmployee);
 
@@ -85,6 +86,25 @@ export const approveRuleProposal = async (
       summary: existing.summary,
     },
   });
+
+  try {
+    await recomputeAllEmployeeEligibilities(db, {
+      source: "manual",
+      actor: admin,
+      kvCache: env.ELIGIBILITY_CACHE,
+      metadata: {
+        trigger: "approveRuleProposal",
+        proposalId: id,
+        benefitId: existing.benefitId,
+        changeType: existing.changeType,
+      },
+    });
+  } catch (err) {
+    console.error(
+      `[approveRuleProposal] Failed to recompute eligibilities after approving proposal ${id}:`,
+      err,
+    );
+  }
 
   return updated;
 };

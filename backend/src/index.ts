@@ -24,6 +24,7 @@ import {
   type AttendanceRowInput,
 } from "./graphql/resolvers/helpers/attendanceCore";
 import { archiveOldAuditLogs } from "./graphql/resolvers/helpers/auditArchive";
+import { invalidateAllEmployeeEligibilityCaches } from "./graphql/resolvers/helpers/benefitCatalogRefresh";
 
 export interface Env {
   DB: D1Database;
@@ -382,6 +383,19 @@ async function handleContractUpload(
       .where(eq(schema.benefits.id, benefitId));
   }
 
+  try {
+    await invalidateAllEmployeeEligibilityCaches(
+      db,
+      env.ELIGIBILITY_CACHE,
+      "handleContractUpload",
+    );
+  } catch (err) {
+    console.error(
+      `[handleContractUpload] Failed to invalidate employee eligibility caches for benefit ${benefitId}:`,
+      err,
+    );
+  }
+
   // Phase 4: Audit log on contract upload
   if (inserted) {
     await writeAuditLog({
@@ -515,6 +529,19 @@ async function handleBenefitImageUpload(
     .update(schema.benefits)
     .set({ imageUrl: r2Key })
     .where(eq(schema.benefits.id, benefitId));
+
+  try {
+    await invalidateAllEmployeeEligibilityCaches(
+      db,
+      env.ELIGIBILITY_CACHE,
+      "handleBenefitImageUpload",
+    );
+  } catch (err) {
+    console.error(
+      `[handleBenefitImageUpload] Failed to invalidate employee eligibility caches for benefit ${benefitId}:`,
+      err,
+    );
+  }
 
   return withCors(request, new Response(JSON.stringify({ imageUrl: r2Key }), {
     status: 201, headers: { "Content-Type": "application/json" },

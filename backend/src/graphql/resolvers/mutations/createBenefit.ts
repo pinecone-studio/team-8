@@ -2,6 +2,7 @@ import { schema } from "../../../db";
 import type { GraphQLContext } from "../../context";
 import { mapBenefitRecordToGraphql } from "../helpers/employeeBenefits";
 import { requireHrAdmin } from "../../../auth";
+import { invalidateAllEmployeeEligibilityCaches } from "../helpers/benefitCatalogRefresh";
 
 export const createBenefit = async (
   _: unknown,
@@ -21,7 +22,7 @@ export const createBenefit = async (
       imageUrl?: string | null;
     };
   },
-  { db, currentEmployee }: GraphQLContext,
+  { db, env, currentEmployee }: GraphQLContext,
 ) => {
   requireHrAdmin(currentEmployee);
   const [row] = await db
@@ -40,5 +41,19 @@ export const createBenefit = async (
     })
     .returning();
   if (!row) throw new Error("Failed to create benefit");
+
+  try {
+    await invalidateAllEmployeeEligibilityCaches(
+      db,
+      env.ELIGIBILITY_CACHE,
+      "createBenefit",
+    );
+  } catch (err) {
+    console.error(
+      `[createBenefit] Failed to invalidate employee eligibility caches for benefit ${row.id}:`,
+      err,
+    );
+  }
+
   return mapBenefitRecordToGraphql(row);
 };
