@@ -96,8 +96,8 @@ export default function BenefitDetailModal({ benefit, onClose, onRequestBenefit 
           </div>
 
           {/* Amount + Subsidy */}
-          <div className="mt-5 grid grid-cols-2 gap-4">
-            {b.amount ? (
+          {b.amount != null && (
+            <div className="mt-5 grid grid-cols-2 gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Total Price</p>
                 <div className="mt-1.5 flex items-center gap-1 rounded-xl bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-800 ring-1 ring-gray-100">
@@ -105,15 +105,14 @@ export default function BenefitDetailModal({ benefit, onClose, onRequestBenefit 
                   {b.amount.toLocaleString()}₮
                 </div>
               </div>
-            ) : null}
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Company Covers</p>
-              <div className="mt-1.5 rounded-xl bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-100">
-                {b.subsidyPercent}%
-                {b.amount ? ` (${Math.round(b.amount * b.subsidyPercent / 100).toLocaleString()}₮)` : ""}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Company Covers</p>
+                <div className="mt-1.5 rounded-xl bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                  {b.subsidyPercent}% ({Math.round(b.amount * b.subsidyPercent / 100).toLocaleString()}₮)
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Category + Location */}
           <div className="mt-4 grid grid-cols-2 gap-4">
@@ -140,7 +139,7 @@ export default function BenefitDetailModal({ benefit, onClose, onRequestBenefit 
               <div className="flex items-center gap-2.5 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
                 <p className="text-sm font-medium text-emerald-800">
-                  Та энэ benefit-ийг авах боломжтой
+                  You are eligible for this benefit
                 </p>
               </div>
             ) : benefit.status === BenefitEligibilityStatus.Locked && failedRules.length > 0 ? (

@@ -4,16 +4,18 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   useGetAdminBenefitsQuery,
-  useDeleteBenefitMutation,
+  useUpdateBenefitMutation,
   GetAdminBenefitsDocument,
 } from "@/graphql/generated/graphql";
-import { ArrowRight, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
 
 function BenefitTableRowSkeleton() {
   return (
     <tr className="border-b border-gray-50 last:border-b-0">
       {/* Name — prominent, wider bar */}
       <td className="px-4 py-3"><div className="h-3.5 w-36 rounded-full bg-slate-200/80 animate-pulse" /></td>
+      {/* Status */}
+      <td className="px-4 py-3"><div className="h-3 w-14 rounded-full bg-slate-200/80 animate-pulse" /></td>
       {/* Category */}
       <td className="px-4 py-3"><div className="h-3 w-20 rounded-full bg-slate-200/80 animate-pulse" /></td>
       {/* Subsidy % */}
@@ -28,14 +30,14 @@ function BenefitTableRowSkeleton() {
           <div className="h-3 w-12 rounded-full bg-slate-200/80 animate-pulse" />
         </div>
       </td>
-      {/* Actions: View button + delete icon */}
+      {/* Actions: View button + toggle */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-1.5">
           <div className="inline-flex items-center gap-1 rounded-lg border border-slate-100 px-2.5 py-1">
             <div className="h-3 w-3 rounded-sm bg-slate-200/80 animate-pulse shrink-0" />
             <div className="h-3 w-6 rounded-full bg-slate-200/80 animate-pulse" />
           </div>
-          <div className="h-7 w-7 rounded-lg bg-slate-200/80 animate-pulse" />
+          <div className="h-7 w-16 rounded-lg bg-slate-200/80 animate-pulse" />
         </div>
       </td>
     </tr>
@@ -50,6 +52,43 @@ const APPROVAL_POLICY_LABELS: Record<string, string> = {
   dual: "Dual",
 };
 
+function FeedbackToast({
+  feedback,
+  onClose,
+}: {
+  feedback: { type: "success" | "error"; message: string } | null;
+  onClose: () => void;
+}) {
+  if (!feedback) return null;
+
+  const isSuccess = feedback.type === "success";
+
+  return (
+    <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 sm:justify-end sm:px-6">
+      <div
+        role="status"
+        aria-live="polite"
+        className={`pointer-events-auto flex w-full max-w-md items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm shadow-lg backdrop-blur ${
+          isSuccess
+            ? "border-green-200 bg-green-50/95 text-green-900"
+            : "border-red-200 bg-red-50/95 text-red-900"
+        }`}
+      >
+        <span className="leading-5">{feedback.message}</span>
+        <button
+          type="button"
+          onClick={onClose}
+          className={`shrink-0 rounded-md px-2 py-1 text-xs font-medium transition ${
+            isSuccess ? "text-green-800 hover:bg-green-100" : "text-red-800 hover:bg-red-100"
+          }`}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function CompanyBenefits() {
   const { employee, loading: employeeLoading } = useCurrentEmployee();
   const hasAdminAccess = isAdminEmployee(employee);
@@ -58,24 +97,23 @@ export default function CompanyBenefits() {
     skip: !hasAdminAccess,
   });
   const skeletonCount = data?.adminBenefits?.length ?? previousData?.adminBenefits?.length ?? 5;
-  const [deleteBenefit, { loading: deleting }] = useDeleteBenefitMutation({
+  const [updateBenefit, { loading: updating }] = useUpdateBenefitMutation({
     refetchQueries: [{ query: GetAdminBenefitsDocument }],
-    onCompleted: () => setFeedback({ type: "success", message: "Benefit removed." }),
-    onError: () => setFeedback({ type: "error", message: "Failed to remove benefit." }),
+    onCompleted: () => setFeedback({ type: "success", message: "Benefit status updated." }),
+    onError: () => setFeedback({ type: "error", message: "Failed to update benefit status." }),
   });
 
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(`Remove benefit "${name}"? This will also remove related requests, rules, and contracts.`)) return;
-    setDeletingId(id);
+  const handleToggleActive = async (id: string, nextActive: boolean) => {
+    setUpdatingId(id);
     setFeedback(null);
     try {
-      await deleteBenefit({ variables: { id } });
+      await updateBenefit({ variables: { id, input: { isActive: nextActive } } });
       setTimeout(() => setFeedback(null), 3000);
     } finally {
-      setDeletingId(null);
+      setUpdatingId(null);
     }
   };
 
@@ -102,6 +140,7 @@ export default function CompanyBenefits() {
                 <thead className="border-b border-gray-100">
                   <tr>
                     <th className="px-4 py-3"><div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                    <th className="px-4 py-3"><div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" /></th>
                     <th className="px-4 py-3"><div className="h-2.5 w-16 rounded-full bg-slate-200/80 animate-pulse" /></th>
                     <th className="px-4 py-3"><div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" /></th>
                     <th className="px-4 py-3"><div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" /></th>
@@ -154,17 +193,7 @@ export default function CompanyBenefits() {
           )}
         </div>
 
-        {feedback && (
-          <div
-            className={`rounded-lg border px-3 py-2 text-sm ${
-              feedback.type === "success"
-                ? "border-green-200 bg-green-50 text-green-800"
-                : "border-red-200 bg-red-50 text-red-800"
-            }`}
-          >
-            {feedback.message}
-          </div>
-        )}
+        <FeedbackToast feedback={feedback} onClose={() => setFeedback(null)} />
 
         <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
           {error ? (
@@ -181,6 +210,7 @@ export default function CompanyBenefits() {
                 <thead className="border-b border-gray-100 text-xs font-medium uppercase tracking-wide text-gray-500">
                   <tr>
                     <th className="px-4 py-3">Name</th>
+                    <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Category</th>
                     <th className="px-4 py-3">Subsidy</th>
                     <th className="px-4 py-3">Vendor</th>
@@ -193,9 +223,22 @@ export default function CompanyBenefits() {
                   {benefits.map((b) => (
                     <tr
                       key={b.id}
-                      className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50/50"
+                      className={`border-b border-gray-50 last:border-b-0 hover:bg-gray-50/50 ${
+                        b.isActive ? "" : "opacity-70"
+                      }`}
                     >
                       <td className="px-4 py-3 font-medium text-gray-900">{b.name}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span
+                          className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
+                            b.isActive
+                              ? "bg-green-50 text-green-700"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {b.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-600 capitalize">{b.category}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{b.subsidyPercent}%</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{b.vendorName ?? "—"}</td>
@@ -225,12 +268,16 @@ export default function CompanyBenefits() {
                           {canCreate && (
                             <button
                               type="button"
-                              onClick={() => handleDelete(b.id, b.name)}
-                              disabled={deleting || deletingId !== null}
-                              className="inline-flex items-center justify-center rounded-lg p-1.5 text-gray-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                              title="Remove benefit"
+                              onClick={() => handleToggleActive(b.id, !b.isActive)}
+                              disabled={updating || updatingId !== null}
+                              className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-xs font-medium transition disabled:opacity-50 ${
+                                b.isActive
+                                  ? "border-gray-200 text-gray-600 hover:bg-gray-50"
+                                  : "border-green-200 text-green-700 hover:bg-green-50"
+                              }`}
+                              title={b.isActive ? "Deactivate benefit" : "Activate benefit"}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              {b.isActive ? "Deactivate" : "Activate"}
                             </button>
                           )}
                         </div>

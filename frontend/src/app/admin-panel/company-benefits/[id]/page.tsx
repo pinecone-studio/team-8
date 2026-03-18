@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { gql, useQuery } from "@apollo/client";
 import { useAuth } from "@clerk/nextjs";
 import {
   AlertTriangle,
@@ -32,7 +31,6 @@ import {
   GetAdminBenefitsDocument,
   GetEligibilityRulesDocument,
   GetRuleProposalsDocument,
-  GetContractsForBenefitDocument,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isAdminEmployee, isHrAdmin } from "../../_lib/access";
@@ -46,8 +44,49 @@ const APPROVAL_POLICIES = [
   { value: "finance", label: "Finance only" },
   { value: "dual", label: "Dual (HR + Finance)" },
 ];
-const RULE_TYPES = ["employment_status", "okr_submitted", "attendance", "responsibility_level", "role", "tenure_days"];
-const OPERATORS = ["eq", "neq", "gte", "gt", "lte", "lt", "in", "not_in"];
+type RuleFieldKey = "employment_status" | "okr_submitted" | "attendance" | "responsibility_level" | "role" | "tenure_days";
+
+const RULE_FIELDS: {
+  key: RuleFieldKey;
+  label: string;
+  valueType: "select" | "boolean" | "number" | "text";
+  options?: { value: string; label: string }[];
+  unit?: string;
+  defaultValue: string;
+  operators: { value: string; label: string }[];
+}[] = [
+  {
+    key: "employment_status", label: "Employment Status", valueType: "select",
+    options: [{ value: '"active"', label: "Active" }, { value: '"probation"', label: "Probation" }, { value: '"leave"', label: "On Leave" }, { value: '"terminated"', label: "Terminated" }],
+    defaultValue: '"active"',
+    operators: [{ value: "eq", label: "is" }, { value: "neq", label: "is not" }],
+  },
+  {
+    key: "okr_submitted", label: "OKR Submitted", valueType: "boolean",
+    options: [{ value: "true", label: "Yes" }, { value: "false", label: "No" }],
+    defaultValue: "true",
+    operators: [{ value: "eq", label: "is" }],
+  },
+  {
+    key: "attendance", label: "Attendance (late arrivals)", valueType: "number", unit: "times",
+    defaultValue: "3",
+    operators: [{ value: "lt", label: "less than" }, { value: "lte", label: "at most" }, { value: "gte", label: "at least" }],
+  },
+  {
+    key: "responsibility_level", label: "Responsibility Level", valueType: "select",
+    options: [{ value: "1", label: "Standard (1)" }, { value: "2", label: "Senior (2)" }, { value: "3", label: "Lead (3)" }, { value: "4", label: "Principal (4)" }],
+    defaultValue: "1",
+    operators: [{ value: "gte", label: "or above" }, { value: "eq", label: "exactly" }, { value: "lte", label: "or below" }],
+  },
+  {
+    key: "role", label: "Role", valueType: "text", defaultValue: '"engineer"',
+    operators: [{ value: "eq", label: "is" }, { value: "neq", label: "is not" }],
+  },
+  {
+    key: "tenure_days", label: "Tenure (days)", valueType: "number", unit: "days", defaultValue: "180",
+    operators: [{ value: "gte", label: "or more" }, { value: "lte", label: "or less" }, { value: "gt", label: "more than" }],
+  },
+];
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700",
@@ -128,7 +167,7 @@ function BenefitDetails({ benefitId, isHr }: { benefitId: string; isHr: boolean 
   const benefit = data?.adminBenefits?.find((b) => b.id === benefitId);
 
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: "", category: "", subsidyPercent: 0, vendorName: "", requiresContract: false, approvalPolicy: "hr" });
+  const [form, setForm] = useState({ name: "", category: "", subsidyPercent: 0, vendorName: "", requiresContract: false, approvalPolicy: "hr", amount: 0 });
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const [updateBenefit, { loading: saving }] = useUpdateBenefitMutation({
@@ -150,12 +189,13 @@ function BenefitDetails({ benefitId, isHr }: { benefitId: string; isHr: boolean 
       vendorName: benefit.vendorName ?? "",
       requiresContract: benefit.requiresContract,
       approvalPolicy: benefit.approvalPolicy ?? "hr",
+      amount: benefit.amount ?? 0,
     });
     setFeedback(null);
     setEditing(true);
   }
 
-  async function handleSave(e: React.FormEvent) {
+  async function handleSave(e: React.SyntheticEvent) {
     e.preventDefault();
     await updateBenefit({
       variables: {
@@ -167,6 +207,7 @@ function BenefitDetails({ benefitId, isHr }: { benefitId: string; isHr: boolean 
           vendorName: form.vendorName.trim() || null,
           requiresContract: form.requiresContract,
           approvalPolicy: form.approvalPolicy,
+          amount: benefit?.amount != null ? form.amount : undefined,
         },
       },
     });
@@ -200,12 +241,22 @@ function BenefitDetails({ benefitId, isHr }: { benefitId: string; isHr: boolean 
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
               </select>
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Subsidy %</label>
-              <input type="number" min={0} max={100} value={form.subsidyPercent}
-                onChange={(e) => setForm((f) => ({ ...f, subsidyPercent: Number(e.target.value) || 0 }))}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-            </div>
+            {benefit.amount != null && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Subsidy %</label>
+                <input type="number" min={0} max={100} value={form.subsidyPercent}
+                  onChange={(e) => setForm((f) => ({ ...f, subsidyPercent: Number(e.target.value) || 0 }))}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+              </div>
+            )}
+            {benefit.amount != null && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Total Amount (₮)</label>
+                <input type="number" min={0} value={form.amount}
+                  onChange={(e) => setForm((f) => ({ ...f, amount: Number(e.target.value) || 0 }))}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+              </div>
+            )}
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">Vendor</label>
               <input value={form.vendorName} onChange={(e) => setForm((f) => ({ ...f, vendorName: e.target.value }))}
@@ -241,10 +292,21 @@ function BenefitDetails({ benefitId, isHr }: { benefitId: string; isHr: boolean 
           <div className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-3">
             <InfoRow label="Name" value={benefit.name} />
             <InfoRow label="Category" value={<span className="capitalize">{benefit.category}</span>} />
-            <InfoRow label="Subsidy" value={`${benefit.subsidyPercent}%`} />
+            {benefit.amount != null && (
+              <InfoRow label="Subsidy" value={`${benefit.subsidyPercent}%`} />
+            )}
             <InfoRow label="Vendor" value={benefit.vendorName ?? "—"} />
             <InfoRow label="Approval Policy" value={policyLabel} />
             <InfoRow label="Requires Contract" value={benefit.requiresContract ? "Yes" : "No"} />
+            {benefit.amount != null && (
+              <InfoRow label="Total Amount" value={`₮${benefit.amount.toLocaleString()}`} />
+            )}
+            {benefit.amount != null && (
+              <InfoRow label="Company Pays" value={`₮${Math.round(benefit.amount * benefit.subsidyPercent / 100).toLocaleString()} (${benefit.subsidyPercent}%)`} />
+            )}
+            {benefit.amount != null && benefit.employeePercent > 0 && (
+              <InfoRow label="Employee Pays" value={`₮${Math.round(benefit.amount * benefit.employeePercent / 100).toLocaleString()} (${benefit.employeePercent}%)`} />
+            )}
           </div>
           {isHr && (
             <button type="button" onClick={startEdit}
@@ -280,9 +342,10 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
 
   type ProposalMode = "create" | "update" | "delete";
   type EligibilityRule = { id: string; benefitId: string; ruleType: string; operator: string; value: string; errorMessage: string; priority: number; isActive: boolean };
-  type RuleProposal = { id: string; changeType: string; proposedData: string; summary: string; status: string; proposedByEmployeeId: string; proposedAt: string; reason?: string | null };
+  type RuleProposal = { id: string; ruleId?: string | null; changeType: string; proposedData: string; summary: string; status: string; proposedByEmployeeId: string; proposedAt: string; reason?: string | null };
 
   const [proposalMode, setProposalMode] = useState<ProposalMode | null>(null);
+  const [editingFromProposal, setEditingFromProposal] = useState(false);
   const [editingRule, setEditingRule] = useState<EligibilityRule | null>(null);
   const [form, setForm] = useState(defaultRuleForm);
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
@@ -331,50 +394,56 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
 
   if (!isHr) return null;
 
+  const fieldCfg = RULE_FIELDS.find((f) => f.key === (form.ruleType as RuleFieldKey)) ?? RULE_FIELDS[0];
+
   return (
-    <Section title="Rule Configuration" icon={<ChevronDown className="h-4 w-4 text-gray-400" />}>
+    <Section title="Active Rules" icon={<ChevronDown className="h-4 w-4 text-gray-400" />}>
       {/* Pending proposals */}
-      {(pending.length > 0 || proposalsLoading) && (
-        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Clock className="h-4 w-4 text-amber-600" />
-            <span className="text-sm font-semibold text-amber-900">Pending Proposals ({pending.length})</span>
-            <span className="text-xs text-amber-700">— requires a second HR admin</span>
-          </div>
-          {proposalsLoading ? <PageLoading inline message="Loading…" /> : (
-            <div className="space-y-2">
-              {pending.map((p) => (
-                <div key={p.id} className="rounded-xl border border-amber-200 bg-white p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-slate-800">{p.summary}</p>
-                      <p className="mt-0.5 text-xs text-slate-500">Proposed {timeAgo(p.proposedAt)} · by {p.proposedByEmployeeId.slice(0, 8)}…</p>
-                      {p.proposedByEmployeeId === me?.id && <p className="mt-1 text-[11px] font-medium text-amber-700">⚠ You proposed this — another HR admin must approve</p>}
-                    </div>
-                    <div className="flex shrink-0 gap-2">
-                      {p.proposedByEmployeeId !== me?.id && (
-                        <button type="button" onClick={() => approveProposal({ variables: { id: p.id } })} disabled={approving}
-                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50">
-                          <Check className="h-3 w-3" />Approve
-                        </button>
-                      )}
-                      <button type="button" onClick={() => { setRejectTarget(p.id); setRejectReason(""); }}
-                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50">
-                        <X className="h-3 w-3" />Reject
+      {proposalsLoading ? <PageLoading inline message="Loading…" /> : pending.length > 0 && (
+        <div className="mb-5 space-y-2">
+          {pending.map((p) => {
+            const relatedRule = rules.find((r) => r.id === p.ruleId);
+            const parsed = (() => { try { return JSON.parse(p.proposedData); } catch { return null; } })();
+            function openEdit() {
+              if (relatedRule) {
+                setProposalMode("update"); setEditingRule(relatedRule);
+                setForm({ ruleType: relatedRule.ruleType, operator: relatedRule.operator, value: relatedRule.value, errorMessage: relatedRule.errorMessage, priority: relatedRule.priority });
+              } else if (parsed) {
+                setProposalMode("create"); setEditingRule(null);
+                setForm({ ruleType: parsed.ruleType ?? "employment_status", operator: parsed.operator ?? "eq", value: parsed.value ?? "", errorMessage: parsed.errorMessage ?? "", priority: parsed.priority ?? 0 });
+              }
+              setEditingFromProposal(true);
+              setActionError(null);
+            }
+            return (
+              <div key={p.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{p.summary}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">Proposed {timeAgo(p.proposedAt)} · by {p.proposedByEmployeeId.slice(0, 8)}…</p>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    {p.proposedByEmployeeId !== me?.id && (
+                      <button type="button" onClick={() => approveProposal({ variables: { id: p.id } })} disabled={approving}
+                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50">
+                        <Check className="h-3 w-3" />Approve
                       </button>
-                    </div>
+                    )}
+                    <button type="button" onClick={openEdit}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50">
+                      <Pencil className="h-3.5 w-3.5" />Edit
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            );
+          })}
         </div>
       )}
 
       {/* Active rules */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-800">Active Rules</h3>
-        <button type="button" onClick={() => { setProposalMode("create"); setEditingRule(null); setForm(defaultRuleForm); setActionError(null); }}
+<button type="button" onClick={() => { setProposalMode("create"); setEditingRule(null); setForm(defaultRuleForm); setEditingFromProposal(false); setActionError(null); }}
           className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-700">
           <Plus className="h-3.5 w-3.5" />Propose New Rule
         </button>
@@ -384,9 +453,9 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
 
       {/* Proposal form */}
       {proposalMode && (
-        <div className={`mb-4 rounded-2xl border p-4 ${proposalMode === "delete" ? "border-red-100 bg-red-50" : "border-blue-100 bg-blue-50"}`}>
-          <p className="mb-3 text-sm font-semibold text-slate-800">
-            {proposalMode === "create" ? "Propose New Rule" : proposalMode === "update" ? "Propose Rule Edit" : "Propose Rule Deletion"}
+        <div className={`mb-4 rounded-2xl border p-4 ${proposalMode === "delete" ? "border-red-100 bg-red-50" : "border-gray-100 bg-white"}`}>
+          <p className="mb-4 text-sm font-semibold text-gray-800">
+            {proposalMode === "delete" ? "Delete Rule" : editingFromProposal || proposalMode === "update" ? "Edit Rule" : "New Rule"}
           </p>
           {proposalMode === "delete" ? (
             <div className="rounded-lg border border-red-200 bg-white px-4 py-3 text-sm text-slate-700">
@@ -394,55 +463,58 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
               <p className="mt-1">{editingRule?.ruleType} {editingRule?.operator} <code className="bg-red-50 px-1 rounded">{editingRule?.value}</code></p>
             </div>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-700">Rule Type</label>
-                <select value={form.ruleType} onChange={(e) => setForm((f) => ({ ...f, ruleType: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
-                  {RULE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                <label className="mb-1 block text-xs font-medium text-gray-600">Condition</label>
+                <select value={form.ruleType} onChange={(e) => {
+                  const newField = RULE_FIELDS.find((f) => f.key === e.target.value as RuleFieldKey) ?? RULE_FIELDS[0];
+                  setForm((f) => ({ ...f, ruleType: e.target.value, operator: newField.operators[0].value, value: newField.defaultValue }));
+                }} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
+                  {RULE_FIELDS.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-700">Operator</label>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Operator</label>
                 <select value={form.operator} onChange={(e) => setForm((f) => ({ ...f, operator: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
-                  {OPERATORS.map((o) => <option key={o} value={o}>{o}</option>)}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
+                  {fieldCfg.operators.map((op) => <option key={op.value} value={op.value}>{op.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-700">Value *</label>
-                <input value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
-                  placeholder='e.g. "active" or 2' className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  Value{fieldCfg.unit ? ` (${fieldCfg.unit})` : ""}
+                </label>
+                {fieldCfg.valueType === "select" || fieldCfg.valueType === "boolean" ? (
+                  <select value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
+                    {fieldCfg.options!.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                ) : (
+                  <input type={fieldCfg.valueType === "number" ? "number" : "text"} value={form.value}
+                    onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+                )}
               </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-700">Priority</label>
-                <input type="number" value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: Number(e.target.value) }))}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-slate-700">Error Message *</label>
+              <div className="sm:col-span-3">
+                <label className="mb-1 block text-xs font-medium text-gray-600">Error Message</label>
                 <input value={form.errorMessage} onChange={(e) => setForm((f) => ({ ...f, errorMessage: e.target.value }))}
-                  placeholder="Shown to employee when rule fails" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
+                  placeholder="Shown to employee when rule fails"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
               </div>
             </div>
           )}
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <p className="text-xs text-slate-500">A second HR admin must approve this before it takes effect.</p>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => { setProposalMode(null); setEditingRule(null); }}
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
-              <button type="button" onClick={submitProposal} disabled={proposing}
-                className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-                {proposing ? "Submitting…" : "Submit Proposal"}
-              </button>
-            </div>
+          <div className="mt-4 flex gap-2">
+            <button type="button" onClick={submitProposal} disabled={proposing}
+              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">
+              {proposing ? "Saving…" : "Save"}
+            </button>
+            <button type="button" onClick={() => { setProposalMode(null); setEditingRule(null); setEditingFromProposal(false); }} disabled={proposing}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">Cancel</button>
           </div>
         </div>
       )}
 
-      {rulesLoading ? <PageLoading inline message="Loading rules…" /> : rules.length === 0 ? (
-        <p className="text-sm text-slate-500">No rules configured for this benefit.</p>
-      ) : (
+      {rulesLoading ? <PageLoading inline message="Loading rules…" /> : rules.length === 0 ? null : (
         <div className="space-y-3">
           {rules.map((rule, idx) => (
             <div key={rule.id} className={`rounded-2xl border p-4 ${rule.isActive ? "border-slate-200 bg-white" : "border-slate-100 bg-slate-50 opacity-60"}`}>
@@ -507,7 +579,7 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
 }
 
 // ── VendorContractSection ─────────────────────────────────────────────────────
-
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function VendorContractSection({ benefitId }: { benefitId: string }) {
   const { getToken } = useAuth();
   const { data, loading, error, refetch } = useGetContractsForBenefitQuery({ variables: { benefitId } });
@@ -707,7 +779,6 @@ export default function BenefitDetailPage() {
           <div className="space-y-6">
             <BenefitDetails benefitId={benefitId} isHr={isHr} />
             {isHr && <RuleConfigSection benefitId={benefitId} />}
-            {isHr && <VendorContractSection benefitId={benefitId} />}
           </div>
         </main>
     </div>
