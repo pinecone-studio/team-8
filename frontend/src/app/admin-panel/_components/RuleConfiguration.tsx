@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Check, ChevronDown, Clock, Plus, Trash2, X } from "lucide-react";
-import PageLoading from "@/app/_components/PageLoading";
 import {
   useGetAdminBenefitsQuery,
   useGetEligibilityRulesQuery,
@@ -233,35 +232,51 @@ export default function RuleConfiguration() {
     <main className="flex-1 px-8 py-9">
       <section className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-xl font-semibold text-gray-900">Rule Configuration</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Propose and approve eligibility rule changes for benefits. All changes require a second HR admin to approve.
-          </p>
+          {benefitsLoading ? (
+            <>
+              <div className="h-6 w-44 rounded-full bg-white/30 animate-pulse" />
+              <div className="mt-2 h-3.5 w-96 rounded-full bg-white/20 animate-pulse" />
+            </>
+          ) : (
+            <>
+              <h1 className="text-xl font-semibold text-white">Rule Configuration</h1>
+              <p className="mt-1 text-sm text-gray-500">
+                Propose and approve eligibility rule changes for benefits. All changes require a second HR admin to approve.
+              </p>
+            </>
+          )}
         </div>
 
         <div className="mb-6 max-w-sm">
-          <label className="mb-2 block text-sm font-medium text-slate-700">Select Benefit</label>
-          <div className="relative">
-            <select
-              value={selectedBenefitId}
-              onChange={(e) => {
-                setSelectedBenefitId(e.target.value);
-                setProposalMode(null);
-                setEditingRule(null);
-                setActionError(null);
-              }}
-              disabled={benefitsLoading}
-              className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3 pr-10 text-sm text-slate-700 disabled:opacity-70"
-            >
-              <option value="">{benefitsLoading ? "Loading…" : "Select a benefit"}</option>
-              {benefits.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}{b.vendorName ? ` – ${b.vendorName}` : ""}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          </div>
+          {benefitsLoading ? (
+            <div className="h-3.5 w-24 rounded-full bg-slate-200/80 animate-pulse mb-2" />
+          ) : (
+            <label className="mb-2 block text-sm font-medium text-slate-700">Select Benefit</label>
+          )}
+          {benefitsLoading ? (
+            <div className="h-12 w-full rounded-xl bg-slate-200/80 animate-pulse" />
+          ) : (
+            <div className="relative">
+              <select
+                value={selectedBenefitId}
+                onChange={(e) => {
+                  setSelectedBenefitId(e.target.value);
+                  setProposalMode(null);
+                  setEditingRule(null);
+                  setActionError(null);
+                }}
+                className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3 pr-10 text-sm text-slate-700"
+              >
+                <option value="">Select a benefit</option>
+                {benefits.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}{b.vendorName ? ` – ${b.vendorName}` : ""}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            </div>
+          )}
         </div>
 
         {selectedBenefitId && (
@@ -277,7 +292,22 @@ export default function RuleConfiguration() {
                   <span className="text-xs text-amber-700">— requires a second HR admin to approve</span>
                 </div>
                 {proposalsLoading ? (
-                  <PageLoading inline message="Loading proposals…" />
+                  <div className="space-y-3">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                      <div key={i} className="rounded-xl border border-amber-100 bg-white p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 space-y-2">
+                            <div className="h-3.5 w-3/5 rounded-full bg-slate-200/80 animate-pulse" />
+                            <div className="h-2.5 w-2/5 rounded-full bg-slate-200/80 animate-pulse" />
+                          </div>
+                          <div className="flex shrink-0 gap-2">
+                            <div className="h-7 w-16 rounded-lg bg-slate-200/80 animate-pulse" />
+                            <div className="h-7 w-14 rounded-lg bg-slate-200/80 animate-pulse" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {pendingProposals.map((p) => (
@@ -475,7 +505,31 @@ export default function RuleConfiguration() {
               )}
 
               {rulesLoading ? (
-                <PageLoading inline message="Loading rules…" />
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="h-3.5 w-16 rounded-full bg-slate-200/80 animate-pulse" />
+                        <div className="flex gap-2">
+                          <div className="h-7 w-20 rounded-lg bg-slate-200/80 animate-pulse" />
+                          <div className="h-7 w-7 rounded-lg bg-slate-200/80 animate-pulse" />
+                        </div>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {[["w-16","w-24"],["w-14","w-16"],["w-10","w-20"],["w-14","w-8"]].map(([lw, vw], j) => (
+                          <div key={j}>
+                            <div className={`h-2.5 ${lw} rounded-full bg-slate-200/80 animate-pulse`} />
+                            <div className={`mt-1.5 h-3.5 ${vw} rounded-full bg-slate-200/80 animate-pulse`} />
+                          </div>
+                        ))}
+                        <div className="md:col-span-2">
+                          <div className="h-2.5 w-24 rounded-full bg-slate-200/80 animate-pulse" />
+                          <div className="mt-1.5 h-3.5 w-full rounded-full bg-slate-200/80 animate-pulse" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : rules.length === 0 ? (
                 <p className="text-sm text-slate-500">No rules configured for this benefit.</p>
               ) : (

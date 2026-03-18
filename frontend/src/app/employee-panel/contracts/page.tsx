@@ -48,6 +48,91 @@ function formatDate(raw: string | null | undefined) {
   }
 }
 
+// ── Skeleton components ───────────────────────────────────────────────────────
+
+function HistoricalVersionsSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      {/* Header row — mirrors real thead: Benefit / Vendor / Version / Effective / Expired / action */}
+      <div className="border-b border-slate-200 bg-slate-50">
+        <div className="grid grid-cols-[2fr_1.5fr_80px_140px_140px_60px] items-center gap-4 px-5 py-3">
+          {["w-14", "w-12", "w-14", "w-16", "w-12"].map((w, i) => (
+            <div key={i} className={`h-2.5 ${w} rounded-full bg-slate-200/80 animate-pulse`} />
+          ))}
+          <div className="h-2.5 w-8 rounded-full bg-slate-200/80 animate-pulse justify-self-end" />
+        </div>
+      </div>
+      {/* Data rows */}
+      {Array.from({ length: rows }).map((_, i) => (
+        <div
+          key={i}
+          className="grid grid-cols-[2fr_1.5fr_80px_140px_140px_60px] items-center gap-4 border-b border-slate-100 px-5 py-4 last:border-b-0"
+        >
+          {/* Benefit name — medium-long bar */}
+          <div className="h-3.5 w-40 rounded-full bg-slate-200/80 animate-pulse" />
+          {/* Vendor — medium bar */}
+          <div className="h-3 w-28 rounded-full bg-slate-200/80 animate-pulse" />
+          {/* Version pill */}
+          <div className="h-5 w-10 rounded-full bg-slate-200/80 animate-pulse" />
+          {/* Effective date */}
+          <div className="h-3 w-24 rounded-full bg-slate-200/80 animate-pulse" />
+          {/* Expired date */}
+          <div className="h-3 w-24 rounded-full bg-slate-200/80 animate-pulse" />
+          {/* View link text */}
+          <div className="h-3 w-8 rounded-full bg-slate-200/80 animate-pulse justify-self-end" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ContractCardSkeleton() {
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+      {/* Top row: icon circle + title/vendor + Active badge */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          {/* Icon circle */}
+          <div className="mt-0.5 h-8 w-8 shrink-0 rounded-full bg-slate-200/80 animate-pulse" />
+          <div className="flex-1 space-y-1.5">
+            {/* Benefit title — medium-wide bar */}
+            <div className="h-4 w-3/5 rounded-full bg-slate-200/80 animate-pulse" />
+            {/* Vendor name — shorter bar */}
+            <div className="h-3 w-2/5 rounded-full bg-slate-200/80 animate-pulse" />
+          </div>
+        </div>
+        {/* Active status badge */}
+        <div className="h-5 w-14 shrink-0 rounded-full bg-slate-200/80 animate-pulse" />
+      </div>
+
+      {/* Info grid: Version / Effective / Expires
+          Each cell = LABEL row (tiny uppercase) + VALUE row (larger) */}
+      <div className="mt-4 grid grid-cols-3 divide-x divide-slate-100 rounded-xl border border-gray-100 bg-gray-50/60">
+        {[
+          { label: "w-12", value: "w-8"  },   /* Version */
+          { label: "w-16", value: "w-20" },   /* Effective */
+          { label: "w-12", value: "w-20" },   /* Expires */
+        ].map((col, i) => (
+          <div key={i} className="px-4 py-3 space-y-2">
+            {/* Column label e.g. "VERSION" — tiny bar */}
+            <div className={`h-2 ${col.label} rounded-full bg-slate-200/80 animate-pulse`} />
+            {/* Column value e.g. "v1.2" or "Jan 1, 2025" — larger bar */}
+            <div className={`h-3.5 ${col.value} rounded-full bg-slate-200/80 animate-pulse`} />
+          </div>
+        ))}
+      </div>
+
+      {/* View Contract button: icon placeholder + text bar */}
+      <div className="mt-4">
+        <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2">
+          <div className="h-4 w-4 rounded-sm bg-slate-200/80 animate-pulse shrink-0" />
+          <div className="h-3.5 w-24 rounded-full bg-slate-200/80 animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Contract Preview Modal ───────────────────────────────────────────────────
 
 function ContractPreviewModal({
@@ -146,36 +231,36 @@ function ActiveContractCard({
   onPreview: (c: ContractRow) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-5">
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 rounded-full bg-emerald-100 p-1.5">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="mt-0.5 shrink-0 rounded-full bg-emerald-50 p-2 ring-1 ring-emerald-200">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           </div>
-          <div>
-            <p className="font-semibold text-gray-900">
+          <div className="min-w-0">
+            <p className="text-[15px] font-semibold text-gray-900 leading-snug truncate">
               {contract.benefitName ?? contract.benefitId}
             </p>
-            <p className="mt-0.5 text-sm text-gray-500">{contract.vendorName}</p>
+            <p className="mt-0.5 text-xs text-gray-400">{contract.vendorName}</p>
           </div>
         </div>
-        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-          ACTIVE
+        <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+          Active
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-4 border-t border-emerald-100 pt-4">
-        <div>
-          <p className="text-xs text-gray-500">Version</p>
-          <p className="mt-0.5 text-sm font-medium text-gray-900">v{contract.version}</p>
+      <div className="mt-4 grid grid-cols-3 divide-x divide-gray-100 rounded-xl border border-gray-100 bg-gray-50/60">
+        <div className="px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Version</p>
+          <p className="mt-1 text-sm font-semibold text-gray-800">v{contract.version}</p>
         </div>
-        <div>
-          <p className="text-xs text-gray-500">Effective</p>
-          <p className="mt-0.5 text-sm font-medium text-gray-900">{formatDate(contract.effectiveDate)}</p>
+        <div className="px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Effective</p>
+          <p className="mt-1 text-sm font-semibold text-gray-800">{formatDate(contract.effectiveDate)}</p>
         </div>
-        <div>
-          <p className="text-xs text-gray-500">Expires</p>
-          <p className="mt-0.5 text-sm font-medium text-gray-900">
+        <div className="px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Expires</p>
+          <p className="mt-1 text-sm font-semibold text-gray-800">
             {contract.expiryDate ? formatDate(contract.expiryDate) : "No expiry"}
           </p>
         </div>
@@ -185,9 +270,9 @@ function ActiveContractCard({
         <button
           type="button"
           onClick={() => onPreview(contract)}
-          className="inline-flex items-center gap-2 rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50"
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
         >
-          <FileText className="h-4 w-4" />
+          <FileText className="h-4 w-4 text-gray-400" />
           View Contract
         </button>
       </div>
@@ -201,12 +286,22 @@ type PageProps = { params?: Promise<Record<string, string | string[]>> };
 
 export default function ContractsPage({ params }: PageProps) {
   if (params) use(params);
-  const { data, loading, error } = useQuery<{ contracts: ContractRow[] }>(GET_CONTRACTS);
+  const { data, loading, error, previousData } = useQuery<{ contracts: ContractRow[] }>(GET_CONTRACTS);
   const [previewContract, setPreviewContract] = useState<ContractRow | null>(null);
 
   const contracts = data?.contracts ?? [];
   const active = contracts.filter((c) => c.isActive);
   const historical = contracts.filter((c) => !c.isActive);
+
+  const prevContracts = previousData?.contracts ?? [];
+  const activeSkeletonCount = active.length || prevContracts.filter((c) => c.isActive).length || 4;
+  const historicalSkeletonRows = historical.length || prevContracts.filter((c) => !c.isActive).length || 3;
+
+  // Only declare these states true once data has actually been received
+  const dataReceived = data !== undefined;
+  const hasCurrentContracts = active.length > 0;
+  const hasHistoricalVersions = historical.length > 0;
+  const showEmptyState = !loading && !error && dataReceived && !hasCurrentContracts && !hasHistoricalVersions;
 
   return (
     <>
@@ -228,14 +323,42 @@ export default function ContractsPage({ params }: PageProps) {
             </p>
 
             {loading ? (
-              <div className="mt-8">
-                <PageLoading inline message="Loading contracts…" className="text-slate-500" />
+              <div>
+                <div className="h-6 w-44 rounded-full bg-white/30 animate-pulse" />
+                <div className="mt-2 h-3.5 w-72 rounded-full bg-white/20 animate-pulse" />
               </div>
+            ) : (
+              <>
+                <h1 className="text-xl font-semibold text-white">Vendor Contracts</h1>
+                <p className="mt-1 text-sm text-gray-500">
+                  Active contracts for benefits you are enrolled in or have a pending request for.
+                </p>
+              </>
+            )}
+
+            {loading ? (
+              <>
+                {/* Current Contracts skeleton */}
+                <section className="mt-8">
+                  <div className="mb-4 h-3 w-32 rounded-full bg-slate-200/80 animate-pulse" />
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {Array.from({ length: activeSkeletonCount }).map((_, i) => (
+                      <ContractCardSkeleton key={i} />
+                    ))}
+                  </div>
+                </section>
+
+                {/* Historical Versions skeleton */}
+                <section className="mt-8">
+                  <div className="mb-4 h-3 w-36 rounded-full bg-slate-200/80 animate-pulse" />
+                  <HistoricalVersionsSkeleton rows={historicalSkeletonRows} />
+                </section>
+              </>
             ) : error ? (
               <div className="mt-8 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
                 Failed to load contracts. Please try again.
               </div>
-            ) : contracts.length === 0 ? (
+            ) : showEmptyState ? (
               <div className="mt-8 rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-14 text-center">
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
                   <FileText className="h-6 w-6 text-gray-400" />
