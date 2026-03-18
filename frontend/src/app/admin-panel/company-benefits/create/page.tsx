@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import NextImage from "next/image";
 import {
   ArrowLeft,
   ArrowRight,
@@ -11,7 +12,7 @@ import {
   CreditCard,
   Eye,
   FileText,
-  Image,
+  Image as ImageIcon,
   Info,
   LayoutGrid,
   MapPin,
@@ -698,12 +699,12 @@ export default function CreateBenefitPage() {
                       </div>
                       <div className="sm:col-span-2">
                         <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600">
-                          <Image className="h-3.5 w-3.5" />
+                          <ImageIcon className="h-3.5 w-3.5" />
                           Benefit Image <span className="text-gray-300">(optional)</span>
                         </label>
                         <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 transition hover:border-violet-300 hover:bg-violet-50">
                           {imagePreview ? (
-                            <img src={imagePreview} alt="Preview" className="h-24 w-auto rounded-lg object-cover" />
+                            <NextImage src={imagePreview} alt="Benefit preview" width={96} height={96} className="h-24 w-auto rounded-lg object-cover" unoptimized />
                           ) : (
                             <>
                               <Upload className="h-6 w-6 text-gray-300" />
@@ -1035,6 +1036,5 @@ export default function CreateBenefitPage() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

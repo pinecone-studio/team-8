@@ -795,7 +795,6 @@ export default function AuditLogs() {
 
   const handleExport = useCallback(() => {
     exportCsv(logs, { actionType, fromDate, toDate });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logs, actionType, fromDate, toDate]);
   const isLoading = meLoading || auditLoading;
   const skeletonRowCount = (prevAuditData?.auditLogs?.length ?? 0) || 6;

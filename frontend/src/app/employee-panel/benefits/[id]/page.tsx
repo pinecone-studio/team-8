@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, Clock, DollarSign, ExternalLink, FileText, Lock, MapPin, ShieldCheck, Users, XCircle } from "lucide-react";
 import StatusBadge from "../../_components/benefits/StatusBadge";
@@ -304,10 +305,13 @@ export default function BenefitDetailPage() {
 
                 {/* Benefit image */}
                 {benefit.imageUrl && (
-                  <img
+                  <Image
                     src={`${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""}/api/benefits/image?key=${encodeURIComponent(benefit.imageUrl)}`}
                     alt={benefit.name}
+                    width={640}
+                    height={176}
                     className="mt-4 h-44 w-full rounded-xl object-cover"
+                    unoptimized
                   />
                 )}
 

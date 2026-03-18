@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { CheckCircle2, ChevronDown, Search, X, XCircle } from "lucide-react";
 import {
   useGetEmployeesQuery,
@@ -438,9 +439,11 @@ export default function EligibilityInspector() {
               const nameValue = (
                 <div className="flex items-center gap-2">
                   {matchesClerkUser ? (
-                    <img
+                    <Image
                       src={user.imageUrl}
                       alt={selectedEmployee.name}
+                      width={28}
+                      height={28}
                       className="h-7 w-7 shrink-0 rounded-full object-cover"
                     />
                   ) : (

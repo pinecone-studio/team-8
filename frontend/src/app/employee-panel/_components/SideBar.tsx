@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { useRef, useEffect, useState, useTransition } from "react";
@@ -202,9 +203,11 @@ export default function Sidebar() {
               {loading || !isUserLoaded ? (
                 <div className="h-9 w-9 shrink-0 rounded-full bg-gray-200 animate-pulse" />
               ) : user?.imageUrl ? (
-                <img
+                <Image
                   src={user.imageUrl}
                   alt={profileName}
+                  width={36}
+                  height={36}
                   className="h-9 w-9 shrink-0 rounded-full object-cover"
                 />
               ) : (

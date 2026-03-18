@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { X, CheckCircle2, Clock, XCircle, MapPin, DollarSign } from "lucide-react";
 import type { BenefitEligibility } from "@/graphql/generated/graphql";
 import { BenefitEligibilityStatus } from "@/graphql/generated/graphql";
@@ -78,10 +79,13 @@ export default function BenefitDetailModal({ benefit, onClose, onRequestBenefit 
         <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
           {/* Image */}
           {b.imageUrl && (
-            <img
+            <Image
               src={`${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""}/api/benefits/image?key=${encodeURIComponent(b.imageUrl)}`}
               alt={b.name}
+              width={640}
+              height={160}
               className="mb-4 h-40 w-full rounded-xl object-cover"
+              unoptimized
             />
           )}
 
