@@ -6,7 +6,6 @@ import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Check, Eye, ExternalLink, FileCheck, X } from "lucide-react";
 import Sidebar from "../_components/SideBar";
-import PageLoading from "@/app/_components/PageLoading";
 import {
   useGetBenefitRequestsQuery,
   useGetBenefitsQuery,
@@ -200,7 +199,7 @@ function TimelineDot({ state }: { state: StepState }) {
     return (
       <span
         aria-hidden="true"
-        className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 ring-2 ring-amber-100 shrink-0"
+        className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 ring-4 ring-amber-100/70 shrink-0"
       >
         <span className="h-1.5 w-1.5 rounded-full bg-white" />
       </span>
@@ -245,14 +244,14 @@ function RequestTimeline({
           <div className="flex flex-col items-center gap-1 shrink-0">
             <TimelineDot state={step.state} />
             <span
-              className={`text-[9px] font-medium whitespace-nowrap leading-tight text-center ${
+              className={`text-[10px] font-medium whitespace-nowrap leading-tight text-center ${
                 step.state === "active"
                   ? "text-amber-600"
                   : step.state === "done"
                     ? "text-emerald-500"
                     : step.state === "failed"
                       ? "text-red-500"
-                      : "text-gray-400"
+                      : "text-gray-300"
               }`}
             >
               {step.label}
@@ -261,13 +260,69 @@ function RequestTimeline({
           {i < steps.length - 1 && (
             <div
               aria-hidden="true"
-              className={`flex-1 h-px mt-2.5 mx-1.5 rounded-full ${
+              className={`flex-1 h-px mt-2.5 mx-2 rounded-full ${
                 step.state === "done" ? "bg-emerald-200" : "bg-gray-200"
               }`}
             />
           )}
         </Fragment>
       ))}
+    </div>
+  );
+}
+
+// ── Request Card Skeleton ──────────────────────────────────────────────────
+
+function RequestCardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-gray-200 border-l-4 border-l-slate-200 bg-white shadow-sm">
+      {/* Top section: title · status badge · reviewer · date */}
+      <div className="flex items-start justify-between gap-4 px-5 pt-4 pb-3">
+        <div className="flex-1 space-y-1.5">
+          {/* Benefit title — wide bar */}
+          <div className="h-4 w-3/5 rounded-full bg-slate-200/80 animate-pulse" />
+          {/* Status badge pill */}
+          <div className="flex items-center gap-2 pt-0.5">
+            <div className="h-5 w-24 rounded-full bg-slate-200/80 animate-pulse" />
+          </div>
+          {/* Reviewer sub-row: dot + "Reviewed by …" */}
+          <div className="flex items-center gap-1.5 pt-0.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-slate-200/80 animate-pulse shrink-0" />
+            <div className="h-2.5 w-32 rounded-full bg-slate-200/80 animate-pulse" />
+          </div>
+        </div>
+        {/* Date block — right-aligned: date value + "submitted" label */}
+        <div className="shrink-0 space-y-1.5 text-right">
+          <div className="h-3 w-20 rounded-full bg-slate-200/80 animate-pulse ml-auto" />
+          <div className="h-2 w-14 rounded-full bg-slate-200/80 animate-pulse ml-auto" />
+        </div>
+      </div>
+
+      {/* Bottom row: timeline + action buttons */}
+      <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-5 py-3.5">
+        {/* Timeline: circle dot + label text under each step */}
+        <div className="flex-1 min-w-[160px] flex items-start gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Fragment key={i}>
+              <div className="flex flex-col items-center gap-1 shrink-0">
+                <div className="h-5 w-5 rounded-full bg-slate-200/80 animate-pulse" />
+                <div className="h-2 w-10 rounded-full bg-slate-200/80 animate-pulse" />
+              </div>
+              {i < 3 && <div className="flex-1 h-px bg-slate-200/80 animate-pulse mt-2.5" />}
+            </Fragment>
+          ))}
+        </div>
+        {/* Buttons: Cancel Request + View Benefit */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-1.5">
+            <div className="h-3 w-24 rounded-full bg-slate-200/80 animate-pulse" />
+          </div>
+          <div className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-1.5">
+            <div className="h-3 w-3 rounded-sm bg-slate-200/80 animate-pulse shrink-0" />
+            <div className="h-3 w-16 rounded-full bg-slate-200/80 animate-pulse" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -415,7 +470,11 @@ function RequestsContent() {
   const searchParams = useSearchParams();
   const submitted = searchParams.get("submitted") === "true";
   const { loading: employeeLoading } = useCurrentEmployee();
-  const { data: requestsData, loading: requestsLoading } = useGetBenefitRequestsQuery({
+  const {
+    data: requestsData,
+    loading: requestsLoading,
+    previousData: requestsPreviousData,
+  } = useGetBenefitRequestsQuery({
     fetchPolicy: submitted ? "network-only" : "cache-first",
   });
   const { data: benefitsData } = useGetBenefitsQuery();
@@ -520,8 +579,17 @@ function RequestsContent() {
         <Sidebar />
         <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
           <main className="w-full max-w-5xl p-8">
-            <h1 className="text-xl font-semibold text-white">My Requests</h1>
-            <p className="mt-1 text-sm text-gray-500">Track the status of your benefit requests</p>
+            {loading ? (
+              <div>
+                <div className="h-6 w-40 rounded-full bg-white/30 animate-pulse" />
+                <div className="mt-2 h-3.5 w-56 rounded-full bg-white/20 animate-pulse" />
+              </div>
+            ) : (
+              <>
+                <h1 className="text-xl font-semibold text-white">My Requests</h1>
+                <p className="mt-1 text-sm text-gray-500">Track the status of your benefit requests</p>
+              </>
+            )}
 
             {submitted && (
               <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm text-green-700">
@@ -543,9 +611,16 @@ function RequestsContent() {
 
             <div className="mt-6 space-y-4">
               {loading ? (
-                <div className="rounded-2xl border border-gray-100 bg-white px-6 py-12 text-center">
-                  <PageLoading inline message="Loading your requests…" />
-                </div>
+                <>
+                  {Array.from({
+                    length:
+                      requestsData?.benefitRequests?.length ??
+                      requestsPreviousData?.benefitRequests?.length ??
+                      3,
+                  }).map((_, i) => (
+                    <RequestCardSkeleton key={i} />
+                  ))}
+                </>
               ) : requests.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-14 text-center">
                   <p className="text-sm font-medium text-gray-600">No requests yet</p>
@@ -576,33 +651,38 @@ function RequestsContent() {
                       className={`overflow-hidden rounded-2xl border border-gray-200 border-l-4 ${accentClass} bg-white shadow-sm hover:shadow-md transition-shadow`}
                     >
                       {/* Top row: title · status badge · reviewer · date */}
-                      <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-3">
-                        <div className="flex flex-wrap items-center gap-2 min-w-0">
-                          <h2 className="text-base font-semibold text-gray-900">
-                            {req.benefitLabel}
-                          </h2>
-                          <div className="relative group">
-                            <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold cursor-default ${badge.className}`}
-                            >
-                              {badge.label}
-                            </span>
-                            {tooltip && (
-                              <div className="absolute left-0 top-full mt-1.5 z-10 hidden group-hover:block w-64 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 shadow-lg">
-                                {tooltip}
-                              </div>
-                            )}
+                      <div className="flex items-start justify-between gap-4 px-5 pt-4 pb-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-[15px] font-semibold text-gray-900 leading-snug">
+                              {req.benefitLabel}
+                            </h2>
+                            <div className="relative group">
+                              <span
+                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold cursor-default ${badge.className}`}
+                              >
+                                {badge.label}
+                              </span>
+                              {tooltip && (
+                                <div className="absolute left-0 top-full mt-1.5 z-10 hidden group-hover:block w-64 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 shadow-lg">
+                                  {tooltip}
+                                </div>
+                              )}
+                            </div>
                           </div>
                           {req.reviewer && (
-                            <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-500">
-                              Reviewed by {req.reviewer}
-                            </span>
+                            <p className="mt-1 flex items-center gap-1 text-[11px] text-gray-400">
+                              <span className="h-1 w-1 rounded-full bg-gray-300" aria-hidden="true" />
+                              Reviewed by{" "}
+                              <span className="font-medium text-gray-500">{req.reviewer}</span>
+                            </p>
                           )}
                         </div>
                         <div className="shrink-0 text-right">
-                          <p className="text-xs text-gray-400 whitespace-nowrap">
-                            Submitted {req.requestDate}
+                          <p className="text-[11px] font-medium tabular-nums text-gray-700 whitespace-nowrap">
+                            {req.requestDate}
                           </p>
+                          <p className="text-[10px] text-gray-400 whitespace-nowrap">submitted</p>
                         </div>
                       </div>
 
@@ -639,8 +719,8 @@ function RequestsContent() {
                         </div>
                       )}
 
-                      {/* Timeline + actions — single row */}
-                      <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-4 py-3">
+                      {/* Timeline + actions */}
+                      <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-5 py-3.5">
                         <div className="flex-1 min-w-[160px]">
                           <RequestTimeline
                             status={req.status}
@@ -658,14 +738,14 @@ function RequestsContent() {
                                 cancelRequest({ variables: { requestId: req.id } });
                               }}
                               disabled={cancellingId === req.id}
-                              className="inline-flex items-center justify-center rounded-md border border-red-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-red-600 shadow-sm transition hover:bg-red-50 hover:border-red-300 disabled:opacity-50 whitespace-nowrap"
+                              className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-1.5 text-xs font-medium text-red-600 shadow-sm transition hover:bg-red-50 hover:border-red-300 disabled:opacity-50 whitespace-nowrap"
                             >
                               {cancellingId === req.id ? "Cancelling…" : "Cancel Request"}
                             </button>
                           )}
                           <Link
                             href={`/employee-panel/benefits/${req.benefitId}`}
-                            className="inline-flex items-center justify-center gap-1.5 rounded-md border border-gray-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-600 shadow-sm transition hover:bg-gray-50 hover:border-gray-300 whitespace-nowrap"
+                            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-1.5 text-xs font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:border-gray-300 whitespace-nowrap"
                           >
                             <Eye className="h-3 w-3" aria-hidden="true" />
                             View Benefit
@@ -686,7 +766,7 @@ function RequestsContent() {
 
 export default function RequestsPage() {
   return (
-    <Suspense fallback={<PageLoading message="Loading…" />}>
+    <Suspense fallback={null}>
       <RequestsContent />
     </Suspense>
   );

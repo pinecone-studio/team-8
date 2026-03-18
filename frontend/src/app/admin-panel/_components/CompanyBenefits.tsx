@@ -7,8 +7,40 @@ import {
   useDeleteBenefitMutation,
   GetAdminBenefitsDocument,
 } from "@/graphql/generated/graphql";
-import PageLoading from "@/app/_components/PageLoading";
 import { ArrowRight, Plus, Trash2 } from "lucide-react";
+
+function BenefitTableRowSkeleton() {
+  return (
+    <tr className="border-b border-gray-50 last:border-b-0">
+      {/* Name — prominent, wider bar */}
+      <td className="px-4 py-3"><div className="h-3.5 w-36 rounded-full bg-slate-200/80 animate-pulse" /></td>
+      {/* Category */}
+      <td className="px-4 py-3"><div className="h-3 w-20 rounded-full bg-slate-200/80 animate-pulse" /></td>
+      {/* Subsidy % */}
+      <td className="px-4 py-3"><div className="h-3 w-10 rounded-full bg-slate-200/80 animate-pulse" /></td>
+      {/* Vendor */}
+      <td className="px-4 py-3"><div className="h-3 w-28 rounded-full bg-slate-200/80 animate-pulse" /></td>
+      {/* Contract yes/no */}
+      <td className="px-4 py-3"><div className="h-3 w-8 rounded-full bg-slate-200/80 animate-pulse" /></td>
+      {/* Approval policy badge — pill outline with inner text line */}
+      <td className="px-4 py-3">
+        <div className="inline-flex items-center rounded px-2 py-0.5 border border-slate-100">
+          <div className="h-3 w-12 rounded-full bg-slate-200/80 animate-pulse" />
+        </div>
+      </td>
+      {/* Actions: View button + delete icon */}
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-1.5">
+          <div className="inline-flex items-center gap-1 rounded-lg border border-slate-100 px-2.5 py-1">
+            <div className="h-3 w-3 rounded-sm bg-slate-200/80 animate-pulse shrink-0" />
+            <div className="h-3 w-6 rounded-full bg-slate-200/80 animate-pulse" />
+          </div>
+          <div className="h-7 w-7 rounded-lg bg-slate-200/80 animate-pulse" />
+        </div>
+      </td>
+    </tr>
+  );
+}
 import { isAdminEmployee, isHrAdmin } from "../_lib/access";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 
@@ -22,9 +54,10 @@ export default function CompanyBenefits() {
   const { employee, loading: employeeLoading } = useCurrentEmployee();
   const hasAdminAccess = isAdminEmployee(employee);
   const canCreate = isHrAdmin(employee);
-  const { data, loading, error } = useGetAdminBenefitsQuery({
+  const { data, loading, error, previousData } = useGetAdminBenefitsQuery({
     skip: !hasAdminAccess,
   });
+  const skeletonCount = data?.adminBenefits?.length ?? previousData?.adminBenefits?.length ?? 5;
   const [deleteBenefit, { loading: deleting }] = useDeleteBenefitMutation({
     refetchQueries: [{ query: GetAdminBenefitsDocument }],
     onCompleted: () => setFeedback({ type: "success", message: "Benefit removed." }),
@@ -47,12 +80,54 @@ export default function CompanyBenefits() {
   };
 
   const benefits = data?.adminBenefits ?? [];
+  const isLoading = employeeLoading || loading;
 
-  if (employeeLoading || !hasAdminAccess) {
+  // ── Full skeleton screen ──────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <main className="p-8">
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="h-7 w-48 rounded-full bg-white/30 animate-pulse" />
+              <div className="mt-2 h-3.5 w-64 rounded-full bg-white/20 animate-pulse" />
+            </div>
+            <div className="inline-flex items-center justify-center rounded-xl border border-slate-200/60 bg-white/20 px-4 py-2.5">
+              <div className="h-3.5 w-20 rounded-full bg-white/30 animate-pulse" />
+            </div>
+          </div>
+          <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left">
+                <thead className="border-b border-gray-100">
+                  <tr>
+                    <th className="px-4 py-3"><div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                    <th className="px-4 py-3"><div className="h-2.5 w-16 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                    <th className="px-4 py-3"><div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                    <th className="px-4 py-3"><div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                    <th className="px-4 py-3"><div className="h-2.5 w-14 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                    <th className="px-4 py-3"><div className="h-2.5 w-14 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                    <th className="px-4 py-3 w-24" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: skeletonCount }).map((_, i) => (
+                    <BenefitTableRowSkeleton key={i} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!hasAdminAccess) {
     return (
       <main className="p-8">
         <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-gray-500">
-          {employeeLoading ? "Loading..." : "You need admin access to manage company benefits."}
+          You need admin access to manage company benefits.
         </div>
       </main>
     );
@@ -92,11 +167,7 @@ export default function CompanyBenefits() {
         )}
 
         <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
-          {loading ? (
-            <div className="p-10">
-              <PageLoading inline message="Loading benefits..." />
-            </div>
-          ) : error ? (
+          {error ? (
             <div className="p-8 text-center text-red-600">
               Failed to load benefits.
             </div>
