@@ -974,7 +974,7 @@ export default function AuditLogs() {
             : null,
         }
       : null;
-  }, [selectedLog?.requestId, allRequestsData?.allBenefitRequests]);
+  }, [selectedLog, allRequestsData]);
 
   const actionTypeOptions = useMemo(() => {
     const unique = Array.from(
