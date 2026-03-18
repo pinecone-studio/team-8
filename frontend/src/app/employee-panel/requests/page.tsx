@@ -482,6 +482,28 @@ function RequestsContent() {
       const benefit = benefitsById.get(req.benefitId);
       const name = benefit?.name ?? req.benefitId;
       const vendor = benefit?.vendorName ?? "";
+
+      // Compute payment info for approved requests
+      let paymentInfo: {
+        total: string;
+        companyPays: string;
+        employeePays: string;
+        subsidyPercent: number;
+      } | null = null;
+      if (benefit?.unitPrice && benefit.subsidyPercent !== undefined) {
+        const unitPrice = benefit.unitPrice;
+        const subsidyPercent = benefit.subsidyPercent;
+        const companyAmount = Math.round(unitPrice * subsidyPercent / 100);
+        const employeeAmount = unitPrice - companyAmount;
+        const fmt = (n: number) => n.toLocaleString("mn-MN") + "₮";
+        paymentInfo = {
+          total: fmt(unitPrice),
+          companyPays: fmt(companyAmount),
+          employeePays: fmt(employeeAmount),
+          subsidyPercent,
+        };
+      }
+
       return {
         id: req.id,
         benefitId: req.benefitId,
@@ -494,6 +516,7 @@ function RequestsContent() {
         viewContractUrl: req.viewContractUrl,
         approvalPolicy: benefit?.approvalPolicy ?? "hr",
         requiresContract: benefit?.requiresContract ?? false,
+        paymentInfo,
       };
     })
     .sort(
@@ -613,6 +636,27 @@ function RequestsContent() {
                         <div className="mx-5 mb-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700">
                           <span className="font-medium">Reason: </span>
                           {req.declineReason}
+                        </div>
+                      )}
+
+                      {/* Payment section — shown only when approved */}
+                      {normalizeRequestStatus(req.status) === "approved" && req.paymentInfo && (
+                        <div className="mx-5 mb-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-blue-500 mb-2">Payment Breakdown</p>
+                          <dl className="space-y-1.5 text-xs">
+                            <div className="flex justify-between">
+                              <dt className="text-blue-700">Total Amount</dt>
+                              <dd className="font-semibold text-blue-900">{req.paymentInfo.total}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt className="text-blue-700">Company Pays ({req.paymentInfo.subsidyPercent}%)</dt>
+                              <dd className="font-semibold text-emerald-700">{req.paymentInfo.companyPays}</dd>
+                            </div>
+                            <div className="flex justify-between border-t border-blue-100 pt-1.5">
+                              <dt className="font-medium text-blue-800">Your Payment</dt>
+                              <dd className="font-bold text-blue-900">{req.paymentInfo.employeePays}</dd>
+                            </div>
+                          </dl>
                         </div>
                       )}
 

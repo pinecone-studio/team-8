@@ -138,6 +138,7 @@ export type BenefitRequest = {
   createdAt: Scalars['String']['output'];
   declineReason?: Maybe<Scalars['String']['output']>;
   employeeApprovedAt?: Maybe<Scalars['String']['output']>;
+  employeeContractKey?: Maybe<Scalars['String']['output']>;
   employeeId: Scalars['String']['output'];
   id: Scalars['String']['output'];
   repaymentMonths?: Maybe<Scalars['Int']['output']>;
@@ -575,6 +576,7 @@ export type QueryRuleProposalsArgs = {
 
 export type RequestBenefitInput = {
   benefitId: Scalars['String']['input'];
+  employeeContractKey?: InputMaybe<Scalars['String']['input']>;
   repaymentMonths?: InputMaybe<Scalars['Int']['input']>;
   requestedAmount?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -657,7 +659,7 @@ export type RequestBenefitMutationVariables = Exact<{
 }>;
 
 
-export type RequestBenefitMutation = { __typename?: 'Mutation', requestBenefit: { __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, declineReason?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null } };
+export type RequestBenefitMutation = { __typename?: 'Mutation', requestBenefit: { __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, declineReason?: string | null, employeeContractKey?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null } };
 
 export type ConfirmBenefitRequestMutationVariables = Exact<{
   requestId: Scalars['String']['input'];
@@ -869,7 +871,7 @@ export type GetMyBenefitsFullQuery = { __typename?: 'Query', myBenefits: Array<{
 export type GetBenefitRequestsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetBenefitRequestsQuery = { __typename?: 'Query', benefitRequests: Array<{ __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, employeeApprovedAt?: string | null, declineReason?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null }> };
+export type GetBenefitRequestsQuery = { __typename?: 'Query', benefitRequests: Array<{ __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, employeeApprovedAt?: string | null, declineReason?: string | null, employeeContractKey?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null }> };
 
 export type GetAllBenefitRequestsQueryVariables = Exact<{
   status?: InputMaybe<Scalars['String']['input']>;
@@ -976,6 +978,7 @@ export const RequestBenefitDocument = gql`
     requestedAmount
     repaymentMonths
     declineReason
+    employeeContractKey
     createdAt
     updatedAt
     viewContractUrl
@@ -2365,6 +2368,7 @@ export const GetBenefitRequestsDocument = gql`
     repaymentMonths
     employeeApprovedAt
     declineReason
+    employeeContractKey
     createdAt
     updatedAt
     viewContractUrl

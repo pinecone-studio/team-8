@@ -1,12 +1,12 @@
 type Props = {
   currentStep: 1 | 2 | 3;
-  /** When false, only 2 steps are shown: Confirm Eligibility → Submit Request (Contract Acceptance skipped) */
+  /** When false, only 2 steps are shown: Contract Review → Submit Request (Upload Contract skipped) */
   requiresContract?: boolean;
 };
 
 const allSteps = [
-  { id: 1, label: "Confirm Eligibility" },
-  { id: 2, label: "Contract Acceptance" },
+  { id: 1, label: "Contract Review" },
+  { id: 2, label: "Upload Contract" },
   { id: 3, label: "Submit Request" },
 ];
 
@@ -14,7 +14,7 @@ export default function Stepper({ currentStep, requiresContract = true }: Props)
   const steps: { id: number; label: string; displayNum: number }[] =
     requiresContract === false
       ? [
-          { id: 1, label: "Confirm Eligibility", displayNum: 1 },
+          { id: 1, label: "Contract Review", displayNum: 1 },
           { id: 3, label: "Submit Request", displayNum: 2 },
         ]
       : allSteps.map((s, i) => ({ ...s, displayNum: i + 1 }));
