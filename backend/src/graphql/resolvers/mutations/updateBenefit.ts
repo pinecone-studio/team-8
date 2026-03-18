@@ -19,6 +19,7 @@ export const updateBenefit = async (
       subsidyPercent?: number | null;
       vendorName?: string | null;
       requiresContract?: boolean | null;
+      isActive?: boolean | null;
       approvalPolicy?: string | null;
       amount?: number | null;
       location?: string | null;
@@ -36,6 +37,7 @@ export const updateBenefit = async (
   if (input.subsidyPercent != null) updates.subsidyPercent = input.subsidyPercent;
   if ("vendorName" in input) updates.vendorName = input.vendorName ?? null;
   if (input.requiresContract != null) updates.requiresContract = input.requiresContract;
+  if (input.isActive != null) updates.isActive = input.isActive;
   if (input.approvalPolicy != null) updates.approvalPolicy = input.approvalPolicy;
   if ("amount" in input) updates.amount = input.amount ?? null;
   if ("location" in input) updates.location = input.location ?? null;

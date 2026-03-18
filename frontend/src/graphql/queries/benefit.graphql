@@ -10,6 +10,7 @@ query GetBenefits($category: String) {
     unitPrice
     vendorName
     requiresContract
+    isActive
     flowType
     optionsDescription
     approvalPolicy
@@ -38,6 +39,7 @@ query GetMyBenefits {
       unitPrice
       vendorName
       requiresContract
+      isActive
       flowType
       optionsDescription
       approvalPolicy
@@ -73,6 +75,7 @@ query GetMyBenefitsFull {
       unitPrice
       vendorName
       requiresContract
+      isActive
       flowType
       optionsDescription
       approvalPolicy
@@ -166,6 +169,7 @@ query GetEmployeeBenefits($employeeId: String!) {
       unitPrice
       vendorName
       requiresContract
+      isActive
       flowType
       optionsDescription
       approvalPolicy
