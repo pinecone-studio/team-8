@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, Clock, DollarSign, ExternalLink, FileText, Lock, MapPin, ShieldCheck, Users, XCircle } from "lucide-react";
 import StatusBadge from "../../_components/benefits/StatusBadge";
-import Sidebar from "../../_components/SideBar";
 import BenefitRequestModal from "../../_components/benefits/BenefitRequestModal";
 import PageLoading from "@/app/_components/PageLoading";
 import { useGetMyBenefitsFullQuery, useGetBenefitRequestsQuery, useGetContractsForBenefitQuery } from "@/graphql/generated/graphql";
@@ -253,31 +252,25 @@ export default function BenefitDetailPage() {
 
   if (employeeLoading || loading) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar />
-        <div className="flex flex-1 flex-col items-center">
-          <main className="flex w-full max-w-7xl items-center justify-center p-8">
-            <PageLoading message="Loading benefit details…" />
-          </main>
-        </div>
+      <div className="flex flex-1 flex-col items-center">
+        <main className="flex w-full max-w-7xl items-center justify-center p-8">
+          <PageLoading message="Loading benefit details…" />
+        </main>
       </div>
     );
   }
 
   if (error || !benefitEligibility) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar />
-        <div className="flex flex-1 flex-col items-center">
-          <main className="w-full max-w-7xl p-8">
+      <div className="flex flex-1 flex-col items-center">
+        <main className="w-full max-w-7xl p-8">
             <Link href="/employee-panel/mybenefits" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
               ← Back to Benefits
             </Link>
             <div className="mt-6 rounded-2xl border border-destructive/30 bg-destructive/10 p-8 text-destructive">
               Benefit data could not be loaded.
             </div>
-          </main>
-        </div>
+        </main>
       </div>
     );
   }
@@ -287,10 +280,8 @@ export default function BenefitDetailPage() {
   const policy = benefit.approvalPolicy ?? "hr";
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      <div className="flex flex-1 flex-col items-center">
-        <main className="w-full max-w-5xl p-8">
+    <div className="flex flex-1 flex-col items-center">
+      <main className="w-full max-w-5xl p-8">
           <Link
             href="/employee-panel/requests"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -504,7 +495,6 @@ export default function BenefitDetailPage() {
             </div>
           </div>
         </main>
-      </div>
       {requestModalOpen && (
         <BenefitRequestModal
           benefitId={id}

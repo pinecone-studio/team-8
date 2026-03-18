@@ -3,7 +3,6 @@
 import { use, useState } from "react";
 import { gql, useQuery } from "@apollo/client";
 import { CheckCircle2, ExternalLink, FileText, X } from "lucide-react";
-import Sidebar from "../_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
 import { getContractProxyUrl } from "@/lib/contracts";
 
@@ -312,11 +311,8 @@ export default function ContractsPage({ params }: PageProps) {
         />
       )}
 
-      <div className="flex min-h-screen bg-background">
-        <Sidebar />
-
-        <div className="flex flex-1 flex-col items-center">
-          <main className="w-full max-w-5xl p-8">
+      <div className="flex flex-1 flex-col items-center">
+        <main className="w-full max-w-5xl p-8">
             <h1 className="text-xl font-semibold text-gray-900">Vendor Contracts</h1>
             <p className="mt-1 text-sm text-gray-500">
               Active contracts for benefits you are enrolled in or have a pending request for.
@@ -439,8 +435,7 @@ export default function ContractsPage({ params }: PageProps) {
                 )}
               </>
             )}
-          </main>
-        </div>
+        </main>
       </div>
     </>
   );

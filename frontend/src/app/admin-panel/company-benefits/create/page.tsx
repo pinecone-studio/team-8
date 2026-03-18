@@ -26,7 +26,6 @@ import {
   Wallet,
   Zap,
 } from "lucide-react";
-import Sidebar from "../../_components/SideBar";
 import {
   useCreateBenefitMutation,
   useProposeRuleChangeMutation,
@@ -497,19 +496,14 @@ export default function CreateBenefitPage() {
 
   if (!canCreate) {
     return (
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar />
-        <div className="flex flex-1 items-center justify-center">
-          <p className="text-gray-500">HR Admin access required.</p>
-        </div>
+      <div className="flex flex-1 items-center justify-center">
+        <p className="text-gray-500">HR Admin access required.</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      <div className="flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col">
         {/* Header */}
         <div className="border-b border-gray-100 bg-white px-8 py-4">
           <div className="flex items-center gap-3">

@@ -6,7 +6,6 @@ import { useParams, useRouter } from "next/navigation";
 import { ExternalLink, FileText, UploadCloud, CheckCircle2, X } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import Stepper from "../../../_components/benefits/Stepper";
-import Sidebar from "@/app/employee-panel/_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
 import {
   BenefitEligibilityStatus,
@@ -161,67 +160,55 @@ export default function BenefitRequestPage() {
   // ── Guards ────────────────────────────────────────────────────────────────
   if (employeeLoading || loading) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar />
-        <div className="flex flex-1 flex-col items-center">
-          <main className="flex w-full max-w-7xl items-center justify-center p-8">
-            <PageLoading message="Loading request flow..." />
-          </main>
-        </div>
+      <div className="flex flex-1 flex-col items-center">
+        <main className="flex w-full max-w-7xl items-center justify-center p-8">
+          <PageLoading message="Loading request flow..." />
+        </main>
       </div>
     );
   }
 
   if (error || !benefitEligibility || !benefit) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar />
-        <div className="flex flex-1 flex-col items-center">
-          <main className="w-full max-w-7xl p-8">
+      <div className="flex flex-1 flex-col items-center">
+        <main className="w-full max-w-7xl p-8">
             <Link href={`/employee-panel/benefits/${id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground active:opacity-80">
               ← Back to Benefit
             </Link>
             <div className="mt-6 rounded-2xl border border-destructive/30 bg-destructive/10 p-8 text-destructive">
               This benefit could not be loaded.
             </div>
-          </main>
-        </div>
+        </main>
       </div>
     );
   }
 
   if (benefitEligibility.status !== BenefitEligibilityStatus.Eligible) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar />
-        <div className="flex flex-1 flex-col items-center">
-          <main className="w-full max-w-7xl p-8">
+      <div className="flex flex-1 flex-col items-center">
+        <main className="w-full max-w-7xl p-8">
             <Link href={`/employee-panel/benefits/${id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground active:opacity-80">
               ← Back to Benefit
             </Link>
             <div className="mt-6 rounded-2xl border border-destructive/30 bg-destructive/10 p-8 text-destructive">
               This benefit is not currently requestable.
             </div>
-          </main>
-        </div>
+        </main>
       </div>
     );
   }
 
   if (isSelfService) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar />
-        <div className="flex flex-1 flex-col items-center">
-          <main className="w-full max-w-7xl p-8">
+      <div className="flex flex-1 flex-col items-center">
+        <main className="w-full max-w-7xl p-8">
             <Link href={`/employee-panel/benefits/${id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground active:opacity-80">
               ← Back to Benefit
             </Link>
             <div className="mt-6 rounded-2xl border border-border bg-card p-8 text-muted-foreground">
               This benefit is self-service and does not require a request.
             </div>
-          </main>
-        </div>
+        </main>
       </div>
     );
   }
@@ -232,10 +219,8 @@ export default function BenefitRequestPage() {
   const employeePays = unitPrice ? unitPrice - (companyPays ?? 0) : null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      <div className="flex flex-1 flex-col items-center">
-        <main className="w-full max-w-7xl p-8">
+    <div className="flex flex-1 flex-col items-center">
+      <main className="w-full max-w-7xl p-8">
           <Link href={`/employee-panel/benefits/${benefit.id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground active:opacity-80">
             ← Back to Benefit
           </Link>
@@ -587,8 +572,7 @@ export default function BenefitRequestPage() {
               </>
             )}
           </div>
-        </main>
-      </div>
+      </main>
     </div>
   );
 }

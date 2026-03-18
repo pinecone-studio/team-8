@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Check, Eye, ExternalLink, FileCheck, X } from "lucide-react";
-import Sidebar from "../_components/SideBar";
 import {
   useGetBenefitRequestsQuery,
   useGetBenefitsQuery,
@@ -603,10 +602,8 @@ function RequestsContent() {
         />
       )}
 
-      <div className="flex min-h-screen bg-background">
-        <Sidebar />
-        <div className="flex flex-1 flex-col items-center">
-          <main className="w-full max-w-5xl p-8">
+      <div className="flex flex-1 flex-col items-center">
+        <main className="w-full max-w-5xl p-8">
             {loading ? (
               <div>
                 <div className="h-6 w-40 rounded-full bg-white/30 animate-pulse" />
@@ -828,8 +825,7 @@ function RequestsContent() {
                 })
               )}
             </div>
-          </main>
-        </div>
+        </main>
       </div>
     </>
   );

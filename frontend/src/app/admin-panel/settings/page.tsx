@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useCallback } from "react";
 import { gql, useQuery, useMutation } from "@apollo/client";
-import Sidebar from "../_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { Bell, CalendarClock, Database, Mail, RefreshCw, ShieldCheck } from "lucide-react";
@@ -135,10 +134,8 @@ export default function AdminSettingsPage() {
   const handleCancel = useCallback(() => setLocalOverrides({}), []);
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      <div className="flex flex-1 flex-col items-center">
-        <main className="w-full max-w-7xl min-h-screen px-8 py-9">
+    <div className="flex flex-1 flex-col items-center">
+      <main className="w-full max-w-7xl min-h-screen px-8 py-9">
           <section className="mx-auto max-w-3xl space-y-8">
 
             <div>
@@ -241,8 +238,7 @@ export default function AdminSettingsPage() {
             </div>
 
           </section>
-        </main>
-      </div>
+      </main>
     </div>
   );
 }

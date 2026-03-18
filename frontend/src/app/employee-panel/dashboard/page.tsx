@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, Clock, Search, Sparkles } from "lucide-react";
-import Sidebar from "../_components/SideBar";
 import SummaryCard from "../_components/benefits/SummaryCard";
 import BenefitCard from "../_components/benefits/BenefitCard";
 import BenefitDetailModal from "../_components/benefits/BenefitDetailModal";
@@ -81,10 +80,8 @@ export default function DashboardPage() {
 
   if (isDashboardLoading) {
     return (
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar />
-        <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
-          <main className="w-full max-w-7xl px-8 py-8">
+      <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
+        <main className="w-full max-w-7xl px-8 py-8">
             {/* Heading skeleton */}
             <div>
               <div className="h-7 w-64 rounded-full bg-white/30 animate-pulse" />
@@ -124,18 +121,14 @@ export default function DashboardPage() {
                 ))}
               </div>
             </section>
-          </main>
-        </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-
-      <div className="flex flex-1 flex-col items-center">
-        <main className="w-full max-w-7xl px-8 py-8">
+    <div className="flex flex-1 flex-col items-center">
+      <main className="w-full max-w-7xl px-8 py-8">
           <PageHeader
             title={`Good to see you, ${employee?.name ?? "Employee"}`}
             description={subtitle}
@@ -237,7 +230,6 @@ export default function DashboardPage() {
             }}
           />
         )}
-      </div>
     </div>
   );
 }
