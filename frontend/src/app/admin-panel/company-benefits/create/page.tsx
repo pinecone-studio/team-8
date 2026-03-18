@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -292,11 +293,19 @@ type RuleRow = {
 
 const CATEGORIES = ["wellness", "equipment", "financial", "career", "flexibility", "other"];
 
+function getApiBaseUrl(): string {
+  const base =
+    (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_GRAPHQL_URL) ||
+    "https://team8-api.team8pinequest.workers.dev/";
+  return base.replace(/\/$/, "");
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CreateBenefitPage() {
   const router = useRouter();
   const { employee } = useCurrentEmployee();
+  const { getToken } = useAuth();
   const canCreate = isHrAdmin(employee);
 
   const [selectedType, setSelectedType] = useState<BenefitTypeKey | null>(null);
@@ -320,8 +329,6 @@ export default function CreateBenefitPage() {
   const [rules, setRules] = useState<RuleRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
 
   const [createBenefit] = useCreateBenefitMutation({
     refetchQueries: [{ query: GetAdminBenefitsDocument }],
@@ -381,6 +388,7 @@ export default function CreateBenefitPage() {
     setError(null);
     try {
       const typeConfig = BENEFIT_TYPES.find((t) => t.key === selectedType)!;
+      const apiBaseUrl = getApiBaseUrl();
       const descriptionTrimmed = form.description.trim();
       const amountNum = form.amount.trim() ? Number(form.amount) : undefined;
       const result = await createBenefit({
@@ -399,17 +407,28 @@ export default function CreateBenefitPage() {
         },
       });
       const benefitId = result.data?.createBenefit.id;
+      const token = await getToken();
+      const uploadHeaders = token
+        ? { Authorization: `Bearer ${token}` }
+        : undefined;
 
       // Upload image if selected
       if (benefitId && imageFile) {
         const imgData = new FormData();
         imgData.append("benefitId", benefitId);
         imgData.append("file", imageFile);
-        await fetch(`${backendUrl}/api/benefits/upload-image`, {
+        const imageRes = await fetch(`${apiBaseUrl}/api/benefits/upload-image`, {
           method: "POST",
           body: imgData,
-          credentials: "include",
+          headers: uploadHeaders,
         });
+        const imageJson = await imageRes.json().catch(() => ({}));
+        if (!imageRes.ok) {
+          throw new Error(
+            imageJson?.error ||
+              "Benefit was created, but the image upload failed.",
+          );
+        }
       }
 
       // Upload contract if selected (contract type only)
@@ -422,11 +441,18 @@ export default function CreateBenefitPage() {
         ctData.append("expiryDate", contractMeta.expiryDate || today);
         ctData.append("vendorName", form.vendorName.trim() || "Vendor");
         ctData.append("file", contractFile);
-        await fetch(`${backendUrl}/api/contracts/upload`, {
+        const contractRes = await fetch(`${apiBaseUrl}/api/contracts/upload`, {
           method: "POST",
           body: ctData,
-          credentials: "include",
+          headers: uploadHeaders,
         });
+        const contractJson = await contractRes.json().catch(() => ({}));
+        if (!contractRes.ok) {
+          throw new Error(
+            contractJson?.error ||
+              "Benefit was created, but the contract upload failed.",
+          );
+        }
       }
 
       if (benefitId && rules.length > 0) {
