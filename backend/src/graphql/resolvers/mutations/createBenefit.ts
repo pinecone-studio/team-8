@@ -16,6 +16,9 @@ export const createBenefit = async (
       vendorName?: string | null;
       requiresContract?: boolean | null;
       approvalPolicy?: string | null;
+      amount?: number | null;
+      location?: string | null;
+      imageUrl?: string | null;
     };
   },
   { db, currentEmployee }: GraphQLContext,
@@ -31,6 +34,9 @@ export const createBenefit = async (
       vendorName: input.vendorName ?? null,
       requiresContract: input.requiresContract ?? false,
       approvalPolicy: input.approvalPolicy ?? "hr",
+      amount: input.amount ?? null,
+      location: input.location ?? null,
+      imageUrl: input.imageUrl ?? null,
     })
     .returning();
   if (!row) throw new Error("Failed to create benefit");

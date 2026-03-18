@@ -12,7 +12,7 @@ import PageHeader from "../_components/layout/PageHeader";
 import PageLoading from "@/app/_components/PageLoading";
 import {
   BenefitEligibilityStatus,
-  useGetMyBenefitsQuery,
+  useGetMyBenefitsFullQuery,
   type BenefitEligibility,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
@@ -47,7 +47,7 @@ export default function DashboardPage() {
     data: benefitsData,
     error: benefitsError,
     loading: benefitsLoading,
-  } = useGetMyBenefitsQuery();
+  } = useGetMyBenefitsFullQuery();
 
   const myBenefits = benefitsData?.myBenefits ?? [];
 

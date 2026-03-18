@@ -17,6 +17,9 @@ type GraphqlBenefit = {
   unitPrice: number | null;
   vendorName: string | null;
   approvalPolicy: string;
+  amount: number | null;
+  location: string | null;
+  imageUrl: string | null;
 };
 
 type RuleEvaluation = {
@@ -68,6 +71,9 @@ export function mapBenefitRecordToGraphql(benefit: Benefit): GraphqlBenefit {
     unitPrice: null,
     vendorName: benefit.vendorName ?? null,
     approvalPolicy: benefit.approvalPolicy ?? "hr",
+    amount: benefit.amount ?? null,
+    location: benefit.location ?? null,
+    imageUrl: benefit.imageUrl ?? null,
   };
 }
 

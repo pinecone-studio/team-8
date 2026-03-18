@@ -451,6 +451,112 @@ async function handleContractExpiryCheck(
 }
 
 /**
+ * HR benefit image upload: POST /api/benefits/upload-image
+ *
+ * Accepts multipart/form-data with `benefitId` and `file` fields.
+ * Stores image in the CONTRACTS_BUCKET R2 under benefits/{benefitId}/images/.
+ * Updates the benefit's image_url field with the R2 key and returns it.
+ * Auth: HR admin only.
+ */
+async function handleBenefitImageUpload(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/api/benefits/upload-image" || request.method !== "POST")
+    return null;
+
+  const db = createDb(env.DB);
+  const currentUser = await getCurrentUserFromRequest(request, env, db);
+
+  if (!currentUser.employee) {
+    return withCors(request, new Response(JSON.stringify({ error: "Authentication required." }), {
+      status: 401, headers: { "Content-Type": "application/json" },
+    }));
+  }
+  if (!canUploadContracts(currentUser.employee)) {
+    return withCors(request, new Response(JSON.stringify({ error: "HR admin access required." }), {
+      status: 403, headers: { "Content-Type": "application/json" },
+    }));
+  }
+
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return withCors(request, new Response("Invalid form", { status: 400 }));
+  }
+
+  const benefitId = formData.get("benefitId")?.toString();
+  const file = formData.get("file") as File | null;
+
+  if (!benefitId || !file?.size) {
+    return withCors(request, new Response(
+      JSON.stringify({ error: "Missing required fields: benefitId, file" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    ));
+  }
+
+  if (!env.CONTRACTS_BUCKET) {
+    return withCors(request, new Response(
+      JSON.stringify({ error: "R2 not configured." }),
+      { status: 503, headers: { "Content-Type": "application/json" } },
+    ));
+  }
+
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const r2Key = `benefits/${benefitId}/images/${Date.now()}.${ext}`;
+  const buffer = await file.arrayBuffer();
+  await env.CONTRACTS_BUCKET.put(r2Key, buffer, {
+    httpMetadata: { contentType: file.type || "image/jpeg" },
+  });
+
+  await db
+    .update(schema.benefits)
+    .set({ imageUrl: r2Key })
+    .where(eq(schema.benefits.id, benefitId));
+
+  return withCors(request, new Response(JSON.stringify({ imageUrl: r2Key }), {
+    status: 201, headers: { "Content-Type": "application/json" },
+  }));
+}
+
+/**
+ * Serve benefit image by R2 key.
+ * GET /api/benefits/image?key=benefits/{benefitId}/images/{file}
+ * Auth: any authenticated employee.
+ */
+async function handleBenefitImageView(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/api/benefits/image" || request.method !== "GET") return null;
+
+  const key = url.searchParams.get("key");
+  if (!key) return withCors(request, new Response("Missing key", { status: 400 }));
+
+  const db = createDb(env.DB);
+  const currentUser = await getCurrentUserFromRequest(request, env, db);
+  if (!currentUser.employee) {
+    return withCors(request, new Response(JSON.stringify({ error: "Authentication required." }), {
+      status: 401, headers: { "Content-Type": "application/json" },
+    }));
+  }
+
+  if (!env.CONTRACTS_BUCKET) {
+    return withCors(request, new Response("R2 not configured", { status: 503 }));
+  }
+
+  const object = await env.CONTRACTS_BUCKET.get(key);
+  if (!object) return withCors(request, new Response("Not found", { status: 404 }));
+
+  return withCors(request, new Response(object.body, {
+    headers: { "Content-Type": object.httpMetadata?.contentType ?? "image/jpeg" },
+  }));
+}
+
+/**
  * HR CSV attendance import: POST /api/attendance/import-csv
  *
  * Accepts multipart/form-data with a `file` field containing a UTF-8 CSV.
@@ -566,6 +672,10 @@ export default {
     if (contractView !== null) return contractView;
     const upload = await handleContractUpload(request, env);
     if (upload !== null) return upload;
+    const imageUpload = await handleBenefitImageUpload(request, env);
+    if (imageUpload !== null) return imageUpload;
+    const imageView = await handleBenefitImageView(request, env);
+    if (imageView !== null) return imageView;
     const expiryCheck = await handleContractExpiryCheck(request, env);
     if (expiryCheck !== null) return expiryCheck;
     const attendanceCsv = await handleAttendanceCsvImport(request, env);

@@ -40,6 +40,9 @@ export const benefitTypeDefs = gql`
     flowType: BenefitFlowType!
     optionsDescription: String
     approvalPolicy: String!
+    amount: Int
+    location: String
+    imageUrl: String
   }
 
   type BenefitEligibility {
@@ -129,6 +132,9 @@ export const benefitTypeDefs = gql`
     vendorName: String
     requiresContract: Boolean
     approvalPolicy: String
+    amount: Int
+    location: String
+    imageUrl: String
   }
 
   input UpdateBenefitInput {
@@ -139,6 +145,9 @@ export const benefitTypeDefs = gql`
     vendorName: String
     requiresContract: Boolean
     approvalPolicy: String
+    amount: Int
+    location: String
+    imageUrl: String
   }
 
   input RequestBenefitInput {

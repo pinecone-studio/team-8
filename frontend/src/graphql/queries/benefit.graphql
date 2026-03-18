@@ -13,6 +13,9 @@ query GetBenefits($category: String) {
     flowType
     optionsDescription
     approvalPolicy
+    amount
+    location
+    imageUrl
   }
 }
 
@@ -38,6 +41,44 @@ query GetMyBenefits {
       flowType
       optionsDescription
       approvalPolicy
+    }
+    ruleEvaluation {
+      ruleType
+      passed
+      reason
+    }
+    failedRule {
+      ruleType
+      errorMessage
+    }
+  }
+}
+
+query GetMyBenefitsFull {
+  myBenefits {
+    benefitId
+    status
+    overrideStatus
+    overrideBy
+    overrideReason
+    overrideExpiresAt
+    benefit {
+      id
+      name
+      description
+      nameEng
+      category
+      subsidyPercent
+      employeePercent
+      unitPrice
+      vendorName
+      requiresContract
+      flowType
+      optionsDescription
+      approvalPolicy
+      amount
+      location
+      imageUrl
     }
     ruleEvaluation {
       ruleType

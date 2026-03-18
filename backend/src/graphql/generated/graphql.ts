@@ -86,12 +86,15 @@ export type AuditLog = {
 
 export type Benefit = {
   __typename?: 'Benefit';
+  amount?: Maybe<Scalars['Int']['output']>;
   approvalPolicy: Scalars['String']['output'];
   category: Scalars['String']['output'];
   description?: Maybe<Scalars['String']['output']>;
   employeePercent: Scalars['Int']['output'];
   flowType: BenefitFlowType;
   id: Scalars['String']['output'];
+  imageUrl?: Maybe<Scalars['String']['output']>;
+  location?: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
   nameEng?: Maybe<Scalars['String']['output']>;
   optionsDescription?: Maybe<Scalars['String']['output']>;
@@ -172,9 +175,12 @@ export type ContractAcceptance = {
 };
 
 export type CreateBenefitInput = {
+  amount?: InputMaybe<Scalars['Int']['input']>;
   approvalPolicy?: InputMaybe<Scalars['String']['input']>;
   category: Scalars['String']['input'];
   description?: InputMaybe<Scalars['String']['input']>;
+  imageUrl?: InputMaybe<Scalars['String']['input']>;
+  location?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   requiresContract?: InputMaybe<Scalars['Boolean']['input']>;
   subsidyPercent: Scalars['Int']['input'];
@@ -594,9 +600,12 @@ export type RuleProposal = {
 };
 
 export type UpdateBenefitInput = {
+  amount?: InputMaybe<Scalars['Int']['input']>;
   approvalPolicy?: InputMaybe<Scalars['String']['input']>;
   category?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
+  imageUrl?: InputMaybe<Scalars['String']['input']>;
+  location?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   requiresContract?: InputMaybe<Scalars['Boolean']['input']>;
   subsidyPercent?: InputMaybe<Scalars['Int']['input']>;
@@ -850,12 +859,15 @@ export type AuditLogResolvers<ContextType = GraphQLContext, ParentType extends R
 }>;
 
 export type BenefitResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Benefit'] = ResolversParentTypes['Benefit']> = ResolversObject<{
+  amount?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   approvalPolicy?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   category?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   description?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   employeePercent?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   flowType?: Resolver<ResolversTypes['BenefitFlowType'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  imageUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  location?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   nameEng?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   optionsDescription?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;

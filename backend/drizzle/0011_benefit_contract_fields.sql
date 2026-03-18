@@ -1,0 +1,3 @@
+ALTER TABLE benefits ADD COLUMN amount INTEGER;
+ALTER TABLE benefits ADD COLUMN location TEXT;
+ALTER TABLE benefits ADD COLUMN image_url TEXT;
