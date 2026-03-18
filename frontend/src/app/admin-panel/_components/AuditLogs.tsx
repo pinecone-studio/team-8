@@ -10,18 +10,29 @@ import {
   X,
 } from "lucide-react";
 import {
+  format,
+  formatDistanceToNow,
+  isToday,
+  isYesterday,
+  differenceInHours,
+  differenceInMinutes,
+} from "date-fns";
+import {
   useGetAuditLogsQuery,
   useGetEmployeesQuery,
+  useGetAllBenefitRequestsQuery,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
 import { UserAvatar } from "@clerk/nextjs";
+import { getContractProxyUrl } from "@/lib/contracts";
+import { FileText, ExternalLink } from "lucide-react";
 
 const ACTION_TYPE_LABELS: Record<string, string> = {
-  REQUEST_SUBMITTED: "Request Submitted",
-  REQUEST_CANCELLED: "Request Cancelled",
-  REQUEST_APPROVED: "Request Approved",
-  REQUEST_REJECTED: "Request Rejected",
+  REQUEST_SUBMITTED: "Submitted",
+  REQUEST_CANCELLED: "Cancelled",
+  REQUEST_APPROVED: "Approved",
+  REQUEST_REJECTED: "Rejected",
   REQUEST_HR_APPROVED: "HR Approved",
   REQUEST_FINANCE_APPROVED: "Finance Approved",
   CONTRACT_ACCEPTED: "Contract Accepted",
@@ -30,7 +41,7 @@ const ACTION_TYPE_LABELS: Record<string, string> = {
   ELIGIBILITY_RULE_CREATED: "Rule Created",
   ELIGIBILITY_RULE_UPDATED: "Rule Updated",
   ELIGIBILITY_RULE_DELETED: "Rule Deleted",
-  ENROLLMENT_CREATED: "Enrollment Created",
+  ENROLLMENT_CREATED: "New Enrollment",
   ENROLLMENT_SUSPENDED: "Enrollment Suspended",
   ENROLLMENT_REACTIVATED: "Enrollment Reactivated",
   RULE_PROPOSAL_SUBMITTED: "Rule Proposal Submitted",
@@ -39,6 +50,31 @@ const ACTION_TYPE_LABELS: Record<string, string> = {
   ATTENDANCE_IMPORT: "Attendance Import",
   ELIGIBILITY_RECOMPUTED: "Eligibility Recomputed",
   OKR_SYNC: "OKR Sync",
+};
+
+/** Default short description when reason is empty — derived from action type */
+const ACTION_DEFAULT_REASON: Record<string, string> = {
+  REQUEST_SUBMITTED: "Benefit request was submitted",
+  REQUEST_CANCELLED: "Benefit request was cancelled",
+  REQUEST_APPROVED: "Benefit request was approved",
+  REQUEST_REJECTED: "Benefit request was rejected",
+  REQUEST_HR_APPROVED: "HR approved the request",
+  REQUEST_FINANCE_APPROVED: "Finance approved the request",
+  CONTRACT_ACCEPTED: "Contract was accepted",
+  CONTRACT_UPLOADED: "Contract was uploaded",
+  ELIGIBILITY_OVERRIDE_SET: "Eligibility override was set",
+  ELIGIBILITY_RULE_CREATED: "Eligibility rule was created",
+  ELIGIBILITY_RULE_UPDATED: "Eligibility rule was updated",
+  ELIGIBILITY_RULE_DELETED: "Eligibility rule was deleted",
+  ENROLLMENT_CREATED: "New benefit enrollment was created",
+  ENROLLMENT_SUSPENDED: "Enrollment was suspended",
+  ENROLLMENT_REACTIVATED: "Enrollment was reactivated",
+  RULE_PROPOSAL_SUBMITTED: "Rule proposal was submitted",
+  RULE_PROPOSAL_APPROVED: "Rule proposal was approved",
+  RULE_PROPOSAL_REJECTED: "Rule proposal was rejected",
+  ATTENDANCE_IMPORT: "Attendance data was imported",
+  ELIGIBILITY_RECOMPUTED: "Eligibility was recomputed",
+  OKR_SYNC: "OKR data was synced",
 };
 
 const ACTION_TONE: Record<string, string> = {
@@ -402,6 +438,38 @@ function formatDate(iso: string) {
   }
 }
 
+/** Human-friendly relative time: "5 minutes ago", "Today at 12:16 AM", "Yesterday at 12:16 AM" */
+function formatRelativeTime(iso: string): string {
+  try {
+    const date = new Date(iso);
+    const now = new Date();
+    const mins = differenceInMinutes(now, date);
+    const hours = differenceInHours(now, date);
+
+    if (mins < 1) return "Just now";
+    if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"} ago`;
+    if (hours < 24 && isToday(date)) return formatDistanceToNow(date, { addSuffix: true });
+    if (isToday(date)) return `Today at ${format(date, "h:mm a")}`;
+    if (isYesterday(date)) return `Yesterday at ${format(date, "h:mm a")}`;
+    if (hours < 48) return formatDistanceToNow(date, { addSuffix: true });
+    return format(date, "MMM d, h:mm a");
+  } catch {
+    return iso;
+  }
+}
+
+/** Reason column: use log.reason or default description from action type / metadata */
+function getReasonDisplay(log: AuditLog): string {
+  if (log.reason?.trim()) return log.reason.trim();
+  const defaultReason = ACTION_DEFAULT_REASON[log.actionType];
+  if (defaultReason) return defaultReason;
+  const meta = tryParseJson(log.metadataJson) as Record<string, unknown> | null;
+  if (meta && typeof meta.description === "string") return meta.description;
+  const after = tryParseJson(log.afterJson) as Record<string, unknown> | null;
+  if (after && typeof after.status === "string") return `Status: ${after.status}`;
+  return "—";
+}
+
 function formatRole(role: string) {
   return role
     .split("_")
@@ -422,15 +490,24 @@ function tryParseJson(raw: string | null | undefined): unknown {
 
 function SectionLabel({
   icon,
+  description,
   children,
 }: {
   icon: React.ReactNode;
+  description?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-      {icon}
-      {children}
+    <div>
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        {icon}
+        {children}
+      </div>
+      {description && (
+        <p className="mt-1 text-xs font-normal normal-case tracking-normal text-slate-500">
+          {description}
+        </p>
+      )}
     </div>
   );
 }
@@ -465,51 +542,6 @@ function MonoId({
   );
 }
 
-function JsonDiffBlock({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: unknown;
-  tone: "red" | "green" | "slate";
-}) {
-  if (!value) return null;
-  const text =
-    typeof value === "string" ? value : JSON.stringify(value, null, 2);
-  const styles = {
-    red: {
-      wrap: "border-red-100 bg-red-50",
-      badge: "bg-red-100 text-red-600",
-      pre: "text-red-800",
-    },
-    green: {
-      wrap: "border-green-100 bg-green-50",
-      badge: "bg-green-100 text-green-700",
-      pre: "text-green-800",
-    },
-    slate: {
-      wrap: "border-slate-200 bg-slate-50",
-      badge: "bg-slate-100 text-slate-600",
-      pre: "text-slate-700",
-    },
-  }[tone];
-  return (
-    <div className={`rounded-xl border p-3 ${styles.wrap}`}>
-      <span
-        className={`inline-flex rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${styles.badge}`}
-      >
-        {label}
-      </span>
-      <pre
-        className={`mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed ${styles.pre}`}
-      >
-        {text}
-      </pre>
-    </div>
-  );
-}
-
 type AuditLog = {
   id: string;
   actorEmployeeId?: string | null;
@@ -529,40 +561,110 @@ type AuditLog = {
   createdAt: string;
 };
 
-function DetailPanel({ log, onClose }: { log: AuditLog; onClose: () => void }) {
-  const before = useMemo(() => tryParseJson(log.beforeJson), [log.beforeJson]);
-  const after = useMemo(() => tryParseJson(log.afterJson), [log.afterJson]);
-  const meta = useMemo(
-    () => tryParseJson(log.metadataJson),
-    [log.metadataJson],
-  );
+type BenefitRequestForDetail = {
+  id: string;
+  viewContractUrl?: string | null;
+  employeeSignedContract?: {
+    viewUrl?: string | null;
+    fileName?: string | null;
+  } | null;
+};
 
-  const hasInvolvedParties =
-    log.actorEmployeeId ||
-    log.targetEmployeeId ||
-    log.benefitId ||
-    log.requestId ||
-    log.contractId;
-  const hasChanges = !!(before || after);
+type EmployeeMap = Map<
+  string,
+  { id: string; name: string; nameEng?: string | null; role: string; department: string }
+>;
+
+function TraceabilityCard({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+        {title}
+      </p>
+      {description && (
+        <p className="mt-0.5 text-[11px] font-normal normal-case text-slate-400">
+          {description}
+        </p>
+      )}
+      <div className="mt-2 text-sm text-slate-700">{children}</div>
+    </div>
+  );
+}
+
+function DetailPanel({
+  log,
+  onClose,
+  employeesById,
+  benefitRequest,
+}: {
+  log: AuditLog;
+  onClose: () => void;
+  employeesById: EmployeeMap;
+  benefitRequest?: BenefitRequestForDetail | null;
+}) {
+  const actorEmployee = log.actorEmployeeId
+    ? employeesById.get(log.actorEmployeeId)
+    : null;
+  const targetEmployee = log.targetEmployeeId
+    ? employeesById.get(log.targetEmployeeId)
+    : null;
+  const contractUrl = benefitRequest?.viewContractUrl
+    ? getContractProxyUrl(benefitRequest.viewContractUrl)
+    : null;
+  const signedContractUrl = benefitRequest?.employeeSignedContract?.viewUrl
+    ? getContractProxyUrl(benefitRequest.employeeSignedContract.viewUrl)
+    : null;
+
+  const requestApprovalStatus = (() => {
+    // Only interpret benefit request approval/rejection/cancel events
+    // (e.g. REQUEST_HR_APPROVED, REQUEST_APPROVED, REQUEST_REJECTED, REQUEST_CANCELLED)
+    switch (log.actionType) {
+      case "REQUEST_APPROVED":
+      case "REQUEST_HR_APPROVED":
+      case "REQUEST_FINANCE_APPROVED":
+        return { text: "Approved", tone: "approved" as const };
+      case "REQUEST_REJECTED":
+      case "REQUEST_CANCELLED":
+        return { text: "Not approved", tone: "not_approved" as const };
+      default:
+        return { text: "In review", tone: "in_review" as const };
+    }
+  })();
 
   return (
     <>
       <div
-        className="fixed inset-0 z-40 bg-black/20"
+        className="fixed inset-0 z-40 bg-black/40"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      <div className="fixed inset-y-0 right-0 z-50 flex w-[460px] flex-col border-l border-slate-200 bg-white shadow-2xl">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <div
+          className="flex max-h-[90vh] w-full max-w-[460px] flex-col rounded-xl border border-slate-200 bg-white shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* ── Header ───────────────────────────────────────────── */}
         <div className="shrink-0 border-b border-slate-100 px-6 py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <span
-                className={`inline-flex rounded-md px-2.5 py-1 text-xs font-semibold tracking-wide ${ACTION_TONE[log.actionType] ?? "bg-gray-100 text-gray-600"}`}
-              >
-                {formatRole(log.actionType)}
-              </span>
+              <h2 className="text-sm font-semibold text-slate-800">
+                Benefit Request Detail
+              </h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Request overview: approver, employee, contract
+              </p>
               <p className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-400">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-300" />
                 {formatDate(log.createdAt)}
@@ -580,90 +682,168 @@ function DetailPanel({ log, onClose }: { log: AuditLog; onClose: () => void }) {
 
         {/* ── Scrollable body ───────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto">
-          {/* Actor + Entity */}
+          {/* 1. Approver Info (Who & When) */}
           <div className="px-6 py-5">
-            <SectionLabel icon={null}>Event</SectionLabel>
-            <div className="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-100 bg-slate-50">
-              <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-xs text-slate-400">Actor role</span>
-                <span className="text-xs font-semibold text-slate-700">
-                  {formatRole(log.actorRole)}
+            <SectionLabel
+              icon={null}
+            >
+              Approver
+            </SectionLabel>
+            <div className="mt-3 space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-4">
+              <div className="flex flex-col gap-1">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+                  Full name
                 </span>
-              </div>
-              <div className="flex items-start justify-between gap-4 px-4 py-3">
-                <span className="shrink-0 text-xs text-slate-400">Entity</span>
-                <div className="text-right">
-                  <span className="text-xs font-semibold text-slate-700">
-                    {log.entityType}
-                  </span>
-                  <p className="mt-0.5 break-all font-mono text-[11px] text-slate-400">
-                    {log.entityId}
+                <p className="text-sm font-semibold text-slate-800">
+                  {actorEmployee?.name ?? actorEmployee?.nameEng ?? "—"}
+                </p>
+                <p className="text-xs text-slate-500">
+                  <span className="font-medium text-slate-600">Position:</span>{" "}
+                  {formatRole(log.actorRole)}
+                </p>
+                {actorEmployee?.department && (
+                  <p className="text-xs text-slate-500">
+                    <span className="font-medium text-slate-600">
+                      Department:
+                    </span>{" "}
+                    {actorEmployee.department}
                   </p>
+                )}
+                <div className="mt-1">
+                  <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+                    Status
+                  </span>
+                  <div
+                    className={`mt-0.5 flex w-fit rounded-md px-2 py-0.5 text-xs font-medium ${
+                      requestApprovalStatus.tone === "approved"
+                        ? "bg-green-50 text-green-700"
+                        : requestApprovalStatus.tone === "not_approved"
+                          ? "bg-red-50 text-red-700"
+                          : "bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {requestApprovalStatus.text}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Involved parties */}
-          {hasInvolvedParties && (
-            <div className="border-t border-slate-100 px-6 py-5">
-              <SectionLabel icon={null}>Involved Parties</SectionLabel>
-              <div className="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-100 bg-slate-50">
-                <MonoId label="Actor ID" value={log.actorEmployeeId} />
-                <MonoId label="Target Employee" value={log.targetEmployeeId} />
-                <MonoId label="Benefit" value={log.benefitId} />
-                <MonoId label="Request" value={log.requestId} />
-                <MonoId label="Contract" value={log.contractId} />
-              </div>
+          {/* Traceability — card-based */}
+          <div className="border-t border-slate-100 px-6 py-5">
+            <SectionLabel
+              icon={null}
+            >
+              Employee
+            </SectionLabel>
+            <div className="mt-3 grid gap-3">
+              {/* Beneficiary Info (Target Employee) */}
+              {log.targetEmployeeId && (
+                <TraceabilityCard
+                  title="Employee"
+                  description="Employee name, position, department"
+                >
+                  {targetEmployee ? (
+                    <div className="space-y-0.5">
+                      <p className="font-semibold text-slate-800">
+                        {targetEmployee.name || targetEmployee.nameEng || "—"}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        <span className="font-medium text-slate-600">Position:</span>{" "}
+                        {formatRole(targetEmployee.role)}
+                      </p>
+                      {targetEmployee.department && (
+                        <p className="text-xs text-slate-500">
+                          <span className="font-medium text-slate-600">Department:</span>{" "}
+                          {targetEmployee.department}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="font-mono text-xs text-slate-500">
+                      —
+                    </span>
+                  )}
+                </TraceabilityCard>
+              )}
             </div>
-          )}
+          </div>
 
-          {/* Reason */}
-          {log.reason && (
-            <div className="border-t border-slate-100 px-6 py-5">
-              <SectionLabel icon={null}>Reason</SectionLabel>
-              <blockquote className="mt-3 rounded-xl border-l-4 border-blue-300 bg-blue-50 px-4 py-3 text-sm leading-relaxed text-blue-900">
-                {log.reason}
-              </blockquote>
+          {/* 4. Contract (Terms / file link) */}
+          <div className="border-t border-slate-100 px-6 py-5">
+            <SectionLabel
+              icon={null}
+              description="Terms and conditions or attached contract file"
+            >
+              Contract
+            </SectionLabel>
+            <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-4">
+              {contractUrl || signedContractUrl ? (
+                <div className="space-y-4">
+                  {contractUrl && (
+                    <div>
+                      <a
+                        href={contractUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-blue-600"
+                      >
+                        <FileText className="h-4 w-4 shrink-0 text-slate-400" />
+                        Terms and Conditions
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                      <iframe
+                        src={contractUrl}
+                        className="mt-2 h-56 w-full rounded-lg border border-slate-200 bg-white"
+                        title="Terms and Conditions"
+                      />
+                    </div>
+                  )}
+                  {signedContractUrl && (
+                    <div>
+                      <a
+                        href={signedContractUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-blue-600"
+                      >
+                        <FileText className="h-4 w-4 shrink-0 text-slate-400" />
+                        {benefitRequest?.employeeSignedContract?.fileName ??
+                          "Signed contract"}
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                      <iframe
+                        src={signedContractUrl}
+                        className="mt-2 h-56 w-full rounded-lg border border-slate-200 bg-white"
+                        title="Signed contract"
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : log.contractId ? (
+                <span className="break-all font-mono text-[11px] text-slate-700">
+                  Contract ID: {log.contractId}
+                </span>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  Contract will appear here once available.
+                </p>
+              )}
             </div>
-          )}
-
-          {/* Before / After diff */}
-          {hasChanges && (
-            <div className="border-t border-slate-100 px-6 py-5">
-              <SectionLabel icon={null}>Changes</SectionLabel>
-              <div className="mt-3 space-y-3">
-                <JsonDiffBlock label="Before" value={before} tone="red" />
-                <JsonDiffBlock label="After" value={after} tone="green" />
-              </div>
-            </div>
-          )}
-
-          {/* Metadata */}
-          {!!meta && (
-            <div className="border-t border-slate-100 px-6 py-5">
-              <SectionLabel icon={null}>Metadata</SectionLabel>
-              <JsonDiffBlock label="Data" value={meta} tone="slate" />
-            </div>
-          )}
+          </div>
 
           {/* Footer — IP + Log ID */}
           <div className="border-t border-slate-100 px-6 py-5">
             <div className="space-y-2">
               {log.ipAddress && (
                 <MetaRow
-                  label="IP Address"
+                  label="IP хаяг"
                   value={<span className="font-mono">{log.ipAddress}</span>}
                 />
               )}
-              <MetaRow
-                label="Log ID"
-                value={
-                  <span className="font-mono text-slate-400">{log.id}</span>
-                }
-              />
             </div>
           </div>
+        </div>
         </div>
       </div>
     </>
@@ -768,12 +948,33 @@ export default function AuditLogs() {
     skip: !isHr,
   });
   const { data: employeesData } = useGetEmployeesQuery({ skip: !isHr });
+  const { data: allRequestsData } = useGetAllBenefitRequestsQuery({
+    skip: !isHr || !selectedLog?.requestId,
+  });
 
   const fullLogs = useMemo(() => (data?.auditLogs ?? []) as AuditLog[], [data]);
   const employeesById = useMemo(
     () => new Map((employeesData?.getEmployees ?? []).map((e) => [e.id, e])),
     [employeesData],
   );
+  const benefitRequestForDetail = useMemo(() => {
+    if (!selectedLog?.requestId || !allRequestsData?.allBenefitRequests) return null;
+    const req = allRequestsData.allBenefitRequests.find(
+      (r) => r.id === selectedLog.requestId,
+    );
+    return req
+      ? {
+          id: req.id,
+          viewContractUrl: req.viewContractUrl ?? null,
+          employeeSignedContract: req.employeeSignedContract
+            ? {
+                viewUrl: req.employeeSignedContract.viewUrl ?? null,
+                fileName: req.employeeSignedContract.fileName ?? null,
+              }
+            : null,
+        }
+      : null;
+  }, [selectedLog?.requestId, allRequestsData?.allBenefitRequests]);
 
   const actionTypeOptions = useMemo(() => {
     const unique = Array.from(
@@ -823,22 +1024,22 @@ export default function AuditLogs() {
               <table className="min-w-full text-left text-sm table-fixed">
                 <thead className="border-b border-slate-200 bg-slate-50">
                   <tr>
-                    <th className="px-5 py-3">
+                    <th className="px-6 py-4">
                       <div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" />
                     </th>
-                    <th className="px-5 py-3">
+                    <th className="px-6 py-4">
                       <div className="h-2.5 w-16 rounded-full bg-slate-200/80 animate-pulse" />
                     </th>
-                    <th className="px-5 py-3">
+                    <th className="px-6 py-4">
                       <div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" />
                     </th>
-                    <th className="px-5 py-3 w-44">
+                    <th className="px-6 py-4 w-44">
                       <div className="h-2.5 w-8 rounded-full bg-slate-200/80 animate-pulse" />
                     </th>
-                    <th className="px-5 py-3 w-full">
+                    <th className="px-6 py-4 w-full">
                       <div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" />
                     </th>
-                    <th className="px-5 py-3 w-12" />
+                    <th className="px-6 py-4 w-12" />
                   </tr>
                 </thead>
                 <tbody>
@@ -847,7 +1048,7 @@ export default function AuditLogs() {
                       key={i}
                       className="border-b border-slate-100 last:border-b-0"
                     >
-                      <td className="px-5 py-3">
+                      <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="h-7 w-7 rounded-full bg-slate-200/80 animate-pulse shrink-0" />
                           <div className="space-y-1.5">
@@ -856,21 +1057,21 @@ export default function AuditLogs() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-6 py-4">
                         <div className="h-3.5 w-20 rounded-full bg-slate-200/80 animate-pulse" />
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-6 py-4">
                         <div className="inline-flex items-center rounded px-2 py-0.5 bg-slate-100/60">
                           <div className="h-3 w-24 rounded-full bg-slate-200/80 animate-pulse" />
                         </div>
                       </td>
-                      <td className="whitespace-nowrap px-5 py-3">
+                      <td className="whitespace-nowrap px-6 py-4">
                         <div className="h-3.5 w-36 rounded-full bg-slate-200/80 animate-pulse" />
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-6 py-4">
                         <div className="h-3.5 w-44 rounded-full bg-slate-200/80 animate-pulse" />
                       </td>
-                      <td className="px-5 py-3 text-right">
+                      <td className="px-6 py-4 text-right">
                         <div className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-200/80 animate-pulse" />
                       </td>
                     </tr>
@@ -901,7 +1102,12 @@ export default function AuditLogs() {
   return (
     <>
       {selectedLog && (
-        <DetailPanel log={selectedLog} onClose={() => setSelectedLog(null)} />
+        <DetailPanel
+          log={selectedLog}
+          onClose={() => setSelectedLog(null)}
+          employeesById={employeesById}
+          benefitRequest={benefitRequestForDetail}
+        />
       )}
 
       <main className="flex-1 px-8 py-9">
@@ -1055,11 +1261,11 @@ export default function AuditLogs() {
                 <table className="min-w-full text-left text-sm table-fixed">
                   <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
                     <tr>
-                      <th className="px-5 py-3">Name</th>
-                      <th className="px-5 py-3">Position</th>
-                      <th className="px-5 py-3">Action</th>
-                      <th className="px-5 py-3 w-44">Date</th>
-                      <th className="px-5 py-3 w-full">Reason</th>
+                      <th className="px-6 py-4">Name</th>
+                      <th className="px-6 py-4">Position</th>
+                      <th className="px-6 py-4">Action</th>
+                      <th className="px-6 py-4 w-44">Date</th>
+                      <th className="px-6 py-4 w-full">Reason</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1078,39 +1284,43 @@ export default function AuditLogs() {
                           }`}
                           onClick={() => setSelectedLog(log)}
                         >
-                          <td className="px-5 py-3 text-slate-700">
+                          <td className="px-6 py-4 text-slate-700">
                             <div className="flex items-center gap-3">
                               <UserAvatar />
-                              <div className="flex flex-col">
-                                <span className="font-medium">{actorName}</span>
+                              <div className="flex flex-col gap-0.5 min-w-0">
+                                <span className="font-semibold text-slate-900 truncate">
+                                  {actorName}
+                                </span>
                                 {actorEmployee?.email && (
-                                  <span className="text-xs text-slate-400">
+                                  <span className="text-xs text-slate-500 truncate">
                                     {actorEmployee.email}
                                   </span>
                                 )}
                               </div>
                             </div>
                           </td>
-                          <td className="px-5 py-3 text-slate-700">
+                          <td className="px-6 py-4 text-slate-700 text-sm">
                             {formatRole(log.actorRole)}
                           </td>
-                          <td className="px-5 py-3">
+                          <td className="px-6 py-4">
                             <span
-                              className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
+                              className={`inline-flex rounded-md px-2.5 py-1 text-xs font-medium ${
                                 ACTION_TONE[log.actionType] ??
                                 "bg-gray-100 text-gray-600"
                               }`}
                             >
-                              {log.actionType}
+                              {ACTION_TYPE_LABELS[log.actionType] ?? log.actionType}
                             </span>
                           </td>
-                          <td className="whitespace-nowrap px-5 py-3 text-slate-500">
-                            {formatDate(log.createdAt)}
+                          <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-500">
+                            {formatRelativeTime(log.createdAt)}
                           </td>
-                          <td className="px-5 py-3 max-w-[180px] truncate text-slate-500">
-                            {log.reason ?? "—"}
+                          <td className="px-6 py-4 max-w-[220px] text-sm text-slate-600">
+                            <span className="line-clamp-2" title={getReasonDisplay(log)}>
+                              {getReasonDisplay(log)}
+                            </span>
                           </td>
-                          <td className="px-5 py-3 text-right">
+                          <td className="px-6 py-4 text-right">
                             <span className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
                               <ChevronRight className="h-4 w-4" />
                             </span>
