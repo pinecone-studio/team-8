@@ -10,6 +10,7 @@ query GetBenefits($category: String) {
     unitPrice
     vendorName
     requiresContract
+    isActive
     flowType
     optionsDescription
     approvalPolicy
@@ -38,6 +39,7 @@ query GetMyBenefits {
       unitPrice
       vendorName
       requiresContract
+      isActive
       flowType
       optionsDescription
       approvalPolicy
@@ -73,6 +75,7 @@ query GetMyBenefitsFull {
       unitPrice
       vendorName
       requiresContract
+      isActive
       flowType
       optionsDescription
       approvalPolicy
@@ -106,6 +109,14 @@ query GetBenefitRequests {
     employeeApprovedAt
     declineReason
     employeeContractKey
+    employeeSignedContract {
+      id
+      fileName
+      mimeType
+      status
+      uploadedAt
+      viewUrl
+    }
     createdAt
     updatedAt
     viewContractUrl
@@ -125,6 +136,14 @@ query GetAllBenefitRequests($status: String, $queue: String) {
     repaymentMonths
     employeeApprovedAt
     declineReason
+    employeeSignedContract {
+      id
+      fileName
+      mimeType
+      status
+      uploadedAt
+      viewUrl
+    }
     createdAt
     updatedAt
     viewContractUrl
@@ -150,6 +169,7 @@ query GetEmployeeBenefits($employeeId: String!) {
       unitPrice
       vendorName
       requiresContract
+      isActive
       flowType
       optionsDescription
       approvalPolicy

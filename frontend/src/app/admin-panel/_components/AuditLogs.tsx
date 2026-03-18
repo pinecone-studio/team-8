@@ -15,7 +15,6 @@ import {
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
-import PageLoading from "@/app/_components/PageLoading";
 import { UserAvatar } from "@clerk/nextjs";
 
 const ACTION_TYPE_LABELS: Record<string, string> = {
@@ -730,7 +729,7 @@ function exportCsv(
 }
 
 export default function AuditLogs() {
-  const { employee: me } = useCurrentEmployee();
+  const { employee: me, loading: meLoading } = useCurrentEmployee();
   const isHr = isHrAdmin(me);
 
   const [actionType, setActionType] = useState("");
@@ -756,7 +755,11 @@ export default function AuditLogs() {
 
   // Fetch ALL logs without actionType — filtering is done client-side so the
   // dropdown options always reflect the full dataset regardless of selection.
-  const { data, loading } = useGetAuditLogsQuery({
+  const {
+    data,
+    loading: auditLoading,
+    previousData: prevAuditData,
+  } = useGetAuditLogsQuery({
     variables: {
       fromDate: fromDate || null,
       toDate: toDate || null,
@@ -794,7 +797,94 @@ export default function AuditLogs() {
     exportCsv(logs, { actionType, fromDate, toDate });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logs, actionType, fromDate, toDate]);
+  const isLoading = meLoading || auditLoading;
+  const skeletonRowCount = (prevAuditData?.auditLogs?.length ?? 0) || 6;
+  // ── 1. Loading skeleton screen (no real text, no access banner) ────────────
+  if (isLoading) {
+    return (
+      <main className="flex-1 px-8 py-9">
+        <section className="mx-auto max-w-7xl">
+          {/* Heading skeleton */}
+          <div className="mb-8 flex items-end justify-between gap-4">
+            <div>
+              <div className="h-7 w-44 rounded-full bg-white/30 animate-pulse" />
+              <div className="mt-2 h-3.5 w-64 rounded-full bg-white/20 animate-pulse" />
+            </div>
+          </div>
 
+          {/* Filter row skeleton */}
+          <div className="mb-6 flex flex-wrap gap-3">
+            <div className="h-9 w-36 rounded-xl bg-slate-200/80 animate-pulse" />
+            <div className="h-9 w-48 rounded-xl bg-slate-200/80 animate-pulse" />
+          </div>
+
+          {/* Table skeleton */}
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm table-fixed">
+                <thead className="border-b border-slate-200 bg-slate-50">
+                  <tr>
+                    <th className="px-5 py-3">
+                      <div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" />
+                    </th>
+                    <th className="px-5 py-3">
+                      <div className="h-2.5 w-16 rounded-full bg-slate-200/80 animate-pulse" />
+                    </th>
+                    <th className="px-5 py-3">
+                      <div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" />
+                    </th>
+                    <th className="px-5 py-3 w-44">
+                      <div className="h-2.5 w-8 rounded-full bg-slate-200/80 animate-pulse" />
+                    </th>
+                    <th className="px-5 py-3 w-full">
+                      <div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" />
+                    </th>
+                    <th className="px-5 py-3 w-12" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: skeletonRowCount }).map((_, i) => (
+                    <tr
+                      key={i}
+                      className="border-b border-slate-100 last:border-b-0"
+                    >
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-7 w-7 rounded-full bg-slate-200/80 animate-pulse shrink-0" />
+                          <div className="space-y-1.5">
+                            <div className="h-3.5 w-28 rounded-full bg-slate-200/80 animate-pulse" />
+                            <div className="h-2.5 w-20 rounded-full bg-slate-200/80 animate-pulse" />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="h-3.5 w-20 rounded-full bg-slate-200/80 animate-pulse" />
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="inline-flex items-center rounded px-2 py-0.5 bg-slate-100/60">
+                          <div className="h-3 w-24 rounded-full bg-slate-200/80 animate-pulse" />
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-3">
+                        <div className="h-3.5 w-36 rounded-full bg-slate-200/80 animate-pulse" />
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="h-3.5 w-44 rounded-full bg-slate-200/80 animate-pulse" />
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <div className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-200/80 animate-pulse" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+  // ── 2. Access denied (only shown after loading resolves) ───────────────────
   if (!isHr) {
     return (
       <main className="flex-1 px-8 py-9">
@@ -809,7 +899,6 @@ export default function AuditLogs() {
       </main>
     );
   }
-
   return (
     <>
       {selectedLog && (
@@ -820,9 +909,7 @@ export default function AuditLogs() {
         <section className="mx-auto max-w-7xl">
           <div className="mb-8 flex items-end justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Request History
-              </h1>
+              <h1 className="text-2xl font-bold text-white">Request History</h1>
               <p className="mt-1 text-sm text-gray-400">
                 All benefit request activity and change history
               </p>
@@ -952,10 +1039,7 @@ export default function AuditLogs() {
               </button>
             )}
           </div>
-
-          {loading ? (
-            <PageLoading inline message="Loading audit logs…" />
-          ) : logs.length === 0 ? (
+          {logs.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white px-8 py-16 text-center">
               <p className="text-sm font-medium text-slate-600">
                 No audit log entries found
@@ -982,7 +1066,7 @@ export default function AuditLogs() {
                   <tbody>
                     {logs.map((log) => {
                       const actorEmployee = log.actorEmployeeId
-                        ? employeesById.get(log.actorEmployeeId) ?? null
+                        ? (employeesById.get(log.actorEmployeeId) ?? null)
                         : null;
                       const actorName =
                         actorEmployee?.name ??

@@ -8,7 +8,8 @@ import SummaryCard from "../_components/benefits/SummaryCard";
 import BenefitCard from "../_components/benefits/BenefitCard";
 import BenefitDetailModal from "../_components/benefits/BenefitDetailModal";
 import PageHeader from "../_components/layout/PageHeader";
-import PageLoading from "@/app/_components/PageLoading";
+import BenefitCardSkeleton from "../_components/benefits/BenefitCardSkeleton";
+import SummaryCardSkeleton from "../_components/benefits/SummaryCardSkeleton";
 import {
   BenefitEligibilityStatus,
   useGetMyBenefitsFullQuery,
@@ -67,9 +68,7 @@ export default function DashboardPage() {
 
   const subtitle = error
     ? "We couldn't load your employee profile."
-    : employeeLoading
-      ? "Loading your employee profile..."
-      : "Here's an overview of your benefits";
+    : "Here's an overview of your benefits";
 
   const stats = myBenefits.reduce(
     (acc, benefit) => {
@@ -83,6 +82,57 @@ export default function DashboardPage() {
 
   const isDashboardLoading = employeeLoading || benefitsLoading;
   const dashboardError = error ?? benefitsError ?? null;
+
+  if (isDashboardLoading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar />
+        <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
+          <main className="w-full max-w-7xl px-8 py-8">
+            {/* Heading skeleton */}
+            <div>
+              <div className="h-7 w-64 rounded-full bg-white/30 animate-pulse" />
+              <div className="mt-2 h-3.5 w-48 rounded-full bg-white/20 animate-pulse" />
+            </div>
+
+            {/* Summary cards skeleton */}
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+              <SummaryCardSkeleton />
+              <SummaryCardSkeleton />
+              <SummaryCardSkeleton />
+            </div>
+
+            {/* Benefits section skeleton */}
+            <section className="mt-8">
+              {/* Section heading + search skeleton */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="h-4 w-36 rounded-full bg-slate-200/80 animate-pulse" />
+                <div className="h-9 w-48 rounded-xl bg-slate-200/80 animate-pulse" />
+              </div>
+
+              {/* Tabs skeleton */}
+              <div className="mt-4 flex items-center gap-1">
+                {[28, 52, 60, 60, 52].map((w, i) => (
+                  <div
+                    key={i}
+                    className="rounded-lg bg-slate-200/80 animate-pulse"
+                    style={{ width: w, height: 32 }}
+                  />
+                ))}
+              </div>
+
+              {/* Benefit cards skeleton */}
+              <div className="mt-4 grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))] [&>*]:min-w-0">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <BenefitCardSkeleton key={i} />
+                ))}
+              </div>
+            </section>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -150,9 +200,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="mt-4 grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))] [&>*]:min-w-0">
-              {isDashboardLoading ? (
-                <PageLoading message="Loading benefits..." />
-              ) : dashboardError ? (
+              {dashboardError ? (
                 <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
                   Failed to load benefit data.
                 </div>

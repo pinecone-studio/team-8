@@ -37,7 +37,13 @@ function StatCard({
 }) {
   if (loading) {
     return (
-      <div className="h-[110px] animate-pulse rounded-2xl border border-slate-200 bg-white" />
+      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="mb-2 flex items-start justify-between">
+          <div className="h-3 w-28 rounded-full bg-slate-200/80 animate-pulse" />
+          <div className="h-4 w-4 rounded-sm bg-slate-200/80 animate-pulse" />
+        </div>
+        <div className="mt-3 h-9 w-12 rounded-lg bg-slate-200/80 animate-pulse" />
+      </div>
     );
   }
   return (
@@ -93,7 +99,14 @@ function AlertCard({
 
   if (loading) {
     return (
-      <div className="h-[116px] animate-pulse rounded-2xl border border-slate-200 bg-white" />
+      <div className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4">
+        <div className="h-12 w-12 shrink-0 rounded-2xl bg-slate-200/80 animate-pulse" />
+        <div className="flex-1">
+          <div className="h-3.5 w-2/3 rounded-full bg-slate-200/80 animate-pulse" />
+          <div className="mt-1.5 h-2.5 w-full rounded-full bg-slate-200/80 animate-pulse" />
+          <div className="mt-3 h-6 w-24 rounded-full bg-slate-200/80 animate-pulse" />
+        </div>
+      </div>
     );
   }
 
@@ -163,7 +176,16 @@ function ActionQueueCard({
 
   if (loading) {
     return (
-      <div className="h-[128px] animate-pulse rounded-2xl border border-slate-200 bg-white" />
+      <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 space-y-2">
+            <div className="h-3.5 w-3/5 rounded-full bg-slate-200/80 animate-pulse" />
+            <div className="h-2.5 w-4/5 rounded-full bg-slate-200/80 animate-pulse" />
+          </div>
+          <div className="h-7 w-7 shrink-0 rounded-lg bg-slate-200/80 animate-pulse" />
+        </div>
+        <div className="mt-4 h-2 w-full rounded-full bg-slate-200/80 animate-pulse" />
+      </div>
     );
   }
 
@@ -323,6 +345,85 @@ export default function Dashboard() {
   const isLoading = employeeLoading || (hasAdminAccess && dashboardLoading);
   const errorMessage = employeeError ?? dashboardError ?? null;
 
+  // ── Full skeleton screen (no real text rendered) ──────────────────────────
+  if (isLoading) {
+    return (
+      <main className="flex-1 px-8 py-9">
+        <section className="mx-auto max-w-7xl">
+          {/* Header skeleton */}
+          <div className="mb-8">
+            <div className="h-7 w-56 rounded-full bg-white/30 animate-pulse" />
+            <div className="mt-2 h-3.5 w-72 rounded-full bg-white/20 animate-pulse" />
+          </div>
+
+          {/* Stat cards skeleton */}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard label="" value={0} icon={Users} iconColor="" loading />
+            <StatCard label="" value={0} icon={Users} iconColor="" loading />
+            <StatCard label="" value={0} icon={Users} iconColor="" loading />
+            <StatCard label="" value={0} icon={Users} iconColor="" loading />
+          </div>
+
+          {/* Alert cards section skeleton */}
+          <div className="mt-6">
+            <div className="mb-3 h-3 w-56 rounded-full bg-slate-200/80 animate-pulse" />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <AlertCard label="" count={0} href="#" tone="amber" hint="" countLabel="" loading />
+              <AlertCard label="" count={0} href="#" tone="rose" hint="" countLabel="" loading />
+              <AlertCard label="" count={0} href="#" tone="blue" hint="" countLabel="" loading />
+            </div>
+          </div>
+
+          {/* Action queues + enrollment chart skeleton */}
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="mb-3 h-3 w-28 rounded-full bg-slate-200/80 animate-pulse" />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <ActionQueueCard label="" count={0} href="#" tone="blue" hint="" maxCount={1} loading />
+                <ActionQueueCard label="" count={0} href="#" tone="amber" hint="" maxCount={1} loading />
+                <ActionQueueCard label="" count={0} href="#" tone="rose" hint="" maxCount={1} loading />
+                <ActionQueueCard label="" count={0} href="#" tone="green" hint="" maxCount={1} loading />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="h-3.5 w-48 rounded-full bg-slate-200/80 animate-pulse" />
+              <div className="mt-4 space-y-4">
+                {[
+                  { label: "w-14", count: "w-10" },
+                  { label: "w-20", count: "w-8" },
+                  { label: "w-16", count: "w-8" },
+                  { label: "w-12", count: "w-8" },
+                  { label: "w-[72px]", count: "w-8" },
+                  { label: "w-16", count: "w-8" },
+                ].map((row, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_220px_64px] items-center gap-4">
+                    <div className={`h-3 ${row.label} rounded-full bg-slate-200/80 animate-pulse`} />
+                    <div className="h-2 w-full rounded-full bg-slate-200/80 animate-pulse" />
+                    <div className={`h-3 ${row.count} rounded-full bg-slate-200/80 animate-pulse ml-auto`} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick links skeleton */}
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5">
+                <div className="mb-3 h-5 w-5 rounded-sm bg-slate-200/80 animate-pulse" />
+                <div className="h-3.5 w-2/3 rounded-full bg-slate-200/80 animate-pulse" />
+                <div className="mt-2 h-2.5 w-full rounded-full bg-slate-200/80 animate-pulse" />
+                <div className="mt-1 h-2.5 w-4/5 rounded-full bg-slate-200/80 animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  // ── Real content ──────────────────────────────────────────────────────────
   return (
     <main className="flex-1 px-8 py-9">
       <section className="mx-auto max-w-7xl">
@@ -332,13 +433,11 @@ export default function Dashboard() {
             {getAdminDashboardTitle(employee)}
           </h1>
           <p className="mt-1 text-sm text-gray-400">
-            {employeeLoading
-              ? "Loading admin profile…"
-              : !employee
-                ? "We couldn't find your employee profile."
-                : !hasAdminAccess
-                  ? "This account does not currently have admin access."
-                  : getAdminDashboardSubtitle(employee)}
+            {!employee
+              ? "We couldn't find your employee profile."
+              : !hasAdminAccess
+                ? "This account does not currently have admin access."
+                : getAdminDashboardSubtitle(employee)}
           </p>
         </div>
 
@@ -347,12 +446,12 @@ export default function Dashboard() {
           <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">
             Failed to load admin dashboard data.
           </div>
-        ) : !employeeLoading && !employee ? (
+        ) : !employee ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-800">
             Your Clerk account is signed in, but no matching employee record was
             found.
           </div>
-        ) : !employeeLoading && employee && !hasAdminAccess ? (
+        ) : !hasAdminAccess ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-800">
             Admin access requires an HR or Finance employee with responsibility
             level 2 or higher.
@@ -366,28 +465,24 @@ export default function Dashboard() {
                 value={summary?.totalEmployees ?? 0}
                 icon={Users}
                 iconColor="text-slate-400"
-                loading={isLoading}
               />
               <StatCard
                 label="Active Benefits"
                 value={summary?.activeBenefits ?? 0}
                 icon={Heart}
                 iconColor="text-emerald-500"
-                loading={isLoading}
               />
               <StatCard
                 label="Pending Requests"
                 value={summary?.pendingRequests ?? 0}
                 icon={ScrollText}
                 iconColor="text-orange-500"
-                loading={isLoading}
               />
               <StatCard
                 label="Locked Benefits"
                 value={summary?.lockedBenefits ?? 0}
                 icon={Lock}
                 iconColor="text-slate-400"
-                loading={isLoading}
               />
             </div>
 
@@ -405,7 +500,6 @@ export default function Dashboard() {
                     tone="amber"
                     hint="Active contracts expiring within 60 days"
                     countLabel="contracts"
-                    loading={isLoading}
                   />
                   <AlertCard
                     label="Missing active contracts"
@@ -414,7 +508,6 @@ export default function Dashboard() {
                     tone="rose"
                     hint="Benefits that need a contract uploaded"
                     countLabel="benefits"
-                    loading={isLoading}
                   />
                   <AlertCard
                     label="Suspended enrollments"
@@ -423,7 +516,6 @@ export default function Dashboard() {
                     tone="blue"
                     hint="Enrollments pending re-evaluation"
                     countLabel="enrollments"
-                    loading={isLoading}
                   />
                 </div>
               </div>
@@ -459,7 +551,6 @@ export default function Dashboard() {
                             tone="blue"
                             hint="Awaiting HR decision"
                             maxCount={maxCount}
-                            loading={isLoading}
                           />
                         )}
                         <ActionQueueCard
@@ -469,7 +560,6 @@ export default function Dashboard() {
                           tone="amber"
                           hint="Awaiting Finance decision"
                           maxCount={maxCount}
-                          loading={isLoading}
                         />
                         {isHr && (
                           <ActionQueueCard
@@ -479,7 +569,6 @@ export default function Dashboard() {
                             tone="rose"
                             hint="Yet to accept contract"
                             maxCount={maxCount}
-                            loading={isLoading}
                           />
                         )}
                         <ActionQueueCard
@@ -489,7 +578,6 @@ export default function Dashboard() {
                           tone="green"
                           hint="Last 7 days"
                           maxCount={maxCount}
-                          loading={isLoading}
                         />
                       </>
                     );
@@ -502,11 +590,7 @@ export default function Dashboard() {
                   Benefit Enrollment by Category
                 </h2>
                 <div className="mt-4">
-                  {isLoading ? (
-                    <div className="h-40 animate-pulse rounded-xl bg-slate-100" />
-                  ) : (
-                    <CategoryBars data={summary?.usageByCategory ?? []} />
-                  )}
+                  <CategoryBars data={summary?.usageByCategory ?? []} />
                 </div>
               </div>
             </div>

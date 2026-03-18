@@ -6,6 +6,7 @@ import * as benefitEligibilitySchema from "./benefit-eligibility";
 import * as benefitRequestsSchema from "./benefit-requests";
 import * as auditLogsSchema from "./audit-logs";
 import * as contractAcceptancesSchema from "./contract-acceptances";
+import * as employeeSignedContractsSchema from "./employee-signed-contracts";
 import * as enrollmentsSchema from "./enrollments";
 import * as ruleProposalsSchema from "./rule-proposals";
 import * as notificationReadsSchema from "./notification-reads";
@@ -22,6 +23,7 @@ export const schema = {
   ...benefitRequestsSchema,
   ...auditLogsSchema,
   ...contractAcceptancesSchema,
+  ...employeeSignedContractsSchema,
   ...enrollmentsSchema,
   ...ruleProposalsSchema,
   ...notificationReadsSchema,
@@ -38,6 +40,7 @@ export * from "./benefit-eligibility";
 export * from "./benefit-requests";
 export * from "./audit-logs";
 export * from "./contract-acceptances";
+export * from "./employee-signed-contracts";
 export * from "./enrollments";
 export * from "./rule-proposals";
 export * from "./notification-reads";

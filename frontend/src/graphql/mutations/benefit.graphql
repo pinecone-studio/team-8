@@ -9,6 +9,14 @@ mutation RequestBenefit($input: RequestBenefitInput!) {
     repaymentMonths
     declineReason
     employeeContractKey
+    employeeSignedContract {
+      id
+      fileName
+      mimeType
+      status
+      uploadedAt
+      viewUrl
+    }
     createdAt
     updatedAt
     viewContractUrl
@@ -91,6 +99,7 @@ mutation UpdateBenefit($id: String!, $input: UpdateBenefitInput!) {
     unitPrice
     vendorName
     requiresContract
+    isActive
     flowType
     optionsDescription
     approvalPolicy
