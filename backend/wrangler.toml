@@ -36,7 +36,7 @@ preview_id = "22bd329b4ebb4215bd08b854dd0fa77a"
 crons = ["0 9 * * *"]
 
 [vars]
-ENVIRONMENT = "development"
+ENVIRONMENT = "production"
 
 [observability]
 enabled = false
