@@ -3,7 +3,11 @@ import { getBenefitConfig } from "../../eligibility";
 import { schema } from "../../db";
 import type { GraphQLContext } from "../context";
 import { mapBenefitRecordToGraphql } from "./helpers/employeeBenefits";
-import { createContractViewToken, getContractViewUrl } from "../../contracts";
+import {
+  createContractViewToken,
+  getContractViewUrl,
+  getEmployeeSignedContractViewUrl,
+} from "../../contracts";
 
 /** Resolve Benefit.employeePercent when returned from Query.benefits (config may omit it) */
 export const Benefit = {
@@ -46,6 +50,38 @@ export const BenefitRequest = {
       { employeeId: currentEmployee?.id, contractId: active.id },
     );
     return getContractViewUrl(baseUrl, token);
+  },
+  async employeeSignedContract(
+    parent: { id: string; employeeContractKey?: string | null },
+    _: unknown,
+    { db }: GraphQLContext,
+  ) {
+    const rows = await db
+      .select()
+      .from(schema.employeeSignedContracts)
+      .where(eq(schema.employeeSignedContracts.requestId, parent.id))
+      .limit(1);
+
+    if (rows[0]) return rows[0];
+    if (!parent.employeeContractKey) return null;
+
+    const fallbackRows = await db
+      .select()
+      .from(schema.employeeSignedContracts)
+      .where(eq(schema.employeeSignedContracts.r2ObjectKey, parent.employeeContractKey))
+      .limit(1);
+
+    return fallbackRows[0] ?? null;
+  },
+};
+
+export const EmployeeSignedContract = {
+  viewUrl(
+    parent: { id: string },
+    _: unknown,
+    { baseUrl }: GraphQLContext,
+  ) {
+    return getEmployeeSignedContractViewUrl(baseUrl, parent.id);
   },
 };
 

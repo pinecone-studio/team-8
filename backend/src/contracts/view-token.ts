@@ -55,6 +55,21 @@ export function getContractViewUrl(baseUrl: string, token: string): string {
 }
 
 /**
+ * Build a session-authenticated URL for viewing an employee-uploaded signed
+ * contract copy. Unlike vendor contracts this route does not use a signed KV
+ * token because access is restricted to the owner employee or HR admins.
+ */
+export function getEmployeeSignedContractViewUrl(
+  baseUrl: string,
+  employeeSignedContractId: string,
+): string {
+  const url = new URL(baseUrl);
+  url.pathname = "/contracts/employee-view";
+  url.searchParams.set("id", employeeSignedContractId);
+  return url.toString();
+}
+
+/**
  * Resolve token from KV.
  * Returns r2Key plus any optional meta (employeeId, contractId) stored at
  * token-creation time — callers use these to write audit log entries.

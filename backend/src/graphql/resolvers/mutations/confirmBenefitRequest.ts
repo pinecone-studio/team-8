@@ -79,6 +79,74 @@ export const confirmBenefitRequest = async (
         "This benefit requires a contract but no active contract is currently available. Please contact HR.",
       );
     }
+
+    const signedContractRows = await db
+      .select()
+      .from(schema.employeeSignedContracts)
+      .where(eq(schema.employeeSignedContracts.requestId, requestId))
+      .limit(1);
+    let signedContract = signedContractRows[0];
+
+    if (!signedContract && req.employeeContractKey) {
+      const fallbackRows = await db
+        .select()
+        .from(schema.employeeSignedContracts)
+        .where(eq(schema.employeeSignedContracts.r2ObjectKey, req.employeeContractKey))
+        .limit(1);
+      signedContract = fallbackRows[0];
+    }
+
+    if (!signedContract && !req.employeeContractKey) {
+      throw new Error(
+        "Please upload your signed contract copy before confirming this request.",
+      );
+    }
+
+    if (signedContract) {
+      if (signedContract.employeeId !== employee.id) {
+        throw new Error("Uploaded signed contract does not belong to this employee.");
+      }
+      if (signedContract.benefitId !== req.benefitId) {
+        throw new Error("Uploaded signed contract does not match this benefit.");
+      }
+      if (
+        signedContract.status !== "uploaded" &&
+        signedContract.status !== "attached_to_request"
+      ) {
+        throw new Error(
+          "This signed contract copy is no longer valid. Please upload a fresh scanned copy.",
+        );
+      }
+      if (signedContract.requestId && signedContract.requestId !== requestId) {
+        throw new Error(
+          "This signed contract copy is already attached to a different request. Please upload a new copy.",
+        );
+      }
+      if (signedContract.hrContractId !== active.id) {
+        throw new Error(
+          "The HR contract has changed since the signed copy was uploaded. Please upload a new signed copy.",
+        );
+      }
+      if (
+        signedContract.hrContractVersion !== active.version ||
+        signedContract.hrContractHash !== active.sha256Hash
+      ) {
+        throw new Error(
+          "Your uploaded signed copy does not match the current HR contract version. Please re-upload it.",
+        );
+      }
+      if (signedContract.status !== "attached_to_request") {
+        await db
+          .update(schema.employeeSignedContracts)
+          .set({
+            requestId,
+            status: "attached_to_request",
+            updatedAt: now,
+          })
+          .where(eq(schema.employeeSignedContracts.id, signedContract.id));
+      }
+    }
+
     contractVersionAccepted = `${active.version}:${active.sha256Hash}`;
 
     // Write contract acceptance record — include IP for audit trail compliance.

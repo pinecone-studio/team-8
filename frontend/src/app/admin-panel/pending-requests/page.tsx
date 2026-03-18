@@ -87,6 +87,9 @@ type RequestRow = {
   requestedAmount: number | null;
   repaymentMonths: number | null;
   viewContractUrl: string | null;
+  employeeSignedContractViewUrl: string | null;
+  employeeSignedContractFileName: string | null;
+  employeeSignedContractUploadedAt: string | null;
   contractAcceptedAt: string | null;
   contractVersionAccepted: string | null;
   employeeApprovedAt: string | null;
@@ -178,6 +181,12 @@ export default function PendingRequestsPage() {
         requestedAmount: req.requestedAmount ?? null,
         repaymentMonths: req.repaymentMonths ?? null,
         viewContractUrl: req.viewContractUrl ?? null,
+        employeeSignedContractViewUrl:
+          req.employeeSignedContract?.viewUrl ?? null,
+        employeeSignedContractFileName:
+          req.employeeSignedContract?.fileName ?? null,
+        employeeSignedContractUploadedAt:
+          req.employeeSignedContract?.uploadedAt ?? null,
         contractAcceptedAt: req.contractAcceptedAt ?? null,
         contractVersionAccepted: req.contractVersionAccepted ?? null,
         employeeApprovedAt: req.employeeApprovedAt ?? null,
@@ -650,6 +659,9 @@ function RequestDetailModal({
   const contractUrl = getContractProxyUrl(
     req.viewContractUrl ?? activeContract?.viewUrl ?? null,
   );
+  const employeeSignedContractUrl = getContractProxyUrl(
+    req.employeeSignedContractViewUrl,
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -759,12 +771,12 @@ function RequestDetailModal({
             </div>
           </section>
 
-          {/* Contract Document */}
+          {/* HR Contract Document */}
           {req.requiresContract && (
             <section>
               <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
                 <FileText className="h-3.5 w-3.5" />
-                Contract / Document
+                HR Contract
               </div>
               <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 space-y-3">
                 {req.contractVersionAccepted && (
@@ -807,6 +819,52 @@ function RequestDetailModal({
                       No contract document available.
                     </p>
                   )
+                )}
+              </div>
+            </section>
+          )}
+
+          {req.requiresContract && (
+            <section>
+              <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                <FileText className="h-3.5 w-3.5" />
+                Employee Signed Copy
+              </div>
+              <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 space-y-3">
+                {employeeSignedContractUrl ? (
+                  <>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                      <span>
+                        Uploaded
+                        {req.employeeSignedContractUploadedAt
+                          ? ` on ${req.employeeSignedContractUploadedAt.split("T")[0]}`
+                          : ""}
+                      </span>
+                      {req.employeeSignedContractFileName && (
+                        <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-gray-500">
+                          {req.employeeSignedContractFileName}
+                        </span>
+                      )}
+                    </div>
+                    <a
+                      href={employeeSignedContractUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Open Signed Copy
+                    </a>
+                    <iframe
+                      src={employeeSignedContractUrl}
+                      className="mt-2 h-56 w-full rounded-lg border border-gray-200"
+                      title="Employee Signed Contract"
+                    />
+                  </>
+                ) : (
+                  <p className="text-xs text-gray-400">
+                    No employee-uploaded signed copy has been attached to this request yet.
+                  </p>
                 )}
               </div>
             </section>

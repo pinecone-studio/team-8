@@ -573,6 +573,9 @@ function RequestsContent() {
         reviewer: req.reviewedBy,
         declineReason: req.declineReason,
         viewContractUrl: req.viewContractUrl,
+        employeeSignedContractViewUrl: req.employeeSignedContract?.viewUrl,
+        employeeSignedContractFileName:
+          req.employeeSignedContract?.fileName ?? null,
         approvalPolicy: benefit?.approvalPolicy ?? "hr",
         requiresContract: benefit?.requiresContract ?? false,
         paymentInfo,
@@ -765,8 +768,30 @@ function RequestsContent() {
                         </div>
                       )}
 
-                      {/* Timeline + actions */}
-                      <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-5 py-3.5">
+                      {req.employeeSignedContractViewUrl && (
+                        <div className="mx-5 mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
+                          <p className="text-xs text-blue-700">
+                            Your signed contract copy is stored with this request.
+                          </p>
+                          <a
+                            href={
+                              getContractProxyUrl(req.employeeSignedContractViewUrl) ??
+                              req.employeeSignedContractViewUrl
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                            {req.employeeSignedContractFileName
+                              ? "Open signed copy"
+                              : "Open uploaded copy"}
+                          </a>
+                        </div>
+                      )}
+
+                      {/* Timeline + actions — single row */}
+                      <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-4 py-3">
                         <div className="flex-1 min-w-[160px]">
                           <RequestTimeline
                             status={req.status}

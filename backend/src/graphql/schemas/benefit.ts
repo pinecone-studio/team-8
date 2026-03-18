@@ -70,9 +70,25 @@ export const benefitTypeDefs = gql`
     employeeApprovedAt: String
     declineReason: String
     employeeContractKey: String
+    employeeSignedContract: EmployeeSignedContract
     createdAt: String!
     updatedAt: String!
     viewContractUrl: String
+  }
+
+  type EmployeeSignedContract {
+    id: String!
+    employeeId: String!
+    benefitId: String!
+    requestId: String
+    hrContractId: String
+    hrContractVersion: String
+    hrContractHash: String
+    fileName: String
+    mimeType: String
+    status: String!
+    uploadedAt: String!
+    viewUrl: String
   }
 
   type Contract {
@@ -156,6 +172,7 @@ export const benefitTypeDefs = gql`
     requestedAmount: Int
     repaymentMonths: Int
     employeeContractKey: String
+    employeeSignedContractId: String
   }
 
   input CreateEligibilityRuleInput {

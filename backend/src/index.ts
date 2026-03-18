@@ -9,8 +9,9 @@ import {
   getContract,
   getContractObjectKey,
   putContract,
+  getEmployeeSignedContractViewUrl,
 } from "./contracts";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { schema } from "./db";
 import { writeAuditLog } from "./graphql/resolvers/helpers/audit";
 import { checkAndSendContractExpiryAlerts } from "./email/contractExpiryAlerts";
@@ -25,6 +26,22 @@ import {
 } from "./graphql/resolvers/helpers/attendanceCore";
 import { archiveOldAuditLogs } from "./graphql/resolvers/helpers/auditArchive";
 import { invalidateAllEmployeeEligibilityCaches } from "./graphql/resolvers/helpers/benefitCatalogRefresh";
+
+const MAX_EMPLOYEE_CONTRACT_FILE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_EMPLOYEE_CONTRACT_MIME_TYPES = new Set([
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+]);
+
+function sanitizeUploadedFileName(fileName: string): string {
+  const trimmed = fileName.trim() || "signed-contract";
+  return trimmed.replace(/[^a-zA-Z0-9._-]+/g, "_");
+}
+
+function isAllowedEmployeeContractFile(file: File): boolean {
+  return ALLOWED_EMPLOYEE_CONTRACT_MIME_TYPES.has(file.type);
+}
 
 export interface Env {
   DB: D1Database;
@@ -468,8 +485,10 @@ async function handleContractExpiryCheck(
  * Employee signed contract upload: POST /api/contracts/employee-upload
  *
  * Accepts multipart/form-data with `benefitId` and `file` fields.
- * Stores the employee's signed contract in R2 under employee-contracts/{benefitId}/{employeeId}/.
- * Returns the R2 key so the frontend can include it in the requestBenefit mutation.
+ * Stores the employee's signed contract in R2 under
+ * employee-contracts/{benefitId}/{employeeId}/ and persists a separate D1 row
+ * so HR can review/download the signed copy independently from the vendor
+ * contract uploaded by HR.
  * Auth: any authenticated employee.
  */
 async function handleEmployeeContractUpload(
@@ -513,27 +532,261 @@ async function handleEmployeeContractUpload(
     ));
   }
 
+  if (file.size > MAX_EMPLOYEE_CONTRACT_FILE_BYTES) {
+    return withCors(request, new Response(
+      JSON.stringify({ error: "File is too large. Maximum size is 10 MB." }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    ));
+  }
+
+  if (!isAllowedEmployeeContractFile(file)) {
+    return withCors(request, new Response(
+      JSON.stringify({
+        error: "Unsupported file type. Please upload a PDF, PNG, or JPG/JPEG file.",
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    ));
+  }
+
+  const benefitRows = await db
+    .select()
+    .from(schema.benefits)
+    .where(eq(schema.benefits.id, benefitId));
+  const benefit = benefitRows[0];
+  if (!benefit || !benefit.isActive) {
+    return withCors(request, new Response(
+      JSON.stringify({ error: "Benefit not found or inactive." }),
+      { status: 404, headers: { "Content-Type": "application/json" } },
+    ));
+  }
+  if (!benefit.requiresContract) {
+    return withCors(request, new Response(
+      JSON.stringify({ error: "This benefit does not require a signed contract upload." }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    ));
+  }
+
+  const contractRows = await db
+    .select()
+    .from(schema.contracts)
+    .where(eq(schema.contracts.benefitId, benefitId));
+  const activeHrContract = contractRows.find((row) => row.isActive);
+  if (!activeHrContract) {
+    return withCors(request, new Response(
+      JSON.stringify({
+        error: "No active HR contract is available for this benefit yet. Please contact HR.",
+      }),
+      { status: 409, headers: { "Content-Type": "application/json" } },
+    ));
+  }
+
   const ext = file.name.split(".").pop() ?? "pdf";
-  const r2Key = `employee-contracts/${benefitId}/${currentUser.employee.id}/${Date.now()}.${ext}`;
+  const safeName = sanitizeUploadedFileName(file.name);
+  const r2Key = `employee-contracts/${benefitId}/${currentUser.employee.id}/${Date.now()}-${safeName || `signed-contract.${ext}`}`;
   const buffer = await file.arrayBuffer();
   await env.CONTRACTS_BUCKET.put(r2Key, buffer, {
     httpMetadata: { contentType: file.type || "application/pdf" },
   });
 
+  let inserted: (typeof schema.employeeSignedContracts.$inferSelect) | undefined;
+  try {
+    const insertedRows = await db
+      .insert(schema.employeeSignedContracts)
+      .values({
+        employeeId: currentUser.employee.id,
+        benefitId,
+        hrContractId: activeHrContract.id,
+        hrContractVersion: activeHrContract.version,
+        hrContractHash: activeHrContract.sha256Hash,
+        r2ObjectKey: r2Key,
+        fileName: file.name,
+        mimeType: file.type || "application/pdf",
+        status: "uploaded",
+      })
+      .returning();
+    inserted = insertedRows[0];
+  } catch (error) {
+    await env.CONTRACTS_BUCKET.delete(r2Key).catch((cleanupErr) =>
+      console.error(
+        "[employeeContractUpload] Failed to clean up orphaned R2 object after DB error:",
+        cleanupErr,
+      ),
+    );
+    console.error("[employeeContractUpload] Failed to insert D1 row:", error);
+  }
+
+  if (!inserted) {
+    return withCors(request, new Response(
+      JSON.stringify({ error: "Failed to store employee contract upload." }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    ));
+  }
+
+  await db
+    .update(schema.employeeSignedContracts)
+    .set({
+      status: "superseded",
+      updatedAt: new Date().toISOString(),
+    })
+    .where(
+      and(
+        eq(schema.employeeSignedContracts.employeeId, currentUser.employee.id),
+        eq(schema.employeeSignedContracts.benefitId, benefitId),
+        eq(schema.employeeSignedContracts.status, "uploaded"),
+        ne(schema.employeeSignedContracts.id, inserted.id),
+        isNull(schema.employeeSignedContracts.requestId),
+      ),
+    );
+
   await writeAuditLog({
     db,
     actor: currentUser.employee,
-    actionType: "CONTRACT_UPLOADED",
+    actionType: "EMPLOYEE_CONTRACT_UPLOADED",
     entityType: "employee_contract",
-    entityId: r2Key,
+    entityId: inserted.id,
     targetEmployeeId: currentUser.employee.id,
     benefitId,
-    metadata: { r2Key, fileName: file.name },
+    metadata: {
+      r2Key,
+      fileName: file.name,
+      hrContractId: activeHrContract.id,
+      hrContractVersion: activeHrContract.version,
+    },
   });
 
-  return withCors(request, new Response(JSON.stringify({ key: r2Key }), {
+  const baseUrl = new URL(request.url).origin;
+  return withCors(request, new Response(JSON.stringify({
+    id: inserted.id,
+    key: r2Key,
+    fileName: inserted.fileName,
+    uploadedAt: inserted.uploadedAt,
+    viewUrl: getEmployeeSignedContractViewUrl(baseUrl, inserted.id),
+  }), {
     status: 201, headers: { "Content-Type": "application/json" },
   }));
+}
+
+/**
+ * Serve an employee-uploaded signed contract copy.
+ *
+ * Access rules:
+ *  - the owner employee may view their own uploaded copy
+ *  - HR/Finance admins may view any uploaded copy for review/audit
+ */
+async function handleEmployeeSignedContractView(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/contracts/employee-view" || request.method !== "GET") {
+    return null;
+  }
+
+  const signedContractId = url.searchParams.get("id");
+  if (!signedContractId) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Missing id." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const db = createDb(env.DB);
+  const currentUser = await getCurrentUserFromRequest(request, env, db);
+  if (!currentUser.employee) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Authentication required." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const rows = await db
+    .select()
+    .from(schema.employeeSignedContracts)
+    .where(eq(schema.employeeSignedContracts.id, signedContractId))
+    .limit(1);
+  const signedContract = rows[0];
+  if (!signedContract) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Employee signed contract not found." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (!currentUser.isAdmin && currentUser.employee.id !== signedContract.employeeId) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Not authorized to view this employee contract." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (!env.CONTRACTS_BUCKET) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "R2 not configured." }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const object = await env.CONTRACTS_BUCKET.get(signedContract.r2ObjectKey);
+  if (!object) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Employee signed contract file not found." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  await writeAuditLog({
+    db,
+    actor: currentUser.employee,
+    actionType: "CONTRACT_VIEWED",
+    entityType: "employee_contract",
+    entityId: signedContract.id,
+    targetEmployeeId: signedContract.employeeId,
+    benefitId: signedContract.benefitId,
+    requestId: signedContract.requestId ?? null,
+    metadata: {
+      r2Key: signedContract.r2ObjectKey,
+      fileName: signedContract.fileName,
+      viewerIsAdmin: currentUser.isAdmin,
+    },
+    ipAddress:
+      request.headers.get("CF-Connecting-IP") ??
+      request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ??
+      null,
+  }).catch((err) => console.error("[employeeSignedContractView] audit log failed:", err));
+
+  const headers = new Headers();
+  headers.set(
+    "Content-Type",
+    signedContract.mimeType ||
+      object.httpMetadata?.contentType ||
+      "application/octet-stream",
+  );
+  if (signedContract.fileName) {
+    headers.set(
+      "Content-Disposition",
+      `inline; filename="${signedContract.fileName.replace(/"/g, "")}"`,
+    );
+  }
+
+  return withCors(request, new Response(object.body, { headers }));
 }
 
 /**
@@ -769,6 +1022,8 @@ export default {
     if (health !== null) return health;
     const contractView = await handleContractView(request, env);
     if (contractView !== null) return contractView;
+    const employeeSignedContractView = await handleEmployeeSignedContractView(request, env);
+    if (employeeSignedContractView !== null) return employeeSignedContractView;
     const upload = await handleContractUpload(request, env);
     if (upload !== null) return upload;
     const employeeUpload = await handleEmployeeContractUpload(request, env);
