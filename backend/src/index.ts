@@ -48,6 +48,14 @@ const ALLOWED_SCREEN_TIME_MIME_TYPES = new Set([
   "image/heic",
   "image/heif",
 ]);
+const MAX_BENEFIT_IMAGE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_BENEFIT_IMAGE_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+]);
 
 function sanitizeUploadedFileName(fileName: string): string {
   const trimmed = fileName.trim() || "signed-contract";
@@ -1236,6 +1244,20 @@ async function handleBenefitImageUpload(
   if (!benefitId || !file?.size) {
     return withCors(request, new Response(
       JSON.stringify({ error: "Missing required fields: benefitId, file" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    ));
+  }
+
+  if (!ALLOWED_BENEFIT_IMAGE_MIME_TYPES.has(file.type)) {
+    return withCors(request, new Response(
+      JSON.stringify({ error: "Unsupported image type. Allowed: PNG, JPEG, WebP, GIF, SVG." }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    ));
+  }
+
+  if (file.size > MAX_BENEFIT_IMAGE_BYTES) {
+    return withCors(request, new Response(
+      JSON.stringify({ error: `Image too large. Maximum size: ${MAX_BENEFIT_IMAGE_BYTES / 1024 / 1024} MB.` }),
       { status: 400, headers: { "Content-Type": "application/json" } },
     ));
   }
