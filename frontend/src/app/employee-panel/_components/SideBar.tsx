@@ -47,6 +47,7 @@ export default function Sidebar() {
   const { employee, loading } = useCurrentEmployee();
   const hasAdminAccess = isAdminEmployee(employee);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const profileRef = useRef<HTMLDivElement>(null);
 
   const profileName = employee?.name ?? "Employee";
@@ -80,68 +81,84 @@ export default function Sidebar() {
         : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
     }`;
 
+  const sidebarW = collapsed ? "w-[64px]" : "w-[260px]";
+
   return (
     <>
-      <aside className="fixed left-0 top-0 z-10 flex h-screen w-[260px] flex-col border-r border-gray-100 bg-white">
+      <aside
+        className={`fixed left-0 top-0 z-10 flex h-screen flex-col border-r border-gray-100 bg-white transition-all duration-200 ${sidebarW}`}
+        onMouseEnter={() => setCollapsed(false)}
+        onMouseLeave={() => { setCollapsed(true); setProfileOpen(false); }}
+      >
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-100 px-4">
           <Link
             href="/employee-panel/dashboard"
             className="flex items-center gap-2"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#3652c5]">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#3652c5]">
               <PineconeLogo />
             </div>
-            <span className="font-semibold text-gray-900">Employee</span>
+            {!collapsed && <span className="font-semibold text-gray-900">Employee</span>}
           </Link>
-          <NotificationBell />
+          {!collapsed && <NotificationBell />}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-2 py-4">
           <nav className="space-y-0.5">
-            <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">
-              Menu
-            </p>
+            {!collapsed && (
+              <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">Menu</p>
+            )}
             {mainNavItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={navLinkClass(item.href)}
+                  title={collapsed ? item.label : undefined}
+                  className={`flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm font-medium transition active:scale-[0.98] ${collapsed ? "justify-center" : "gap-3"} ${
+                    isActive(item.href)
+                      ? "bg-gray-100 text-gray-900"
+                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                  }`}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
-                  <span>{item.label}</span>
+                  {!collapsed && <span>{item.label}</span>}
                 </Link>
               );
             })}
           </nav>
 
           <nav className="mt-6 space-y-0.5 border-t border-gray-100 pt-4">
-            <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">
-              Dev
-            </p>
+            {!collapsed && (
+              <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">Dev</p>
+            )}
             {devNavItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={navLinkClass(item.href)}
+                  title={collapsed ? item.label : undefined}
+                  className={`flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm font-medium transition active:scale-[0.98] ${collapsed ? "justify-center" : "gap-3"} ${
+                    isActive(item.href)
+                      ? "bg-gray-100 text-gray-900"
+                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                  }`}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
-                  <span>{item.label}</span>
+                  {!collapsed && <span>{item.label}</span>}
                 </Link>
               );
             })}
           </nav>
         </div>
 
-        <div className="shrink-0 border-t border-gray-100 px-3 py-3">
+        <div className="shrink-0 border-t border-gray-100 px-2 py-3">
           <div className="relative" ref={profileRef}>
             <button
               type="button"
               onClick={() => setProfileOpen((o) => !o)}
-              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-gray-50 active:scale-[0.99]"
+              className={`flex w-full items-center rounded-xl px-2 py-2.5 text-left transition hover:bg-gray-50 active:scale-[0.99] ${collapsed ? "justify-center" : "gap-2.5"}`}
             >
               {loading || !isUserLoaded ? (
                 <div className="h-9 w-9 shrink-0 rounded-full bg-gray-200 animate-pulse" />
@@ -156,26 +173,26 @@ export default function Sidebar() {
                   {profileName.charAt(0).toUpperCase()}
                 </div>
               )}
-              <div className="min-w-0 flex-1">
-                {loading ? (
-                  <>
-                    <div className="h-3.5 w-24 rounded bg-gray-200 animate-pulse" />
-                    <div className="mt-1.5 h-3 w-16 rounded bg-gray-200 animate-pulse" />
-                  </>
-                ) : (
-                  <>
-                    <p className="truncate text-sm font-medium text-gray-900">
-                      {profileName}
-                    </p>
-                    <p className="truncate text-xs text-gray-400">
-                      {profileRole}
-                    </p>
-                  </>
-                )}
-              </div>
-              <ChevronDown
-                className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`}
-              />
+              {!collapsed && (
+                <>
+                  <div className="min-w-0 flex-1">
+                    {loading ? (
+                      <>
+                        <div className="h-3.5 w-24 rounded bg-gray-200 animate-pulse" />
+                        <div className="mt-1.5 h-3 w-16 rounded bg-gray-200 animate-pulse" />
+                      </>
+                    ) : (
+                      <>
+                        <p className="truncate text-sm font-medium text-gray-900">{profileName}</p>
+                        <p className="truncate text-xs text-gray-400">{profileRole}</p>
+                      </>
+                    )}
+                  </div>
+                  <ChevronDown
+                    className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`}
+                  />
+                </>
+              )}
             </button>
             <div
               className={`absolute bottom-full left-0 right-0 z-20 mb-1.5 origin-bottom rounded-lg border border-gray-100 bg-white py-1 shadow-lg transition-all duration-200 ease-out ${
@@ -209,7 +226,7 @@ export default function Sidebar() {
           </div>
         </div>
       </aside>
-      <div className="w-[260px] shrink-0" aria-hidden />
+      <div className={`shrink-0 transition-all duration-200 ${sidebarW}`} aria-hidden />
     </>
   );
 }
