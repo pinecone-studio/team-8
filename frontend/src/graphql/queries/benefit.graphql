@@ -106,6 +106,14 @@ query GetBenefitRequests {
     employeeApprovedAt
     declineReason
     employeeContractKey
+    employeeSignedContract {
+      id
+      fileName
+      mimeType
+      status
+      uploadedAt
+      viewUrl
+    }
     createdAt
     updatedAt
     viewContractUrl
@@ -125,6 +133,14 @@ query GetAllBenefitRequests($status: String, $queue: String) {
     repaymentMonths
     employeeApprovedAt
     declineReason
+    employeeSignedContract {
+      id
+      fileName
+      mimeType
+      status
+      uploadedAt
+      viewUrl
+    }
     createdAt
     updatedAt
     viewContractUrl

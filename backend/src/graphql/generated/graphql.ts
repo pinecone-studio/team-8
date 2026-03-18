@@ -139,6 +139,7 @@ export type BenefitRequest = {
   employeeApprovedAt?: Maybe<Scalars['String']['output']>;
   employeeContractKey?: Maybe<Scalars['String']['output']>;
   employeeId: Scalars['String']['output'];
+  employeeSignedContract?: Maybe<EmployeeSignedContract>;
   id: Scalars['String']['output'];
   repaymentMonths?: Maybe<Scalars['Int']['output']>;
   requestedAmount?: Maybe<Scalars['Int']['output']>;
@@ -268,6 +269,22 @@ export type EmployeeSettings = {
   notificationEmail: Scalars['Boolean']['output'];
   notificationRenewals: Scalars['Boolean']['output'];
   timezone: Scalars['String']['output'];
+};
+
+export type EmployeeSignedContract = {
+  __typename?: 'EmployeeSignedContract';
+  benefitId: Scalars['String']['output'];
+  employeeId: Scalars['String']['output'];
+  fileName?: Maybe<Scalars['String']['output']>;
+  hrContractHash?: Maybe<Scalars['String']['output']>;
+  hrContractId?: Maybe<Scalars['String']['output']>;
+  hrContractVersion?: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  mimeType?: Maybe<Scalars['String']['output']>;
+  requestId?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  uploadedAt: Scalars['String']['output'];
+  viewUrl?: Maybe<Scalars['String']['output']>;
 };
 
 export type EmploymentStatus =
@@ -574,6 +591,7 @@ export type QueryRuleProposalsArgs = {
 export type RequestBenefitInput = {
   benefitId: Scalars['String']['input'];
   employeeContractKey?: InputMaybe<Scalars['String']['input']>;
+  employeeSignedContractId?: InputMaybe<Scalars['String']['input']>;
   repaymentMonths?: InputMaybe<Scalars['Int']['input']>;
   requestedAmount?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -739,6 +757,7 @@ export type ResolversTypes = ResolversObject<{
   EmployeeBenefitEnrollment: ResolverTypeWrapper<EmployeeBenefitEnrollment>;
   EmployeeRole: EmployeeRole;
   EmployeeSettings: ResolverTypeWrapper<EmployeeSettings>;
+  EmployeeSignedContract: ResolverTypeWrapper<EmployeeSignedContract>;
   EmploymentStatus: EmploymentStatus;
   FailedRule: ResolverTypeWrapper<FailedRule>;
   Int: ResolverTypeWrapper<Scalars['Int']['output']>;
@@ -782,6 +801,7 @@ export type ResolversParentTypes = ResolversObject<{
   Employee: EmployeeModel;
   EmployeeBenefitEnrollment: EmployeeBenefitEnrollment;
   EmployeeSettings: EmployeeSettings;
+  EmployeeSignedContract: EmployeeSignedContract;
   FailedRule: FailedRule;
   Int: Scalars['Int']['output'];
   Mutation: {};
@@ -902,6 +922,7 @@ export type BenefitRequestResolvers<ContextType = GraphQLContext, ParentType ext
   employeeApprovedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   employeeContractKey?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   employeeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  employeeSignedContract?: Resolver<Maybe<ResolversTypes['EmployeeSignedContract']>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   repaymentMonths?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   requestedAmount?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
@@ -996,6 +1017,22 @@ export type EmployeeSettingsResolvers<ContextType = GraphQLContext, ParentType e
   notificationEmail?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   notificationRenewals?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   timezone?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type EmployeeSignedContractResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['EmployeeSignedContract'] = ResolversParentTypes['EmployeeSignedContract']> = ResolversObject<{
+  benefitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  employeeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  fileName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  hrContractHash?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  hrContractId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  hrContractVersion?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  mimeType?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  requestId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  uploadedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  viewUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -1119,6 +1156,7 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   Employee?: EmployeeResolvers<ContextType>;
   EmployeeBenefitEnrollment?: EmployeeBenefitEnrollmentResolvers<ContextType>;
   EmployeeSettings?: EmployeeSettingsResolvers<ContextType>;
+  EmployeeSignedContract?: EmployeeSignedContractResolvers<ContextType>;
   FailedRule?: FailedRuleResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
   Notification?: NotificationResolvers<ContextType>;

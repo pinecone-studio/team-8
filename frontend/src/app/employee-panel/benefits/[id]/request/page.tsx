@@ -33,6 +33,14 @@ function formatPrice(amount: number | null | undefined): string {
   return amount.toLocaleString("mn-MN") + "₮";
 }
 
+type UploadedEmployeeSignedContract = {
+  id: string;
+  key: string;
+  fileName?: string | null;
+  uploadedAt?: string | null;
+  viewUrl?: string | null;
+};
+
 export default function BenefitRequestPage() {
   const router = useRouter();
   const params = useParams();
@@ -44,7 +52,8 @@ export default function BenefitRequestPage() {
   const [confirmBenefitRequest, { loading: confirming }] = useConfirmBenefitRequestMutation();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [employeeContractKey, setEmployeeContractKey] = useState<string | null>(null);
+  const [employeeSignedContract, setEmployeeSignedContract] =
+    useState<UploadedEmployeeSignedContract | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -88,9 +97,9 @@ export default function BenefitRequestPage() {
         throw new Error((err as { error?: string }).error ?? "Upload failed");
       }
 
-      const json = await res.json() as { key: string };
-      setEmployeeContractKey(json.key);
-      setUploadedFileName(file.name);
+      const json = (await res.json()) as UploadedEmployeeSignedContract;
+      setEmployeeSignedContract(json);
+      setUploadedFileName(json.fileName ?? file.name);
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : "Upload failed. Please try again.");
     } finally {
@@ -103,7 +112,7 @@ export default function BenefitRequestPage() {
     if (!benefitEligibility || !benefit) return;
     setSubmitMessage(null);
 
-    if (requiresContract && !employeeContractKey) {
+    if (requiresContract && !employeeSignedContract?.id) {
       setSubmitMessage("Please upload your signed contract before submitting.");
       setStep(2);
       return;
@@ -114,7 +123,7 @@ export default function BenefitRequestPage() {
         variables: {
           input: {
             benefitId: benefit.id,
-            employeeContractKey: employeeContractKey ?? undefined,
+            employeeSignedContractId: employeeSignedContract?.id ?? undefined,
           },
         },
         refetchQueries: [{ query: GetBenefitRequestsDocument }],
@@ -381,23 +390,23 @@ export default function BenefitRequestPage() {
                   {/* Upload area */}
                   <div
                     className={`relative flex flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed p-12 text-center transition ${
-                      employeeContractKey
+                      employeeSignedContract?.id
                         ? "border-emerald-300 bg-emerald-50"
                         : uploadError
                           ? "border-red-300 bg-red-50"
                           : "border-gray-200 bg-gray-50 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer"
                     }`}
-                    onClick={() => !employeeContractKey && !uploading && fileInputRef.current?.click()}
+                    onClick={() => !employeeSignedContract?.id && !uploading && fileInputRef.current?.click()}
                   >
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                      accept=".pdf,.png,.jpg,.jpeg"
                       className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          setEmployeeContractKey(null);
+                          setEmployeeSignedContract(null);
                           setUploadedFileName(null);
                           handleFileUpload(file);
                         }
@@ -410,7 +419,7 @@ export default function BenefitRequestPage() {
                         <div className="h-10 w-10 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin" />
                         <p className="text-sm font-medium text-blue-700">Uploading…</p>
                       </>
-                    ) : employeeContractKey ? (
+                    ) : employeeSignedContract?.id ? (
                       <>
                         <CheckCircle2 className="h-12 w-12 text-emerald-500" />
                         <div>
@@ -419,19 +428,32 @@ export default function BenefitRequestPage() {
                             <p className="mt-1 text-xs text-emerald-600">{uploadedFileName}</p>
                           )}
                         </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEmployeeContractKey(null);
-                            setUploadedFileName(null);
-                            fileInputRef.current?.click();
-                          }}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-50"
-                        >
-                          <X className="h-3 w-3" />
-                          Replace file
-                        </button>
+                        <div className="flex flex-wrap items-center justify-center gap-2">
+                          {employeeSignedContract.viewUrl && (
+                            <a
+                              href={getContractProxyUrl(employeeSignedContract.viewUrl) ?? employeeSignedContract.viewUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-50"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                              Open uploaded copy
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEmployeeSignedContract(null);
+                              setUploadedFileName(null);
+                              fileInputRef.current?.click();
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-50"
+                          >
+                            <X className="h-3 w-3" />
+                            Replace file
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <>
@@ -440,7 +462,7 @@ export default function BenefitRequestPage() {
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-gray-700">Click to upload your signed contract</p>
-                          <p className="mt-1 text-xs text-gray-400">PDF, DOC, DOCX, PNG, JPG supported</p>
+                          <p className="mt-1 text-xs text-gray-400">PDF, PNG, JPG supported</p>
                         </div>
                         <button
                           type="button"
@@ -474,7 +496,7 @@ export default function BenefitRequestPage() {
                     Back
                   </button>
                   <button
-                    disabled={!employeeContractKey || uploading}
+                    disabled={!employeeSignedContract?.id || uploading}
                     onClick={() => setStep(3)}
                     className="h-12 flex-[2] rounded-xl bg-blue-600 text-base font-medium text-white transition hover:bg-blue-700 active:scale-[0.99] active:bg-blue-800 disabled:bg-gray-300 disabled:active:scale-100"
                   >
@@ -532,8 +554,8 @@ export default function BenefitRequestPage() {
                     {requiresContract && (
                       <div className="flex justify-between">
                         <dt className="text-gray-500">Your Contract</dt>
-                        <dd className={`font-medium ${employeeContractKey ? "text-emerald-700" : "text-orange-600"}`}>
-                          {employeeContractKey ? `✓ Uploaded${uploadedFileName ? ` (${uploadedFileName})` : ""}` : "Not uploaded"}
+                        <dd className={`font-medium ${employeeSignedContract?.id ? "text-emerald-700" : "text-orange-600"}`}>
+                          {employeeSignedContract?.id ? `✓ Uploaded${uploadedFileName ? ` (${uploadedFileName})` : ""}` : "Not uploaded"}
                         </dd>
                       </div>
                     )}
@@ -556,7 +578,7 @@ export default function BenefitRequestPage() {
                   </button>
                   <button
                     onClick={submitRequest}
-                    disabled={isWorking || (requiresContract && !employeeContractKey)}
+                    disabled={isWorking || (requiresContract && !employeeSignedContract?.id)}
                     className="h-10 flex-[2] rounded-lg bg-gray-900 text-sm font-medium text-white transition hover:bg-gray-800 active:scale-[0.99] disabled:bg-gray-300 disabled:active:scale-100"
                   >
                     {isWorking ? "Submitting…" : "Submit Request"}

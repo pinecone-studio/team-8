@@ -34,12 +34,19 @@ export const requestBenefit = async (
       requestedAmount?: number | null;
       repaymentMonths?: number | null;
       employeeContractKey?: string | null;
+      employeeSignedContractId?: string | null;
     };
   },
   { db, env, baseUrl, currentEmployee }: GraphQLContext,
 ) => {
   const employee = requireAuth(currentEmployee);
-  const { benefitId, requestedAmount, repaymentMonths, employeeContractKey } = input;
+  const {
+    benefitId,
+    requestedAmount,
+    repaymentMonths,
+    employeeContractKey,
+    employeeSignedContractId,
+  } = input;
 
   const benefitRows = await db
     .select()
@@ -94,6 +101,93 @@ export const requestBenefit = async (
   const approvalPolicy = benefitFromDb.approvalPolicy ?? "hr";
   const initialStatus = deriveInitialStatus(approvalPolicy, benefitFromDb.requiresContract);
 
+  let resolvedEmployeeContractKey: string | null = null;
+  let attachedEmployeeSignedContractId: string | null = null;
+
+  if (benefitFromDb.requiresContract) {
+    if (!employeeSignedContractId && !employeeContractKey) {
+      throw new Error(
+        "Please upload your signed contract before submitting this request.",
+      );
+    }
+
+    const contractRows = await db
+      .select()
+      .from(schema.contracts)
+      .where(eq(schema.contracts.benefitId, benefitId));
+    const activeHrContract = contractRows.find((row) => row.isActive);
+    if (!activeHrContract) {
+      throw new Error(
+        "No active HR contract is available for this benefit. Please contact HR.",
+      );
+    }
+
+    let signedContract:
+      | typeof schema.employeeSignedContracts.$inferSelect
+      | undefined;
+
+    if (employeeSignedContractId) {
+      const rows = await db
+        .select()
+        .from(schema.employeeSignedContracts)
+        .where(eq(schema.employeeSignedContracts.id, employeeSignedContractId))
+        .limit(1);
+      signedContract = rows[0];
+    } else if (employeeContractKey) {
+      const rows = await db
+        .select()
+        .from(schema.employeeSignedContracts)
+        .where(
+          and(
+            eq(schema.employeeSignedContracts.employeeId, employee.id),
+            eq(schema.employeeSignedContracts.benefitId, benefitId),
+            eq(schema.employeeSignedContracts.r2ObjectKey, employeeContractKey),
+          ),
+        )
+        .limit(1);
+      signedContract = rows[0];
+    }
+
+    if (!signedContract) {
+      throw new Error(
+        "We could not find your uploaded signed contract. Please upload it again before submitting.",
+      );
+    }
+
+    if (signedContract.employeeId !== employee.id) {
+      throw new Error("Uploaded contract does not belong to the current employee.");
+    }
+    if (signedContract.benefitId !== benefitId) {
+      throw new Error("Uploaded contract does not match the selected benefit.");
+    }
+    if (signedContract.status !== "uploaded") {
+      throw new Error(
+        "This signed contract copy is no longer the latest uploaded version. Please upload a fresh scanned copy.",
+      );
+    }
+    if (signedContract.requestId) {
+      throw new Error(
+        "This signed contract copy is already attached to a previous request. Please upload a fresh scanned copy.",
+      );
+    }
+    if (signedContract.hrContractId !== activeHrContract.id) {
+      throw new Error(
+        "The HR contract has changed since you uploaded your signed copy. Please review the latest contract and upload a new signed copy.",
+      );
+    }
+    if (
+      signedContract.hrContractVersion !== activeHrContract.version ||
+      signedContract.hrContractHash !== activeHrContract.sha256Hash
+    ) {
+      throw new Error(
+        "Your signed contract copy does not match the current HR contract version. Please upload a new signed copy.",
+      );
+    }
+
+    resolvedEmployeeContractKey = signedContract.r2ObjectKey;
+    attachedEmployeeSignedContractId = signedContract.id;
+  }
+
   const [inserted] = await db
     .insert(schema.benefitRequests)
     .values({
@@ -102,11 +196,29 @@ export const requestBenefit = async (
       status: initialStatus,
       requestedAmount: requestedAmount ?? null,
       repaymentMonths: repaymentMonths ?? null,
-      employeeContractKey: employeeContractKey ?? null,
+      employeeContractKey:
+        resolvedEmployeeContractKey ?? employeeContractKey ?? null,
     })
     .returning();
 
   if (!inserted) throw new Error("Failed to create benefit request");
+
+  if (attachedEmployeeSignedContractId) {
+    await db
+      .update(schema.employeeSignedContracts)
+      .set({
+        requestId: inserted.id,
+        status: "attached_to_request",
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(schema.employeeSignedContracts.id, attachedEmployeeSignedContractId))
+      .catch((err) => {
+        console.error(
+          `[requestBenefit] Failed to attach employee signed contract ${attachedEmployeeSignedContractId} to request ${inserted.id}:`,
+          err,
+        );
+      });
+  }
 
   // Audit log for request submission
   await writeAuditLog({
@@ -118,7 +230,11 @@ export const requestBenefit = async (
     targetEmployeeId: employee.id,
     benefitId,
     requestId: inserted.id,
-    metadata: { status: initialStatus, approvalPolicy },
+    metadata: {
+      status: initialStatus,
+      approvalPolicy,
+      employeeSignedContractId: attachedEmployeeSignedContractId,
+    },
   });
 
   await sendBenefitRequestSubmittedEmail(
