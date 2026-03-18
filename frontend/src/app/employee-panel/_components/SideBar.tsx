@@ -88,7 +88,7 @@ export default function Sidebar() {
             href="/employee-panel/dashboard"
             className="flex items-center gap-2"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#3652c5]">
               <PineconeLogo />
             </div>
             <span className="font-semibold text-gray-900">Employee</span>
