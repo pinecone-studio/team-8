@@ -9,6 +9,7 @@ type GraphqlBenefit = {
   employeePercent: number;
   flowType: "contract" | "normal" | "down_payment" | "self_service" | "screen_time";
   id: string;
+  isActive: boolean;
   name: string;
   nameEng: string | null;
   optionsDescription: string | null;
@@ -71,6 +72,7 @@ export function mapBenefitRecordToGraphql(benefit: Benefit): GraphqlBenefit {
           ? "contract"
           : "normal",
     id: benefit.id,
+    isActive: benefit.isActive,
     name: benefit.name,
     nameEng: null,
     optionsDescription: null,

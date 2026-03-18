@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { CheckCircle, FileText } from "lucide-react";
 import Sidebar from "../_components/SideBar";
-import PageLoading from "@/app/_components/PageLoading";
 import {
   useGetAllBenefitRequestsQuery,
   useGetAdminBenefitsQuery,
@@ -310,16 +309,23 @@ export default function PendingRequestsPage() {
       <div className="flex flex-1 flex-col items-center">
         <main className="w-full max-w-7xl p-8">
           <div className="flex items-end justify-between gap-4">
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">
-                Pending Requests
-              </h1>
-              <p className="mt-1 text-sm text-gray-500">
-                {activeTabDef?.description ??
-                  "Review benefit requests in detail before deciding"}
-              </p>
-            </div>
-            {requests.length > 0 && (
+            {requestsLoading ? (
+              <div>
+                <div className="h-6 w-40 rounded-full bg-white/30 animate-pulse" />
+                <div className="mt-2 h-3.5 w-64 rounded-full bg-white/20 animate-pulse" />
+              </div>
+            ) : (
+              <div>
+                <h1 className="text-xl font-semibold text-white">
+                  Pending Requests
+                </h1>
+                <p className="mt-1 text-sm text-gray-500">
+                  {activeTabDef?.description ??
+                    "Review benefit requests in detail before deciding"}
+                </p>
+              </div>
+            )}
+            {!requestsLoading && requests.length > 0 && (
               <p className="text-xs text-gray-400">
                 {requests.length} request{requests.length !== 1 ? "s" : ""}
               </p>
@@ -328,54 +334,124 @@ export default function PendingRequestsPage() {
 
           {/* Queue tabs */}
           <div className="mt-6 flex gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 w-fit">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveQueue(tab.key)}
-                className={`flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition ${
-                  activeQueue === tab.key
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                {tab.label}
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span
-                    className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
-                      activeQueue === tab.key
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 text-gray-600"
-                    }`}
-                  >
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            ))}
+            {requestsLoading ? (
+              // Skeleton tab placeholders — widths mirror "HR Queue" / "Finance Queue" / "All In-Progress"
+              [80, 104, 112].map((w, i) => (
+                <div
+                  key={i}
+                  className="rounded-lg bg-slate-200/80 animate-pulse"
+                  style={{ width: w, height: 32 }}
+                />
+              ))
+            ) : (
+              tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveQueue(tab.key)}
+                  className={`flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+                    activeQueue === tab.key
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {tab.label}
+                  {tab.count !== undefined && tab.count > 0 && (
+                    <span
+                      className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+                        activeQueue === tab.key
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-200 text-gray-600"
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))
+            )}
           </div>
 
           <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white">
             <div className="overflow-x-auto">
               <table className="min-w-full text-left">
-                <thead className="border-b border-gray-200 bg-white text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <thead className="border-b border-gray-200 bg-white">
                   <tr>
-                    <th className="px-5 py-3">Employee</th>
-                    <th className="px-5 py-3">Benefit</th>
-                    <th className="px-5 py-3">Date</th>
-                    <th className="px-5 py-3">Amount / Subsidy</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3">Policy</th>
-                    <th className="px-5 py-3">Actions</th>
+                    {requestsLoading ? (
+                      <>
+                        <th className="px-5 py-3"><div className="h-2.5 w-16 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                        <th className="px-5 py-3"><div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                        <th className="px-5 py-3"><div className="h-2.5 w-8 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                        <th className="px-5 py-3"><div className="h-2.5 w-20 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                        <th className="px-5 py-3"><div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                        <th className="px-5 py-3"><div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                        <th className="px-5 py-3"><div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Employee</th>
+                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Benefit</th>
+                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Date</th>
+                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Amount / Subsidy</th>
+                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Policy</th>
+                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {requestsLoading ? (
-                    <tr>
-                      <td colSpan={7} className="px-5 py-10">
-                        <PageLoading inline message="Loading requests…" />
-                      </td>
-                    </tr>
+                    <>
+                      {Array.from({
+                        length:
+                          requestsData?.allBenefitRequests?.length ?? 5,
+                      }).map((_, i) => (
+                        <tr key={i} className="border-b border-gray-100 last:border-b-0">
+                          {/* Employee: avatar + name bar + email bar */}
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-2">
+                              <div className="h-7 w-7 rounded-full bg-slate-200/80 animate-pulse shrink-0" />
+                              <div className="space-y-1.5">
+                                <div className="h-3.5 w-28 rounded-full bg-slate-200/80 animate-pulse" />
+                                <div className="h-2.5 w-20 rounded-full bg-slate-200/80 animate-pulse" />
+                              </div>
+                            </div>
+                          </td>
+                          {/* Benefit name — wider bar */}
+                          <td className="px-5 py-4">
+                            <div className="h-3.5 w-36 rounded-full bg-slate-200/80 animate-pulse" />
+                          </td>
+                          {/* Date */}
+                          <td className="px-5 py-4">
+                            <div className="h-3.5 w-20 rounded-full bg-slate-200/80 animate-pulse" />
+                          </td>
+                          {/* Amount / subsidy */}
+                          <td className="px-5 py-4">
+                            <div className="h-3.5 w-16 rounded-full bg-slate-200/80 animate-pulse" />
+                          </td>
+                          {/* Status badge — pill outline with inner text bar */}
+                          <td className="px-5 py-4">
+                            <div className="inline-flex items-center rounded border border-slate-100 px-2 py-0.5">
+                              <div className="h-3 w-20 rounded-full bg-slate-200/80 animate-pulse" />
+                            </div>
+                          </td>
+                          {/* Policy badge — subtle background pill */}
+                          <td className="px-5 py-4">
+                            <div className="inline-flex items-center rounded px-2 py-0.5 bg-slate-100/60">
+                              <div className="h-3 w-10 rounded-full bg-slate-200/80 animate-pulse" />
+                            </div>
+                          </td>
+                          {/* View Details button — icon + text */}
+                          <td className="px-5 py-4">
+                            <div className="inline-flex items-center gap-1.5 rounded-lg border border-slate-100 bg-slate-50 px-3 py-1.5">
+                              <div className="h-3.5 w-3.5 rounded-sm bg-slate-200/80 animate-pulse shrink-0" />
+                              <div className="h-3 w-16 rounded-full bg-slate-200/80 animate-pulse" />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </>
                   ) : requests.length === 0 ? (
                     <tr>
                       <td colSpan={7}>

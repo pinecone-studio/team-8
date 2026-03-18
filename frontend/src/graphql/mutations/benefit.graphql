@@ -99,6 +99,7 @@ mutation UpdateBenefit($id: String!, $input: UpdateBenefitInput!) {
     unitPrice
     vendorName
     requiresContract
+    isActive
     flowType
     optionsDescription
     approvalPolicy

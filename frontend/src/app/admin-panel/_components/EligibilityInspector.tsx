@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { CheckCircle2, ChevronDown, Search, X, XCircle } from "lucide-react";
-import PageLoading from "@/app/_components/PageLoading";
 import {
   useGetEmployeesQuery,
   useGetDepartmentsQuery,
@@ -197,8 +196,19 @@ function EmployeePicker({
               Type a name or pick a department to search employees…
             </div>
           ) : loading ? (
-            <div className="px-4 py-6">
-              <PageLoading inline message="Searching…" />
+            <div className="px-2 py-2 space-y-1">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 border-b border-slate-100 px-2 py-2.5 last:border-b-0">
+                  <div className="h-7 w-7 rounded-full bg-slate-200/80 animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3 w-1/2 rounded-full bg-slate-200/80 animate-pulse" />
+                    <div className="h-2.5 w-1/3 rounded-full bg-slate-200/80 animate-pulse" />
+                  </div>
+                  <div className="shrink-0">
+                    <div className="h-4 w-14 rounded bg-slate-200/80 animate-pulse" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : results.length === 0 ? (
             <div className="px-4 py-6 text-center text-sm text-slate-400">
@@ -260,7 +270,7 @@ interface OverrideFormState {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function EligibilityInspector() {
-  const { employee: me } = useCurrentEmployee();
+  const { employee: me, loading: meLoading } = useCurrentEmployee();
   const { user, isLoaded: isUserLoaded } = useUser();
   const isHr = isHrAdmin(me);
   const canOverride = isHr;
@@ -277,10 +287,18 @@ export default function EligibilityInspector() {
 
   const { data: departmentsData } = useGetDepartmentsQuery({ skip: !isHr });
 
-  const { data: eligibilityData, loading: eligibilityLoading } = useGetEmployeeBenefitsQuery({
+  const {
+    data: eligibilityData,
+    loading: eligibilityLoading,
+    previousData: prevEligibilityData,
+  } = useGetEmployeeBenefitsQuery({
     variables: { employeeId: selectedEmployeeId },
     skip: !selectedEmployeeId || !isHr,
   });
+  const eligibilitySkeletonCount =
+    eligibilityData?.getEmployeeBenefits?.length ??
+    prevEligibilityData?.getEmployeeBenefits?.length ??
+    6;
 
   const [overrideEligibility, { loading: overriding }] = useOverrideEligibilityMutation({
     refetchQueries: [
@@ -313,6 +331,37 @@ export default function EligibilityInspector() {
   });
   const clerkEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? null;
 
+  // ── 1. Loading skeleton (no real text, no access banner) ──────────────────
+  if (meLoading) {
+    return (
+      <main className="flex-1 px-8 py-9">
+        <section className="mx-auto max-w-7xl">
+          {/* Heading skeleton */}
+          <div className="mb-8">
+            <div className="h-7 w-64 rounded-full bg-white/30 animate-pulse" />
+            <div className="mt-2 h-3.5 w-80 rounded-full bg-white/20 animate-pulse" />
+          </div>
+
+          {/* Search / filter row skeleton */}
+          <div className="mb-6">
+            <div className="mb-2 h-3.5 w-24 rounded-full bg-slate-200/80 animate-pulse" />
+            <div className="flex max-w-2xl gap-2">
+              <div className="h-10 flex-1 rounded-xl bg-slate-200/80 animate-pulse" />
+              <div className="h-10 w-36 rounded-xl bg-slate-200/80 animate-pulse" />
+            </div>
+          </div>
+
+          {/* Empty-state panel skeleton */}
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 flex flex-col items-center gap-3">
+            <div className="h-6 w-6 rounded-full bg-slate-200/80 animate-pulse" />
+            <div className="h-3.5 w-64 rounded-full bg-slate-200/80 animate-pulse" />
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  // ── 2. Access denied (only shown after role is known) ──────────────────────
   if (!isHr) {
     return (
       <main className="flex-1 px-8 py-9">
@@ -441,11 +490,39 @@ export default function EligibilityInspector() {
                 </thead>
                 <tbody>
                   {eligibilityLoading ? (
-                    <tr>
-                      <td colSpan={canOverride ? 5 : 4} className="px-5 py-8">
-                        <PageLoading inline message="Loading eligibility…" />
-                      </td>
-                    </tr>
+                    <>
+                      {Array.from({ length: eligibilitySkeletonCount }).map((_, i) => (
+                        <tr key={i} className="border-b border-slate-100 last:border-b-0">
+                          {/* Benefit name — medium-wide bar */}
+                          <td className="px-5 py-4">
+                            <div className="h-3.5 w-36 rounded-full bg-slate-200/80 animate-pulse" />
+                          </td>
+                          {/* Status — icon circle + label text (mirrors EligibilityBadge) */}
+                          <td className="px-5 py-4">
+                            <div className="inline-flex items-center gap-1.5">
+                              <div className="h-4 w-4 rounded-full bg-slate-200/80 animate-pulse shrink-0" />
+                              <div className="h-3.5 w-16 rounded-full bg-slate-200/80 animate-pulse" />
+                            </div>
+                          </td>
+                          {/* Override — badge-shaped rectangle */}
+                          <td className="px-5 py-4">
+                            <div className="inline-flex rounded bg-slate-200/80 animate-pulse h-5 w-20" />
+                          </td>
+                          {/* Blocking rule — longer content bar */}
+                          <td className="px-5 py-4">
+                            <div className="h-3.5 w-52 rounded-full bg-slate-200/80 animate-pulse" />
+                          </td>
+                          {/* Override button — button outline with inner text */}
+                          {canOverride && (
+                            <td className="px-5 py-4">
+                              <div className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-1.5">
+                                <div className="h-3 w-14 rounded-full bg-slate-200/80 animate-pulse" />
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </>
                   ) : eligibilities.length === 0 ? (
                     <tr>
                       <td colSpan={canOverride ? 5 : 4} className="px-5 py-6 text-sm text-slate-400">

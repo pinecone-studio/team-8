@@ -110,6 +110,7 @@ export type Benefit = {
   flowType: BenefitFlowType;
   id: Scalars['String']['output'];
   imageUrl?: Maybe<Scalars['String']['output']>;
+  isActive: Scalars['Boolean']['output'];
   location?: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
   nameEng?: Maybe<Scalars['String']['output']>;
@@ -769,6 +770,7 @@ export type UpdateBenefitInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   flowType?: InputMaybe<BenefitFlowType>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
   location?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   requiresContract?: InputMaybe<Scalars['Boolean']['input']>;
@@ -869,7 +871,7 @@ export type UpdateBenefitMutationVariables = Exact<{
 }>;
 
 
-export type UpdateBenefitMutation = { __typename?: 'Mutation', updateBenefit: { __typename?: 'Benefit', id: string, name: string, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string } };
+export type UpdateBenefitMutation = { __typename?: 'Mutation', updateBenefit: { __typename?: 'Benefit', id: string, name: string, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, isActive: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string } };
 
 export type DeleteBenefitMutationVariables = Exact<{
   id: Scalars['String']['input'];
@@ -974,7 +976,7 @@ export type GetAdminDashboardSummaryQuery = { __typename?: 'Query', adminDashboa
 export type GetAdminBenefitsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetAdminBenefitsQuery = { __typename?: 'Query', adminBenefits: Array<{ __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string }> };
+export type GetAdminBenefitsQuery = { __typename?: 'Query', adminBenefits: Array<{ __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, isActive: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string, amount?: number | null }> };
 
 export type GetAuditLogActionTypesQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1028,17 +1030,17 @@ export type GetBenefitsQueryVariables = Exact<{
 }>;
 
 
-export type GetBenefitsQuery = { __typename?: 'Query', benefits: Array<{ __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string, amount?: number | null, location?: string | null, imageUrl?: string | null }> };
+export type GetBenefitsQuery = { __typename?: 'Query', benefits: Array<{ __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, isActive: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string, amount?: number | null, location?: string | null, imageUrl?: string | null }> };
 
 export type GetMyBenefitsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetMyBenefitsQuery = { __typename?: 'Query', myBenefits: Array<{ __typename?: 'BenefitEligibility', benefitId: string, status: BenefitEligibilityStatus, overrideStatus?: string | null, overrideBy?: string | null, overrideReason?: string | null, overrideExpiresAt?: string | null, benefit: { __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string }, ruleEvaluation: Array<{ __typename?: 'RuleEvaluation', ruleType: string, passed: boolean, reason: string }>, failedRule?: { __typename?: 'FailedRule', ruleType: string, errorMessage: string } | null }> };
+export type GetMyBenefitsQuery = { __typename?: 'Query', myBenefits: Array<{ __typename?: 'BenefitEligibility', benefitId: string, status: BenefitEligibilityStatus, overrideStatus?: string | null, overrideBy?: string | null, overrideReason?: string | null, overrideExpiresAt?: string | null, benefit: { __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, isActive: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string }, ruleEvaluation: Array<{ __typename?: 'RuleEvaluation', ruleType: string, passed: boolean, reason: string }>, failedRule?: { __typename?: 'FailedRule', ruleType: string, errorMessage: string } | null }> };
 
 export type GetMyBenefitsFullQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetMyBenefitsFullQuery = { __typename?: 'Query', myBenefits: Array<{ __typename?: 'BenefitEligibility', benefitId: string, status: BenefitEligibilityStatus, overrideStatus?: string | null, overrideBy?: string | null, overrideReason?: string | null, overrideExpiresAt?: string | null, benefit: { __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string, amount?: number | null, location?: string | null, imageUrl?: string | null }, ruleEvaluation: Array<{ __typename?: 'RuleEvaluation', ruleType: string, passed: boolean, reason: string }>, failedRule?: { __typename?: 'FailedRule', ruleType: string, errorMessage: string } | null }> };
+export type GetMyBenefitsFullQuery = { __typename?: 'Query', myBenefits: Array<{ __typename?: 'BenefitEligibility', benefitId: string, status: BenefitEligibilityStatus, overrideStatus?: string | null, overrideBy?: string | null, overrideReason?: string | null, overrideExpiresAt?: string | null, benefit: { __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, isActive: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string, amount?: number | null, location?: string | null, imageUrl?: string | null }, ruleEvaluation: Array<{ __typename?: 'RuleEvaluation', ruleType: string, passed: boolean, reason: string }>, failedRule?: { __typename?: 'FailedRule', ruleType: string, errorMessage: string } | null }> };
 
 export type GetBenefitRequestsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1058,7 +1060,7 @@ export type GetEmployeeBenefitsQueryVariables = Exact<{
 }>;
 
 
-export type GetEmployeeBenefitsQuery = { __typename?: 'Query', getEmployeeBenefits: Array<{ __typename?: 'BenefitEligibility', benefitId: string, status: BenefitEligibilityStatus, overrideStatus?: string | null, overrideBy?: string | null, overrideReason?: string | null, overrideExpiresAt?: string | null, benefit: { __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string }, ruleEvaluation: Array<{ __typename?: 'RuleEvaluation', ruleType: string, passed: boolean, reason: string }>, failedRule?: { __typename?: 'FailedRule', ruleType: string, errorMessage: string } | null }> };
+export type GetEmployeeBenefitsQuery = { __typename?: 'Query', getEmployeeBenefits: Array<{ __typename?: 'BenefitEligibility', benefitId: string, status: BenefitEligibilityStatus, overrideStatus?: string | null, overrideBy?: string | null, overrideReason?: string | null, overrideExpiresAt?: string | null, benefit: { __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, isActive: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string }, ruleEvaluation: Array<{ __typename?: 'RuleEvaluation', ruleType: string, passed: boolean, reason: string }>, failedRule?: { __typename?: 'FailedRule', ruleType: string, errorMessage: string } | null }> };
 
 export type GetContractsForBenefitQueryVariables = Exact<{
   benefitId: Scalars['String']['input'];
@@ -1432,6 +1434,7 @@ export const UpdateBenefitDocument = gql`
     unitPrice
     vendorName
     requiresContract
+    isActive
     flowType
     optionsDescription
     approvalPolicy
@@ -2031,9 +2034,11 @@ export const GetAdminBenefitsDocument = gql`
     unitPrice
     vendorName
     requiresContract
+    isActive
     flowType
     optionsDescription
     approvalPolicy
+    amount
   }
 }
     `;
@@ -2411,6 +2416,7 @@ export const GetBenefitsDocument = gql`
     unitPrice
     vendorName
     requiresContract
+    isActive
     flowType
     optionsDescription
     approvalPolicy
@@ -2476,6 +2482,7 @@ export const GetMyBenefitsDocument = gql`
       unitPrice
       vendorName
       requiresContract
+      isActive
       flowType
       optionsDescription
       approvalPolicy
@@ -2547,6 +2554,7 @@ export const GetMyBenefitsFullDocument = gql`
       unitPrice
       vendorName
       requiresContract
+      isActive
       flowType
       optionsDescription
       approvalPolicy
@@ -2750,6 +2758,7 @@ export const GetEmployeeBenefitsDocument = gql`
       unitPrice
       vendorName
       requiresContract
+      isActive
       flowType
       optionsDescription
       approvalPolicy
