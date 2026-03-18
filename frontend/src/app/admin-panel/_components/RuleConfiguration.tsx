@@ -233,7 +233,7 @@ export default function RuleConfiguration() {
     <main className="flex-1 px-8 py-9">
       <section className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-xl font-semibold text-gray-900">Rule Configuration</h1>
+          <h1 className="text-xl font-semibold text-white">Rule Configuration</h1>
           <p className="mt-1 text-sm text-gray-500">
             Propose and approve eligibility rule changes for benefits. All changes require a second HR admin to approve.
           </p>

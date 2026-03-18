@@ -218,7 +218,7 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
           {/* Step 1: Confirm Eligibility */}
           {step === 1 && (
             <>
-              <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+              <h1 className="text-2xl font-bold tracking-tight text-white">
                 Confirm Eligibility
               </h1>
               <p className="mt-2 text-sm text-gray-600">
@@ -267,7 +267,7 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
           {/* Step 2: Contract Acceptance */}
           {step === 2 && requiresContract && (
             <>
-              <h1 className="text-xl font-semibold text-gray-900">Contract Acceptance</h1>
+              <h1 className="text-xl font-semibold text-white">Contract Acceptance</h1>
               <p className="mt-1 text-sm text-gray-500">
                 Please review and accept the contract terms for {benefit.name}.
               </p>
@@ -389,7 +389,7 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
           {/* Step 3: Submit */}
           {step === 3 && (
             <>
-              <h1 className="text-xl font-semibold text-gray-900">Submit Request</h1>
+              <h1 className="text-xl font-semibold text-white">Submit Request</h1>
               <p className="mt-1 text-sm text-gray-500">Review and submit for approval.</p>
 
               <div className="mt-6 rounded-xl border border-gray-100 bg-gray-50/50 px-5 py-4">

@@ -425,7 +425,7 @@ export default function CreateBenefitPage() {
     return (
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar />
-        <div className="flex flex-1 items-center justify-center">
+        <div className="flex flex-1 items-center justify-center bg-[linear-gradient(180deg,#0a116d_0%,#ffffff_100%)]">
           <p className="text-gray-500">HR Admin access required.</p>
         </div>
       </div>
@@ -435,7 +435,7 @@ export default function CreateBenefitPage() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col bg-[linear-gradient(180deg,#0a116d_0%,#ffffff_100%)]">
         {/* Header */}
         <div className="border-b border-gray-100 bg-white px-8 py-4">
           <div className="flex items-center gap-3">

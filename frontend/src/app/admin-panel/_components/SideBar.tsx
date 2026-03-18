@@ -99,7 +99,7 @@ export default function Sidebar() {
       <aside className="fixed left-0 top-0 z-10 flex h-screen w-[260px] flex-col border-r border-gray-100 bg-white">
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-100 px-4">
           <Link href="/admin-panel" className="flex items-center gap-2 ">
-            <div className="flex h-8  w-8 items-center justify-center rounded-lg bg-gray-900">
+            <div className="flex h-8  w-8 items-center justify-center rounded-lg bg-[#0a116d] ">
               <PineconeLogo />
             </div>
             {loading ? (

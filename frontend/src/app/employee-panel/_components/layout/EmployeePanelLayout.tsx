@@ -10,7 +10,7 @@ export default function EmployeePanelLayout({ children }: EmployeePanelLayoutPro
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <div className="flex flex-1 flex-col items-center">
+      <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
         <main className="w-full max-w-7xl p-8">{children}</main>
       </div>
     </div>

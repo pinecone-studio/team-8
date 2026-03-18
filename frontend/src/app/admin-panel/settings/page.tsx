@@ -137,12 +137,12 @@ export default function AdminSettingsPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <div className="flex flex-1 flex-col items-center">
+      <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#0a116d_0%,#ffffff_100%)]">
         <main className="w-full max-w-7xl min-h-screen px-8 py-9">
           <section className="mx-auto max-w-3xl space-y-8">
 
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Settings</h1>
+              <h1 className="text-xl font-semibold text-white">Settings</h1>
               <p className="mt-1 text-sm text-gray-500">Manage admin preferences and review system configuration</p>
             </div>
 
