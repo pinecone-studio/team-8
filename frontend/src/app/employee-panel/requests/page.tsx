@@ -15,6 +15,7 @@ import {
   GetBenefitRequestsDocument,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
+import { getContractProxyUrl } from "@/lib/contracts";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -293,6 +294,7 @@ function ContractAcceptModal({
   confirming: boolean;
 }) {
   const [accepted, setAccepted] = useState(false);
+  const contractUrl = getContractProxyUrl(state.viewContractUrl);
 
   return (
     <div
@@ -319,16 +321,16 @@ function ContractAcceptModal({
           </button>
         </div>
 
-        {state.viewContractUrl ? (
+        {contractUrl ? (
           <div className="flex flex-col flex-1 overflow-hidden">
             <iframe
-              src={state.viewContractUrl}
+              src={contractUrl}
               className="flex-1 min-h-[400px] border-none bg-gray-50"
               title="Contract"
             />
             <div className="px-6 py-2 border-t border-gray-100">
               <a
-                href={state.viewContractUrl}
+                href={contractUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline"

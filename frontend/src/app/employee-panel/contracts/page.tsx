@@ -5,6 +5,7 @@ import { gql, useQuery } from "@apollo/client";
 import { CheckCircle2, ExternalLink, FileText, X } from "lucide-react";
 import Sidebar from "../_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
+import { getContractProxyUrl } from "@/lib/contracts";
 
 const GET_CONTRACTS = gql`
   query Contracts {
@@ -56,6 +57,8 @@ function ContractPreviewModal({
   contract: ContractRow;
   onClose: () => void;
 }) {
+  const contractUrl = getContractProxyUrl(contract.viewUrl);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -96,16 +99,16 @@ function ContractPreviewModal({
         </div>
 
         {/* PDF Viewer */}
-        {contract.viewUrl ? (
+        {contractUrl ? (
           <div className="flex flex-col flex-1 overflow-hidden">
             <iframe
-              src={contract.viewUrl}
+              src={contractUrl}
               className="flex-1 min-h-[500px] border-none bg-gray-50"
               title={`Contract: ${contract.benefitName}`}
             />
             <div className="flex items-center justify-between border-t border-gray-100 px-6 py-3">
               <a
-                href={contract.viewUrl}
+                href={contractUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline"

@@ -10,6 +10,7 @@ import BenefitRequestModal from "../../_components/benefits/BenefitRequestModal"
 import PageLoading from "@/app/_components/PageLoading";
 import { useGetMyBenefitsFullQuery, useGetBenefitRequestsQuery, useGetContractsForBenefitQuery } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
+import { getContractProxyUrl } from "@/lib/contracts";
 
 function formatRuleLabel(value: string) {
   return value
@@ -451,7 +452,7 @@ export default function BenefitDetailPage() {
                           </div>
                           {c.viewUrl && (
                             <a
-                              href={c.viewUrl}
+                              href={getContractProxyUrl(c.viewUrl) ?? c.viewUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50"

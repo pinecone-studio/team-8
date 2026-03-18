@@ -13,6 +13,7 @@ import {
   useRequestBenefitMutation,
   useConfirmBenefitRequestMutation,
 } from "@/graphql/generated/graphql";
+import { getContractProxyUrl } from "@/lib/contracts";
 
 type Props = {
   benefitId: string;
@@ -39,6 +40,7 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
     skip: !requiresContract || !benefitId,
   });
   const activeContract = contractsData?.contracts.find((c) => c.isActive) ?? null;
+  const contractUrl = getContractProxyUrl(activeContract?.viewUrl);
   const hasReviewableContract = Boolean(activeContract?.viewUrl);
   const contractStepBlocked = requiresContract && !contractsLoading && !hasReviewableContract;
 
@@ -278,15 +280,15 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
                     <div className="flex h-[320px] items-center justify-center rounded-2xl border border-gray-200 bg-gray-50">
                       <PageLoading inline message="Loading contract…" />
                     </div>
-                  ) : activeContract?.viewUrl ? (
+                  ) : contractUrl ? (
                     <>
                       <iframe
-                        src={activeContract.viewUrl}
+                        src={contractUrl}
                         className="h-[320px] w-full rounded-2xl border border-gray-200 bg-gray-50"
                         title={`${benefit.vendorName ?? benefit.name} Contract`}
                       />
                       <a
-                        href={activeContract.viewUrl}
+                        href={contractUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="mt-2 inline-flex items-center gap-1.5 self-start text-xs text-blue-600 hover:underline"

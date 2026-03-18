@@ -37,6 +37,7 @@ import {
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isAdminEmployee, isHrAdmin } from "../../_lib/access";
+import { getContractProxyUrl } from "@/lib/contracts";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -601,7 +602,7 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
                   <td className="px-4 py-3"><ExpiryBadge contract={row} now={now} /></td>
                   <td className="px-4 py-3">
                     {row.viewUrl ? (
-                      <a href={row.viewUrl} target="_blank" rel="noreferrer"
+                      <a href={getContractProxyUrl(row.viewUrl) ?? row.viewUrl} target="_blank" rel="noreferrer"
                         className="inline-flex items-center gap-1.5 rounded-lg text-sm font-medium text-blue-600 transition hover:text-blue-700">
                         <ExternalLink className="h-3.5 w-3.5" />View
                       </a>
