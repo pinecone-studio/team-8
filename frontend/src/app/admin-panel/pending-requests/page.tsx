@@ -238,7 +238,7 @@ export default function PendingRequestsPage() {
     return (
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar />
-        <div className="flex flex-1 flex-col items-center justify-center bg-[linear-gradient(180deg,#0a116d_0%,#ffffff_100%)]">
+        <div className="flex flex-1 flex-col items-center justify-center">
           <p className="text-muted-foreground">Admin access required.</p>
         </div>
       </div>
@@ -297,11 +297,11 @@ export default function PendingRequestsPage() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#0a116d_0%,#ffffff_100%)]">
+      <div className="flex flex-1 flex-col items-center">
         <main className="w-full max-w-7xl p-8">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <h1 className="text-xl font-semibold text-white">
+              <h1 className="text-xl font-semibold text-gray-900">
                 Pending Requests
               </h1>
               <p className="mt-1 text-sm text-gray-500">

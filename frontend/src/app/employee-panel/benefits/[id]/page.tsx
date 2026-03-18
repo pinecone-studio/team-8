@@ -254,7 +254,7 @@ export default function BenefitDetailPage() {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
+        <div className="flex flex-1 flex-col items-center">
           <main className="flex w-full max-w-7xl items-center justify-center p-8">
             <PageLoading message="Loading benefit details…" />
           </main>
@@ -267,7 +267,7 @@ export default function BenefitDetailPage() {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
+        <div className="flex flex-1 flex-col items-center">
           <main className="w-full max-w-7xl p-8">
             <Link href="/employee-panel/mybenefits" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
               ← Back to Benefits
@@ -288,7 +288,7 @@ export default function BenefitDetailPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
+      <div className="flex flex-1 flex-col items-center">
         <main className="w-full max-w-5xl p-8">
           <Link
             href="/employee-panel/requests"
@@ -304,7 +304,7 @@ export default function BenefitDetailPage() {
               <div className="rounded-2xl border border-gray-200 bg-white p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h1 className="text-xl font-semibold text-white">{benefit.name}</h1>
+                    <h1 className="text-xl font-semibold text-gray-900">{benefit.name}</h1>
                     <p className="mt-0.5 text-sm text-gray-500">{vendor}</p>
                   </div>
                   <StatusBadge status={benefitEligibility.status} />

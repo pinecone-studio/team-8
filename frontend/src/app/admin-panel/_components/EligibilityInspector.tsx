@@ -350,7 +350,7 @@ export default function EligibilityInspector() {
     <main className="flex-1 px-8 py-9">
       <section className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white">Employee Eligibility Inspector</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Employee Eligibility Inspector</h1>
           <p className="mt-1 text-sm text-gray-400">
             Search by name, email, or department to review an employee&apos;s benefit eligibility.
           </p>

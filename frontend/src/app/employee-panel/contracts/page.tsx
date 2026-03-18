@@ -217,9 +217,9 @@ export default function ContractsPage({ params }: PageProps) {
       <div className="flex min-h-screen bg-background">
         <Sidebar />
 
-        <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
+        <div className="flex flex-1 flex-col items-center">
           <main className="w-full max-w-5xl p-8">
-            <h1 className="text-xl font-semibold text-white">Vendor Contracts</h1>
+            <h1 className="text-xl font-semibold text-gray-900">Vendor Contracts</h1>
             <p className="mt-1 text-sm text-gray-500">
               Active contracts for benefits you are enrolled in or have a pending request for.
             </p>

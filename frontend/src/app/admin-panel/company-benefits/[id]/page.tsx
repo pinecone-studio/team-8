@@ -687,12 +687,12 @@ export default function BenefitDetailPage() {
   const hasAccess = isAdminEmployee(employee);
   const isHr = isHrAdmin(employee);
 
-  if (empLoading) return <div className="flex min-h-screen bg-gray-50"><Sidebar /><div className="flex flex-1 items-center justify-center bg-[linear-gradient(180deg,#0a116d_0%,#ffffff_100%)]"><PageLoading message="Loading…" /></div></div>;
+  if (empLoading) return <div className="flex min-h-screen bg-gray-50"><Sidebar /><div className="flex flex-1 items-center justify-center"><PageLoading message="Loading…" /></div></div>;
 
   if (!hasAccess) return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <main className="flex flex-1 items-center justify-center p-8 bg-[linear-gradient(180deg,#0a116d_0%,#ffffff_100%)]">
+      <main className="flex flex-1 items-center justify-center p-8">
         <p className="text-sm text-gray-500">You need admin access to view this page.</p>
       </main>
     </div>
@@ -701,7 +701,7 @@ export default function BenefitDetailPage() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="flex flex-1 flex-col bg-[linear-gradient(180deg,#0a116d_0%,#ffffff_100%)]">
+      <div className="flex flex-1 flex-col">
         <main className="mx-auto w-full max-w-4xl px-8 py-8">
           <button type="button" onClick={() => router.push("/admin-panel/company-benefits")}
             className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-gray-800">

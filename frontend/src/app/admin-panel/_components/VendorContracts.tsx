@@ -203,7 +203,7 @@ export default function VendorContracts() {
       <section className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold text-white">
+            <h1 className="text-xl font-semibold text-gray-900">
               Vendor Contract Management
             </h1>
             <p className="mt-1 text-sm text-gray-500">

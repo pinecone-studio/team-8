@@ -63,7 +63,7 @@ export default function CompanyBenefits() {
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-white">Company Benefits</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Company Benefits</h1>
             <p className="mt-1 text-sm text-gray-400">
               Add and view benefits offered by the company.
             </p>

@@ -108,7 +108,7 @@ export default function BenefitRequestPage() {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
+        <div className="flex flex-1 flex-col items-center">
           <main className="flex w-full max-w-7xl items-center justify-center p-8">
             <PageLoading message="Loading request flow..." />
           </main>
@@ -121,7 +121,7 @@ export default function BenefitRequestPage() {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
+        <div className="flex flex-1 flex-col items-center">
           <main className="w-full max-w-7xl p-8">
             <Link href={`/employee-panel/benefits/${id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground active:opacity-80">
               ← Back to Benefit
@@ -139,7 +139,7 @@ export default function BenefitRequestPage() {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
+        <div className="flex flex-1 flex-col items-center">
           <main className="w-full max-w-7xl p-8">
             <Link href={`/employee-panel/benefits/${id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground active:opacity-80">
               ← Back to Benefit
@@ -157,7 +157,7 @@ export default function BenefitRequestPage() {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
+        <div className="flex flex-1 flex-col items-center">
           <main className="w-full max-w-7xl p-8">
             <Link href={`/employee-panel/benefits/${id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground active:opacity-80">
               ← Back to Benefit
@@ -174,7 +174,7 @@ export default function BenefitRequestPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <div className="flex flex-1 flex-col items-center bg-[linear-gradient(180deg,#3652c5_0%,#ffffff_100%)]">
+      <div className="flex flex-1 flex-col items-center">
         <main className="w-full max-w-7xl p-8">
           <Link href={`/employee-panel/benefits/${benefit.id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground active:opacity-80">
             ← Back to Benefit
@@ -188,7 +188,7 @@ export default function BenefitRequestPage() {
             {/* ── Step 1: Confirm Eligibility ── */}
             {step === 1 && (
               <>
-                <h1 className="text-xl font-semibold text-white">Confirm Eligibility</h1>
+                <h1 className="text-xl font-semibold text-gray-900">Confirm Eligibility</h1>
                 <p className="mt-1 text-sm text-gray-500">
                   Please review your eligibility for {benefit.name} before proceeding.
                 </p>
@@ -229,7 +229,7 @@ export default function BenefitRequestPage() {
             {/* ── Step 2: Contract Acceptance ── */}
             {step === 2 && requiresContract && (
               <>
-                <h1 className="text-xl font-semibold text-white">Contract Acceptance</h1>
+                <h1 className="text-xl font-semibold text-gray-900">Contract Acceptance</h1>
                 <p className="mt-1 text-sm text-gray-500">
                   Please review and accept the contract terms for {benefit.name}.
                 </p>
@@ -355,7 +355,7 @@ export default function BenefitRequestPage() {
             {/* ── Step 3: Submit ── */}
             {step === 3 && (
               <>
-                <h1 className="text-xl font-semibold text-white">Submit Request</h1>
+                <h1 className="text-xl font-semibold text-gray-900">Submit Request</h1>
                 <p className="mt-1 text-sm text-gray-500">Review and submit for approval.</p>
 
                 <div className="mt-6 rounded-xl border border-gray-100 bg-gray-50/50 px-5 py-4">
