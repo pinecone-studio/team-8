@@ -158,7 +158,7 @@ export default function Sidebar() {
                       ? "bg-gray-100 text-gray-900"
                       : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
                   }`}
-                  onClick={collapsed ? (e) => { e.preventDefault(); setCollapsed(false); } : undefined}
+                  onClick={collapsed ? (e: React.MouseEvent<HTMLAnchorElement>) => { e.preventDefault(); setCollapsed(false); } : undefined}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
                   {!collapsed && <span>{item.label}</span>}
@@ -183,7 +183,7 @@ export default function Sidebar() {
                       ? "bg-gray-100 text-gray-900"
                       : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
                   }`}
-                  onClick={collapsed ? (e) => { e.preventDefault(); setCollapsed(false); } : undefined}
+                  onClick={collapsed ? (e: React.MouseEvent<HTMLAnchorElement>) => { e.preventDefault(); setCollapsed(false); } : undefined}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
                   {!collapsed && <span>{item.label}</span>}
