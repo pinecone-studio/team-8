@@ -95,9 +95,17 @@ export const getContracts = async (
         null;
       let viewUrl: string | null = null;
       try {
+        // Bind token to the requesting employee so handleContractView can
+        // enforce that only this employee (or an HR admin) may open the URL.
+        // Admin tokens are left unbound — they bypass the session check anyway.
+        const meta = canViewAllContracts
+          ? undefined
+          : { employeeId: employee.id, contractId: row.id };
         const token = await createContractViewToken(
           env.CONTRACT_VIEW_TOKENS,
           row.r2ObjectKey,
+          undefined,
+          meta,
         );
         viewUrl = getContractViewUrl(baseUrl, token);
       } catch {

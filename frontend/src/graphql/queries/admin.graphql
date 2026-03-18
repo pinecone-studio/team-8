@@ -26,6 +26,7 @@ query GetAdminBenefits {
   adminBenefits {
     id
     name
+    description
     nameEng
     category
     subsidyPercent
@@ -37,6 +38,10 @@ query GetAdminBenefits {
     optionsDescription
     approvalPolicy
   }
+}
+
+query GetAuditLogActionTypes {
+  auditLogActionTypes
 }
 
 query GetAuditLogs(

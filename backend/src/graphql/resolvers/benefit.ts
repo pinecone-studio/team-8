@@ -21,7 +21,7 @@ export const BenefitRequest = {
   async viewContractUrl(
     parent: { benefitId: string; status: string; viewContractUrl?: string | null },
     _: unknown,
-    { db, env, baseUrl }: GraphQLContext,
+    { db, env, baseUrl, currentEmployee }: GraphQLContext,
   ): Promise<string | null> {
     // Already computed (e.g., returned directly from requestBenefit mutation)
     if (parent.viewContractUrl) return parent.viewContractUrl;
@@ -36,7 +36,15 @@ export const BenefitRequest = {
     const active = contracts.find((c) => c.isActive);
     if (!active) return null;
 
-    const token = await createContractViewToken(env.CONTRACT_VIEW_TOKENS, active.r2ObjectKey);
+    // Bind token to the requesting employee so the session-scope check in
+    // handleContractView can enforce that only this employee (or an HR admin)
+    // may open the URL.
+    const token = await createContractViewToken(
+      env.CONTRACT_VIEW_TOKENS,
+      active.r2ObjectKey,
+      undefined,
+      { employeeId: currentEmployee?.id, contractId: active.id },
+    );
     return getContractViewUrl(baseUrl, token);
   },
 
@@ -98,6 +106,7 @@ export const BenefitEligibility = {
       return {
         id: parent.benefitId,
         name: "Unknown",
+        description: null,
         nameEng: null,
         category: "other",
         subsidyPercent: 0,
@@ -115,6 +124,7 @@ export const BenefitEligibility = {
     return {
       id: config.id,
       name: config.name,
+      description: null,
       nameEng: config.nameEng ?? null,
       category: config.category,
       subsidyPercent: config.subsidyPercent,

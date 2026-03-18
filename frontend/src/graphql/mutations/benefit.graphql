@@ -66,6 +66,7 @@ mutation CreateBenefit($input: CreateBenefitInput!) {
   createBenefit(input: $input) {
     id
     name
+    description
     nameEng
     category
     subsidyPercent

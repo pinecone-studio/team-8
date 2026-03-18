@@ -97,7 +97,47 @@ export default function Sidebar() {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
-          <div className="relative mb-4" ref={profileRef}>
+          <nav className="space-y-0.5">
+            <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">
+              Menu
+            </p>
+            {mainNavItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={navLinkClass(item.href)}
+                >
+                  <Icon className="h-5 w-5 shrink-0" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          <nav className="mt-6 space-y-0.5 border-t border-gray-100 pt-4">
+            <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">
+              Dev
+            </p>
+            {devNavItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={navLinkClass(item.href)}
+                >
+                  <Icon className="h-5 w-5 shrink-0" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        <div className="shrink-0 border-t border-gray-100 px-3 py-3">
+          <div className="relative" ref={profileRef}>
             <button
               type="button"
               onClick={() => setProfileOpen((o) => !o)}
@@ -138,7 +178,7 @@ export default function Sidebar() {
               />
             </button>
             <div
-              className={`absolute left-0 right-0 top-full z-20 mt-1.5 origin-top rounded-lg border border-gray-100 bg-white py-1 shadow-lg transition-all duration-200 ease-out ${
+              className={`absolute bottom-full left-0 right-0 z-20 mb-1.5 origin-bottom rounded-lg border border-gray-100 bg-white py-1 shadow-lg transition-all duration-200 ease-out ${
                 profileOpen
                   ? "visible scale-100 opacity-100"
                   : "invisible scale-95 opacity-0 pointer-events-none"
@@ -167,44 +207,6 @@ export default function Sidebar() {
               </button>
             </div>
           </div>
-
-          <nav className="space-y-0.5">
-            <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">
-              Menu
-            </p>
-            {mainNavItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={navLinkClass(item.href)}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-
-          <nav className="mt-6 space-y-0.5 border-t border-gray-100 pt-4">
-            <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">
-              Dev
-            </p>
-            {devNavItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={navLinkClass(item.href)}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
         </div>
       </aside>
       <div className="w-[260px] shrink-0" aria-hidden />

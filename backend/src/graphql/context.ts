@@ -6,6 +6,10 @@ export interface Env {
   DB: D1Database;
   CONTRACTS_BUCKET?: R2Bucket;
   CONTRACT_VIEW_TOKENS: KVNamespace;
+  /** KV namespace for caching per-employee eligibility snapshots (TTL 1 h). */
+  ELIGIBILITY_CACHE: KVNamespace;
+  /** R2 bucket for archiving audit_logs rows older than 12 months (TDD §14). */
+  AUDIT_ARCHIVE_BUCKET?: R2Bucket;
   ENVIRONMENT: string;
   CLERK_SECRET_KEY?: string;
   CLERK_JWT_KEY?: string;
@@ -19,6 +23,9 @@ export interface Env {
   GMAIL_CLIENT_SECRET?: string;
   GMAIL_REFRESH_TOKEN?: string;
   GMAIL_SENDER_EMAIL?: string;
+  // OKR integration adapter
+  OKR_WEBHOOK_SECRET?: string;
+  OKR_API_URL?: string;
 }
 
 export interface GraphQLContext {
@@ -29,4 +36,10 @@ export interface GraphQLContext {
   /** Currently authenticated employee, or null if unauthenticated. */
   currentEmployee: Employee | null;
   currentUser: CurrentUser;
+  /**
+   * Client IP address from CF-Connecting-IP (Cloudflare) or X-Forwarded-For fallback.
+   * Null when unavailable (e.g. local dev without proxy).
+   * Used for contract acceptance audit trail per TDD compliance requirements.
+   */
+  ipAddress: string | null;
 }

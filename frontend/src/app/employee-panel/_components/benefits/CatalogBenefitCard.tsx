@@ -22,6 +22,7 @@ function CategoryIcon({
 
 function buildDescription(benefit: BenefitEligibility) {
   if (benefit.failedRule?.errorMessage) return benefit.failedRule.errorMessage;
+  if (benefit.benefit.description) return benefit.benefit.description;
   if (benefit.benefit.optionsDescription) return benefit.benefit.optionsDescription;
   if (benefit.benefit.requiresContract) {
     return `Requires contract acceptance. Employee share ${benefit.benefit.employeePercent}%.`;
@@ -62,9 +63,6 @@ export default function CatalogBenefitCard({ benefit }: Props) {
           </div>
           <p className="mt-4 text-sm leading-6 text-gray-600">
             {buildDescription(benefit)}
-          </p>
-          <p className="mt-4 text-base font-semibold text-gray-900">
-            {benefit.benefit.subsidyPercent}% subsidy
           </p>
         </div>
       </div>

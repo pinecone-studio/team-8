@@ -2,13 +2,23 @@ import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
 import { MutationResolvers } from "../../generated/graphql";
 import type { GraphQLContext } from "../../context";
+import { recomputeEligibilityForEmployees } from "../helpers/recomputeEligibility";
 
 const SELF_MUTABLE_FIELDS = new Set(["name", "nameEng"]);
+
+/**
+ * Fields whose change directly affects eligibility rule evaluation.
+ * When any of these are updated by an admin, we trigger a best-effort recompute
+ * so that benefit access immediately reflects the new profile (e.g. demotion/role change).
+ * Per TDD §5: "If an employee is demoted or their role responsibility changes,
+ * benefits tied to higher tiers are automatically suspended."
+ */
+const ELIGIBILITY_AFFECTING_FIELDS = new Set(["employmentStatus", "responsibilityLevel", "role"]);
 
 export const updateEmployee: MutationResolvers["updateEmployee"] = async (
   _,
   { id, input },
-  { db, currentUser }: GraphQLContext,
+  { db, env, currentUser, currentEmployee }: GraphQLContext,
 ) => {
   if (!currentUser.employee) {
     throw new Error("Not authenticated.");
@@ -43,5 +53,33 @@ export const updateEmployee: MutationResolvers["updateEmployee"] = async (
     .set(updates)
     .where(eq(schema.employees.id, id))
     .returning();
-  return results[0] ?? null;
+
+  const updatedEmployee = results[0] ?? null;
+
+  // If any eligibility-affecting field changed, recompute benefit eligibility for this employee.
+  // Best-effort: failure is logged but does NOT block the update response.
+  // Suspension of active enrollments is handled inside recomputeEligibilityForEmployees
+  // (same path as overrideEligibility("locked")), giving demotion/role-change an
+  // immediate, truthful effect on enrolled benefits.
+  if (isAdmin && updatedEmployee) {
+    const eligibilityAffected = Object.keys(updates).some((k) =>
+      ELIGIBILITY_AFFECTING_FIELDS.has(k),
+    );
+    if (eligibilityAffected) {
+      // Best-effort: wrapped in try/catch so a recompute failure never rolls back the
+      // already-committed employee update or surfaces a confusing error to the caller.
+      try {
+        await recomputeEligibilityForEmployees(db, [id], {
+          source: "manual",
+          actor: currentEmployee,
+          metadata: { trigger: "updateEmployee", changedFields: Object.keys(updates) },
+          kvCache: env.ELIGIBILITY_CACHE,
+        });
+      } catch (err: unknown) {
+        console.error(`[updateEmployee] recompute failed for employee ${id}:`, err);
+      }
+    }
+  }
+
+  return updatedEmployee;
 };

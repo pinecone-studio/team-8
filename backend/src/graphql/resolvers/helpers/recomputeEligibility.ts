@@ -114,6 +114,12 @@ export interface RecomputeOptions {
    * Pass null for system-originated recomputes (webhooks / cron).
    */
   actor?: Employee | null;
+  /**
+   * When provided, the eligibility KV cache entry for each recomputed employee
+   * is invalidated so the next read reflects the fresh D1 snapshot.
+   * Omit from call sites that don't have env access — TTL expiry is the fallback.
+   */
+  kvCache?: KVNamespace;
 }
 
 export interface RecomputeResult {
@@ -138,6 +144,9 @@ export interface RecomputeResult {
  * - Writes a single ELIGIBILITY_RECOMPUTED audit entry per employee.
  * - Designed to be called from attendance import, OKR sync, or manual triggers.
  */
+/** KV cache key for a given employeeId — must stay in sync with getMyBenefits.ts. */
+export const eligibilityCacheKey = (employeeId: string) => `eligibility:v1:${employeeId}`;
+
 export async function recomputeEligibilityForEmployees(
   db: Database,
   employeeIds: string[],
@@ -145,7 +154,7 @@ export async function recomputeEligibilityForEmployees(
 ): Promise<RecomputeResult> {
   if (employeeIds.length === 0) return { evaluated: 0, changed: 0, skipped: 0, suspended: 0 };
 
-  const { source, metadata, actor = null } = options;
+  const { source, metadata, actor = null, kvCache } = options;
   const now = new Date().toISOString();
 
   // Batch-fetch all data we need
@@ -276,6 +285,18 @@ export async function recomputeEligibilityForEmployees(
         ...(metadata !== undefined ? { importMetadata: metadata } : {}),
       },
     });
+  }
+
+  // Invalidate KV eligibility cache for all recomputed employees so the next
+  // getMyBenefits call returns fresh D1 data instead of a stale snapshot.
+  if (kvCache && employeeIds.length > 0) {
+    await Promise.all(
+      employeeIds.map((id) =>
+        kvCache.delete(eligibilityCacheKey(id)).catch((err) =>
+          console.error(`[recomputeEligibility] KV cache invalidation failed for ${id}:`, err),
+        ),
+      ),
+    );
   }
 
   return { evaluated, changed, skipped, suspended };

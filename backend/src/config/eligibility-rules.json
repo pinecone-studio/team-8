@@ -115,15 +115,14 @@
       "id": "shit_happened_days",
       "name": "Shit Happened Days",
       "category": "flexibility",
-      "subsidyPercent": 0,
-      "employeePercent": 100,
+      "subsidyPercent": 100,
+      "employeePercent": 0,
       "vendorName": null,
       "requiresContract": false,
       "flowType": "self_service",
       "optionsDescription": "3 days per year, no questions asked",
       "rules": [
-        { "type": "employment_status", "operator": "neq", "value": "terminated", "errorMessage": "Not available after termination." },
-        { "type": "okr_submitted", "operator": "eq", "value": true, "errorMessage": "Submit OKR for full allocation." }
+        { "type": "employment_status", "operator": "neq", "value": "terminated", "errorMessage": "Not available after termination." }
       ]
     },
     "remote_work": {

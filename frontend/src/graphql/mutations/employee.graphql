@@ -30,3 +30,13 @@ mutation UpdateEmployee($id: String!, $input: UpdateEmployeeInput!) {
 mutation DeleteEmployee($id: String!) {
   deleteEmployee(id: $id)
 }
+
+mutation UpdateMySettings($input: UpdateMySettingsInput!) {
+  updateMySettings(input: $input) {
+    notificationEmail
+    notificationEligibility
+    notificationRenewals
+    language
+    timezone
+  }
+}

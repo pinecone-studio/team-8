@@ -57,17 +57,35 @@ export const employeeTypeDefs = gql`
     lateArrivalUpdatedAt: String
   }
 
+  type EmployeeSettings {
+    notificationEmail: Boolean!
+    notificationEligibility: Boolean!
+    notificationRenewals: Boolean!
+    language: String!
+    timezone: String!
+  }
+
+  input UpdateMySettingsInput {
+    notificationEmail: Boolean
+    notificationEligibility: Boolean
+    notificationRenewals: Boolean
+    language: String
+    timezone: String
+  }
+
   extend type Query {
     getEmployees(search: String, department: String, limit: Int): [Employee!]!
     getDepartments: [String!]!
     getEmployee(id: String!): Employee
     getEmployeeByEmail(email: String!): Employee
     session: Employee
+    mySettings: EmployeeSettings!
   }
 
   extend type Mutation {
     createEmployee(input: CreateEmployeeInput!): Employee!
     updateEmployee(id: String!, input: UpdateEmployeeInput!): Employee
     deleteEmployee(id: String!): Boolean!
+    updateMySettings(input: UpdateMySettingsInput!): EmployeeSettings!
   }
 `;

@@ -12,11 +12,13 @@ import { getAdminDashboardSummary } from "./getAdminDashboardSummary";
 import { getAdminBenefits } from "./getAdminBenefits";
 import { getEligibilityRules } from "./getEligibilityRules";
 import { getAuditLogs } from "./getAuditLogs";
+import { getAuditLogActionTypes } from "./getAuditLogActionTypes";
 import { getContractAcceptances } from "./getContractAcceptances";
 import { getEnrollments } from "./getEnrollments";
 import { getDepartments } from "./getDepartments";
 import { getNotifications } from "./getNotifications";
 import { getRuleProposals } from "./getRuleProposals";
+import { getMySettings } from "./getMySettings";
 
 export const queries = {
   adminDashboardSummary: getAdminDashboardSummary,
@@ -33,9 +35,11 @@ export const queries = {
   session: getSession,
   eligibilityRules: getEligibilityRules,
   auditLogs: getAuditLogs,
+  auditLogActionTypes: getAuditLogActionTypes,
   contractAcceptances: getContractAcceptances,
   enrollments: getEnrollments,
   getDepartments,
   notifications: getNotifications,
   ruleProposals: getRuleProposals,
+  mySettings: getMySettings,
 };

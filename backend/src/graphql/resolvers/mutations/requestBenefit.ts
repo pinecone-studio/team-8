@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq, notInArray } from "drizzle-orm";
 import { schema } from "../../../db";
 import { createContractViewToken, getContractViewUrl } from "../../../contracts";
-import { sendBenefitRequestSubmittedEmail } from "../../../email/sendTransactionalEmail";
+import { sendBenefitRequestSubmittedEmail, sendHrNewBenefitRequestEmail } from "../../../email/sendTransactionalEmail";
 import type { GraphQLContext } from "../../context";
 import { requireAuth } from "../../../auth";
 import { getBenefitsForEmployee } from "../helpers/employeeBenefits";
@@ -68,6 +68,28 @@ export const requestBenefit = async (
     );
   }
 
+  // Duplicate-request guard: reject if an active (non-terminal) request for this
+  // benefit already exists for this employee.  This prevents accidental double-
+  // submissions from rapid clicks or retried network requests.
+  const TERMINAL_STATUSES = ["cancelled", "declined"] as const;
+  const existingActive = await db
+    .select({ id: schema.benefitRequests.id })
+    .from(schema.benefitRequests)
+    .where(
+      and(
+        eq(schema.benefitRequests.employeeId, employee.id),
+        eq(schema.benefitRequests.benefitId, benefitId),
+        notInArray(schema.benefitRequests.status, [...TERMINAL_STATUSES]),
+      ),
+    )
+    .limit(1);
+  if (existingActive.length > 0) {
+    throw new Error(
+      "You already have an active request for this benefit. " +
+        "Cancel the existing request before submitting a new one.",
+    );
+  }
+
   const approvalPolicy = benefitFromDb.approvalPolicy ?? "hr";
   const initialStatus = deriveInitialStatus(approvalPolicy, benefitFromDb.requiresContract);
 
@@ -104,6 +126,27 @@ export const requestBenefit = async (
     initialStatus,
   );
 
+  // Notify active HR managers about the new request.
+  // Awaited via Promise.all so emails are sent before the Worker response
+  // completes (avoids being killed mid-flight by the Workers runtime).
+  const hrManagers = await db
+    .select({ email: schema.employees.email })
+    .from(schema.employees)
+    .where(
+      and(
+        eq(schema.employees.employmentStatus, "active"),
+        eq(schema.employees.role, "hr_manager"),
+      ),
+    );
+  const displayName = employee.nameEng?.trim() || employee.name.trim() || employee.email;
+  await Promise.all(
+    hrManagers.map((hr) =>
+      sendHrNewBenefitRequestEmail(env, hr.email, displayName, benefitFromDb.name).catch(
+        (err) => console.error("[requestBenefit] HR alert email failed:", err),
+      ),
+    ),
+  );
+
   const requiresContract = benefitFromDb.requiresContract;
   let viewContractUrl: string | null = null;
   if (requiresContract && env.CONTRACT_VIEW_TOKENS) {
@@ -116,6 +159,8 @@ export const requestBenefit = async (
       const token = await createContractViewToken(
         env.CONTRACT_VIEW_TOKENS,
         active.r2ObjectKey,
+        undefined,
+        { employeeId: employee.id, contractId: active.id },
       );
       viewContractUrl = getContractViewUrl(baseUrl, token);
     }

@@ -17,7 +17,7 @@ function routeAfterConfirm(approvalPolicy: string): string {
 export const confirmBenefitRequest = async (
   _: unknown,
   { requestId, contractAccepted }: { requestId: string; contractAccepted: boolean },
-  { db, currentEmployee }: GraphQLContext,
+  { db, currentEmployee, ipAddress }: GraphQLContext,
 ) => {
   const employee = requireAuth(currentEmployee);
   const requests = await db
@@ -81,7 +81,7 @@ export const confirmBenefitRequest = async (
     }
     contractVersionAccepted = `${active.version}:${active.sha256Hash}`;
 
-    // Write contract acceptance record
+    // Write contract acceptance record — include IP for audit trail compliance.
     await db.insert(schema.contractAcceptances).values({
       employeeId: employee.id,
       benefitId: req.benefitId,
@@ -90,6 +90,7 @@ export const confirmBenefitRequest = async (
       contractHash: active.sha256Hash,
       acceptedAt: contractAcceptedAt,
       requestId,
+      ipAddress: ipAddress ?? null,
     });
   }
 
@@ -117,6 +118,7 @@ export const confirmBenefitRequest = async (
     benefitId: req.benefitId,
     requestId,
     metadata: { nextStatus, contractVersionAccepted },
+    ipAddress,
   });
 
   return updated;

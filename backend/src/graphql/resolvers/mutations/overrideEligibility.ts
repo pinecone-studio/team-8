@@ -5,6 +5,7 @@ import { requireHrAdmin } from "../../../auth";
 import { writeAuditLog } from "../helpers/audit";
 import { suspendActiveEnrollments, reactivateSuspendedEnrollments } from "../helpers/suspendEnrollments";
 import { getBenefitsForEmployee } from "../helpers/employeeBenefits";
+import { eligibilityCacheKey } from "../helpers/recomputeEligibility";
 
 const VALID_OVERRIDE_STATUSES = new Set(["eligible", "active", "locked"]);
 
@@ -21,7 +22,7 @@ export const overrideEligibility = async (
       expiresAt?: string | null;
     };
   },
-  { db, currentEmployee }: GraphQLContext,
+  { db, env, currentEmployee }: GraphQLContext,
 ) => {
   const admin = requireHrAdmin(currentEmployee);
 
@@ -143,6 +144,13 @@ export const overrideEligibility = async (
   } else if (normalizedStatus === "eligible" || normalizedStatus === "active") {
     await reactivateSuspendedEnrollments(db, admin, employeeId, benefitId, reason.trim());
   }
+
+  // Invalidate the employee's KV eligibility cache so their next getMyBenefits
+  // call reflects the override immediately rather than serving the stale snapshot
+  // for up to 1 hour.
+  env.ELIGIBILITY_CACHE.delete(eligibilityCacheKey(employeeId)).catch((err) =>
+    console.error("[overrideEligibility] KV cache invalidation failed:", err),
+  );
 
   // Return the updated eligibility in BenefitEligibility shape
   const eligibilities = await getBenefitsForEmployee(db, employeeId);

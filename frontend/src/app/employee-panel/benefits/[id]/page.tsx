@@ -310,9 +310,9 @@ export default function BenefitDetailPage() {
                   <StatusBadge status={benefitEligibility.status} />
                 </div>
 
-                {benefit.optionsDescription && (
+                {(benefit.description ?? benefit.optionsDescription) && (
                   <p className="mt-4 text-sm leading-relaxed text-gray-600">
-                    {benefit.optionsDescription}
+                    {benefit.description ?? benefit.optionsDescription}
                   </p>
                 )}
 

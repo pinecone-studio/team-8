@@ -303,6 +303,7 @@ export default function CreateBenefitPage() {
   const [selectedType, setSelectedType] = useState<BenefitTypeKey | null>(null);
   const [form, setForm] = useState({
     name: "",
+    description: "",
     category: "wellness",
     subsidyPercent: 50,
     vendorName: "",
@@ -374,10 +375,12 @@ export default function CreateBenefitPage() {
     setError(null);
     try {
       const typeConfig = BENEFIT_TYPES.find((t) => t.key === selectedType)!;
+      const descriptionTrimmed = form.description.trim();
       const result = await createBenefit({
         variables: {
           input: {
             name: form.name.trim(),
+            ...(descriptionTrimmed ? { description: descriptionTrimmed } : {}),
             category: form.category,
             subsidyPercent: form.subsidyPercent,
             vendorName: form.vendorName.trim() || undefined,
@@ -429,8 +432,19 @@ export default function CreateBenefitPage() {
         }
       }
       router.push(`/admin-panel/company-benefits/${benefitId}`);
-    } catch (e) {
-      setError("Failed to create benefit. Please try again.");
+    } catch (e: unknown) {
+      let message = "Failed to create benefit. Please try again.";
+      const err = e as {
+        message?: string;
+        graphQLErrors?: Array<{ message?: string }>;
+        networkError?: Error & { result?: { errors?: Array<{ message?: string }>; message?: string } };
+      };
+      if (err?.graphQLErrors?.[0]?.message) message = err.graphQLErrors[0].message;
+      else if (err?.networkError?.result?.errors?.[0]?.message) message = err.networkError.result.errors[0].message;
+      else if (err?.networkError?.result?.message) message = err.networkError.result.message;
+      else if (err?.networkError?.message) message = err.networkError.message;
+      else if (err?.message) message = err.message;
+      setError(message);
       setSaving(false);
     }
   }
@@ -534,6 +548,18 @@ export default function CreateBenefitPage() {
                       onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                       placeholder="e.g. Gym Membership — Pulse 50%"
                       className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm placeholder-gray-300 transition focus:border-gray-400 focus:outline-none"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                      Description <span className="text-gray-300">(optional)</span>
+                    </label>
+                    <textarea
+                      value={form.description}
+                      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                      placeholder="e.g. Company-subsidized gym access at Pulse Fitness. 50% covered by employer."
+                      rows={3}
+                      className="w-full resize-y rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm placeholder-gray-300 transition focus:border-gray-400 focus:outline-none"
                     />
                   </div>
                   <div>

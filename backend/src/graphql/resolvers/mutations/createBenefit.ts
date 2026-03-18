@@ -10,6 +10,7 @@ export const createBenefit = async (
   }: {
     input: {
       name: string;
+      description?: string | null;
       category: string;
       subsidyPercent: number;
       vendorName?: string | null;
@@ -24,6 +25,7 @@ export const createBenefit = async (
     .insert(schema.benefits)
     .values({
       name: input.name,
+      description: input.description ?? null,
       category: input.category,
       subsidyPercent: input.subsidyPercent,
       vendorName: input.vendorName ?? null,
