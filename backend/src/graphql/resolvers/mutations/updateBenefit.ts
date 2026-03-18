@@ -19,6 +19,9 @@ export const updateBenefit = async (
       vendorName?: string | null;
       requiresContract?: boolean | null;
       approvalPolicy?: string | null;
+      amount?: number | null;
+      location?: string | null;
+      imageUrl?: string | null;
     };
   },
   { db, currentEmployee }: GraphQLContext,
@@ -33,6 +36,9 @@ export const updateBenefit = async (
   if ("vendorName" in input) updates.vendorName = input.vendorName ?? null;
   if (input.requiresContract != null) updates.requiresContract = input.requiresContract;
   if (input.approvalPolicy != null) updates.approvalPolicy = input.approvalPolicy;
+  if ("amount" in input) updates.amount = input.amount ?? null;
+  if ("location" in input) updates.location = input.location ?? null;
+  if ("imageUrl" in input) updates.imageUrl = input.imageUrl ?? null;
 
   const [row] = await db
     .update(schema.benefits)

@@ -85,12 +85,15 @@ export type AuditLog = {
 
 export type Benefit = {
   __typename?: 'Benefit';
+  amount?: Maybe<Scalars['Int']['output']>;
   approvalPolicy: Scalars['String']['output'];
   category: Scalars['String']['output'];
   description?: Maybe<Scalars['String']['output']>;
   employeePercent: Scalars['Int']['output'];
   flowType: BenefitFlowType;
   id: Scalars['String']['output'];
+  imageUrl?: Maybe<Scalars['String']['output']>;
+  location?: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
   nameEng?: Maybe<Scalars['String']['output']>;
   optionsDescription?: Maybe<Scalars['String']['output']>;
@@ -173,9 +176,12 @@ export type ContractAcceptance = {
 };
 
 export type CreateBenefitInput = {
+  amount?: InputMaybe<Scalars['Int']['input']>;
   approvalPolicy?: InputMaybe<Scalars['String']['input']>;
   category: Scalars['String']['input'];
   description?: InputMaybe<Scalars['String']['input']>;
+  imageUrl?: InputMaybe<Scalars['String']['input']>;
+  location?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   requiresContract?: InputMaybe<Scalars['Boolean']['input']>;
   subsidyPercent: Scalars['Int']['input'];
@@ -597,9 +603,12 @@ export type RuleProposal = {
 };
 
 export type UpdateBenefitInput = {
+  amount?: InputMaybe<Scalars['Int']['input']>;
   approvalPolicy?: InputMaybe<Scalars['String']['input']>;
   category?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
+  imageUrl?: InputMaybe<Scalars['String']['input']>;
+  location?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   requiresContract?: InputMaybe<Scalars['Boolean']['input']>;
   subsidyPercent?: InputMaybe<Scalars['Int']['input']>;
@@ -845,12 +854,17 @@ export type GetBenefitsQueryVariables = Exact<{
 }>;
 
 
-export type GetBenefitsQuery = { __typename?: 'Query', benefits: Array<{ __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string }> };
+export type GetBenefitsQuery = { __typename?: 'Query', benefits: Array<{ __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string, amount?: number | null, location?: string | null, imageUrl?: string | null }> };
 
 export type GetMyBenefitsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type GetMyBenefitsQuery = { __typename?: 'Query', myBenefits: Array<{ __typename?: 'BenefitEligibility', benefitId: string, status: BenefitEligibilityStatus, overrideStatus?: string | null, overrideBy?: string | null, overrideReason?: string | null, overrideExpiresAt?: string | null, benefit: { __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string }, ruleEvaluation: Array<{ __typename?: 'RuleEvaluation', ruleType: string, passed: boolean, reason: string }>, failedRule?: { __typename?: 'FailedRule', ruleType: string, errorMessage: string } | null }> };
+
+export type GetMyBenefitsFullQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetMyBenefitsFullQuery = { __typename?: 'Query', myBenefits: Array<{ __typename?: 'BenefitEligibility', benefitId: string, status: BenefitEligibilityStatus, overrideStatus?: string | null, overrideBy?: string | null, overrideReason?: string | null, overrideExpiresAt?: string | null, benefit: { __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string, amount?: number | null, location?: string | null, imageUrl?: string | null }, ruleEvaluation: Array<{ __typename?: 'RuleEvaluation', ruleType: string, passed: boolean, reason: string }>, failedRule?: { __typename?: 'FailedRule', ruleType: string, errorMessage: string } | null }> };
 
 export type GetBenefitRequestsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -2150,6 +2164,9 @@ export const GetBenefitsDocument = gql`
     flowType
     optionsDescription
     approvalPolicy
+    amount
+    location
+    imageUrl
   }
 }
     `;
@@ -2260,6 +2277,80 @@ export type GetMyBenefitsQueryHookResult = ReturnType<typeof useGetMyBenefitsQue
 export type GetMyBenefitsLazyQueryHookResult = ReturnType<typeof useGetMyBenefitsLazyQuery>;
 export type GetMyBenefitsSuspenseQueryHookResult = ReturnType<typeof useGetMyBenefitsSuspenseQuery>;
 export type GetMyBenefitsQueryResult = Apollo.QueryResult<GetMyBenefitsQuery, GetMyBenefitsQueryVariables>;
+export const GetMyBenefitsFullDocument = gql`
+    query GetMyBenefitsFull {
+  myBenefits {
+    benefitId
+    status
+    overrideStatus
+    overrideBy
+    overrideReason
+    overrideExpiresAt
+    benefit {
+      id
+      name
+      description
+      nameEng
+      category
+      subsidyPercent
+      employeePercent
+      unitPrice
+      vendorName
+      requiresContract
+      flowType
+      optionsDescription
+      approvalPolicy
+      amount
+      location
+      imageUrl
+    }
+    ruleEvaluation {
+      ruleType
+      passed
+      reason
+    }
+    failedRule {
+      ruleType
+      errorMessage
+    }
+  }
+}
+    `;
+
+/**
+ * __useGetMyBenefitsFullQuery__
+ *
+ * To run a query within a React component, call `useGetMyBenefitsFullQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetMyBenefitsFullQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetMyBenefitsFullQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetMyBenefitsFullQuery(baseOptions?: Apollo.QueryHookOptions<GetMyBenefitsFullQuery, GetMyBenefitsFullQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetMyBenefitsFullQuery, GetMyBenefitsFullQueryVariables>(GetMyBenefitsFullDocument, options);
+      }
+export function useGetMyBenefitsFullLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetMyBenefitsFullQuery, GetMyBenefitsFullQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetMyBenefitsFullQuery, GetMyBenefitsFullQueryVariables>(GetMyBenefitsFullDocument, options);
+        }
+// @ts-ignore
+export function useGetMyBenefitsFullSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetMyBenefitsFullQuery, GetMyBenefitsFullQueryVariables>): Apollo.UseSuspenseQueryResult<GetMyBenefitsFullQuery, GetMyBenefitsFullQueryVariables>;
+export function useGetMyBenefitsFullSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetMyBenefitsFullQuery, GetMyBenefitsFullQueryVariables>): Apollo.UseSuspenseQueryResult<GetMyBenefitsFullQuery | undefined, GetMyBenefitsFullQueryVariables>;
+export function useGetMyBenefitsFullSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetMyBenefitsFullQuery, GetMyBenefitsFullQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetMyBenefitsFullQuery, GetMyBenefitsFullQueryVariables>(GetMyBenefitsFullDocument, options);
+        }
+export type GetMyBenefitsFullQueryHookResult = ReturnType<typeof useGetMyBenefitsFullQuery>;
+export type GetMyBenefitsFullLazyQueryHookResult = ReturnType<typeof useGetMyBenefitsFullLazyQuery>;
+export type GetMyBenefitsFullSuspenseQueryHookResult = ReturnType<typeof useGetMyBenefitsFullSuspenseQuery>;
+export type GetMyBenefitsFullQueryResult = Apollo.QueryResult<GetMyBenefitsFullQuery, GetMyBenefitsFullQueryVariables>;
 export const GetBenefitRequestsDocument = gql`
     query GetBenefitRequests {
   benefitRequests {

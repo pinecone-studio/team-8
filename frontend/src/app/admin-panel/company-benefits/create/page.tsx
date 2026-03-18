@@ -10,14 +10,17 @@ import {
   CreditCard,
   Eye,
   FileText,
+  Image,
   Info,
   LayoutGrid,
+  MapPin,
   Monitor,
   Plus,
   RefreshCw,
   Send,
   Shield,
   Trash2,
+  Upload,
   UserCheck,
   Wallet,
   Zap,
@@ -303,10 +306,22 @@ export default function CreateBenefitPage() {
     category: "wellness",
     subsidyPercent: 50,
     vendorName: "",
+    amount: "" as string,
+    location: "",
+  });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [contractFile, setContractFile] = useState<File | null>(null);
+  const [contractMeta, setContractMeta] = useState({
+    version: "1.0",
+    effectiveDate: "",
+    expiryDate: "",
   });
   const [rules, setRules] = useState<RuleRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
 
   const [createBenefit] = useCreateBenefitMutation({
     refetchQueries: [{ query: GetAdminBenefitsDocument }],
@@ -367,6 +382,7 @@ export default function CreateBenefitPage() {
     try {
       const typeConfig = BENEFIT_TYPES.find((t) => t.key === selectedType)!;
       const descriptionTrimmed = form.description.trim();
+      const amountNum = form.amount.trim() ? Number(form.amount) : undefined;
       const result = await createBenefit({
         variables: {
           input: {
@@ -377,10 +393,42 @@ export default function CreateBenefitPage() {
             vendorName: form.vendorName.trim() || undefined,
             requiresContract: typeConfig.requiresContract,
             approvalPolicy: typeConfig.approvalPolicy,
+            ...(amountNum ? { amount: amountNum } : {}),
+            ...(form.location.trim() ? { location: form.location.trim() } : {}),
           },
         },
       });
       const benefitId = result.data?.createBenefit.id;
+
+      // Upload image if selected
+      if (benefitId && imageFile) {
+        const imgData = new FormData();
+        imgData.append("benefitId", benefitId);
+        imgData.append("file", imageFile);
+        await fetch(`${backendUrl}/api/benefits/upload-image`, {
+          method: "POST",
+          body: imgData,
+          credentials: "include",
+        });
+      }
+
+      // Upload contract if selected (contract type only)
+      if (benefitId && contractFile && selectedType === "contract") {
+        const today = new Date().toISOString().split("T")[0];
+        const ctData = new FormData();
+        ctData.append("benefitId", benefitId);
+        ctData.append("version", contractMeta.version || "1.0");
+        ctData.append("effectiveDate", contractMeta.effectiveDate || today);
+        ctData.append("expiryDate", contractMeta.expiryDate || today);
+        ctData.append("vendorName", form.vendorName.trim() || "Vendor");
+        ctData.append("file", contractFile);
+        await fetch(`${backendUrl}/api/contracts/upload`, {
+          method: "POST",
+          body: ctData,
+          credentials: "include",
+        });
+      }
+
       if (benefitId && rules.length > 0) {
         for (const rule of rules) {
           const fieldCfg = RULE_FIELDS.find((f) => f.key === rule.fieldKey)!;
@@ -591,6 +639,76 @@ export default function CreateBenefitPage() {
                     </p>
                   </div>
                 )}
+
+                {/* Contract-specific extra fields */}
+                {selectedType === "contract" && (
+                  <div className="mt-5 border-t border-gray-100 pt-5">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-violet-600">Contract Benefit Details</p>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                          Total Price (₮) <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={form.amount}
+                          onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                          placeholder="e.g. 120000"
+                          className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm placeholder-gray-300 transition focus:border-violet-400 focus:outline-none"
+                        />
+                        {form.amount && form.subsidyPercent > 0 && (
+                          <p className="mt-1 text-xs text-gray-400">
+                            Company: {Math.round(Number(form.amount) * form.subsidyPercent / 100).toLocaleString()}₮ · You: {Math.round(Number(form.amount) * (100 - form.subsidyPercent) / 100).toLocaleString()}₮
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                          <MapPin className="h-3.5 w-3.5" />
+                          Location <span className="text-gray-300">(optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={form.location}
+                          onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                          placeholder="e.g. Ulaanbaatar, Khan-Uul"
+                          className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm placeholder-gray-300 transition focus:border-violet-400 focus:outline-none"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                          <Image className="h-3.5 w-3.5" />
+                          Benefit Image <span className="text-gray-300">(optional)</span>
+                        </label>
+                        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 transition hover:border-violet-300 hover:bg-violet-50">
+                          {imagePreview ? (
+                            <img src={imagePreview} alt="Preview" className="h-24 w-auto rounded-lg object-cover" />
+                          ) : (
+                            <>
+                              <Upload className="h-6 w-6 text-gray-300" />
+                              <p className="text-xs text-gray-400">Click to upload an image (JPG, PNG, WEBP)</p>
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0] ?? null;
+                              setImageFile(f);
+                              if (f) setImagePreview(URL.createObjectURL(f));
+                              else setImagePreview(null);
+                            }}
+                          />
+                        </label>
+                        {imageFile && (
+                          <p className="mt-1 text-xs text-gray-500">{imageFile.name}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Step 3: Rules */}
@@ -727,6 +845,72 @@ export default function CreateBenefitPage() {
                   </div>
                 )}
               </div>
+
+              {/* Step 4: Contract Upload (contract type only) */}
+              {selectedType === "contract" && (
+                <div className="rounded-2xl border border-gray-100 bg-white p-6">
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">4</span>
+                    <h2 className="text-base font-semibold text-gray-900">Contract Upload</h2>
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">optional</span>
+                  </div>
+                  <p className="mb-5 ml-8 text-sm text-gray-400">
+                    Upload the vendor contract PDF that employees will need to review and sign
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-gray-600">Version</label>
+                      <input
+                        type="text"
+                        value={contractMeta.version}
+                        onChange={(e) => setContractMeta((m) => ({ ...m, version: e.target.value }))}
+                        placeholder="e.g. 1.0"
+                        className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm placeholder-gray-300 transition focus:border-gray-400 focus:outline-none"
+                      />
+                    </div>
+                    <div />
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-gray-600">Effective Date</label>
+                      <input
+                        type="date"
+                        value={contractMeta.effectiveDate}
+                        onChange={(e) => setContractMeta((m) => ({ ...m, effectiveDate: e.target.value }))}
+                        className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-gray-400 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-gray-600">Expiry Date</label>
+                      <input
+                        type="date"
+                        value={contractMeta.expiryDate}
+                        onChange={(e) => setContractMeta((m) => ({ ...m, expiryDate: e.target.value }))}
+                        className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-gray-400 focus:outline-none"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                        <FileText className="h-3.5 w-3.5" />
+                        Contract PDF
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-gray-200 p-4 transition hover:border-violet-300 hover:bg-violet-50">
+                        <Upload className="h-5 w-5 shrink-0 text-gray-300" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">
+                            {contractFile ? contractFile.name : "Upload contract PDF"}
+                          </p>
+                          <p className="text-xs text-gray-400">PDF, max 10MB</p>
+                        </div>
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          className="hidden"
+                          onChange={(e) => setContractFile(e.target.files?.[0] ?? null)}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Submit */}
               {error && (

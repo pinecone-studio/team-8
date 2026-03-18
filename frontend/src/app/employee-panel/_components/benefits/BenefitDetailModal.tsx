@@ -1,6 +1,6 @@
 "use client";
 
-import { X, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { X, CheckCircle2, Clock, XCircle, MapPin, DollarSign } from "lucide-react";
 import type { BenefitEligibility } from "@/graphql/generated/graphql";
 import { BenefitEligibilityStatus } from "@/graphql/generated/graphql";
 
@@ -9,13 +9,6 @@ type Props = {
   onClose: () => void;
   onRequestBenefit?: (benefitId: string) => void;
 };
-
-function formatRuleLabel(value: string) {
-  return value
-    .split("_")
-    .join(" ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 function formatCategory(cat: string) {
   return cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase();
@@ -45,8 +38,12 @@ export default function BenefitDetailModal({ benefit, onClose, onRequestBenefit 
     b.optionsDescription ??
     `Company covers ${b.subsidyPercent}%. Employee share ${b.employeePercent}%.`;
   const category = formatCategory(b.category ?? "Other");
-  const passedCount = benefit.ruleEvaluation.filter((r) => r.passed).length;
-  const totalRules = benefit.ruleEvaluation.length;
+
+  const isEligible =
+    benefit.status === BenefitEligibilityStatus.Eligible ||
+    benefit.status === BenefitEligibilityStatus.Active;
+
+  const failedRules = benefit.ruleEvaluation.filter((r) => !r.passed);
 
   return (
     <div
@@ -78,74 +75,92 @@ export default function BenefitDetailModal({ benefit, onClose, onRequestBenefit 
           </div>
         </div>
 
-        <div className="px-6 py-5">
+        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+          {/* Image */}
+          {b.imageUrl && (
+            <img
+              src={`${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""}/api/benefits/image?key=${encodeURIComponent(b.imageUrl)}`}
+              alt={b.name}
+              className="mb-4 h-40 w-full rounded-xl object-cover"
+            />
+          )}
+
           {/* Description */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Description</p>
             <p className="mt-1.5 text-sm leading-relaxed text-gray-700">{description}</p>
           </div>
 
-          {/* Category & Subsidy */}
+          {/* Amount + Subsidy */}
           <div className="mt-5 grid grid-cols-2 gap-4">
+            {b.amount ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Total Price</p>
+                <div className="mt-1.5 flex items-center gap-1 rounded-xl bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-800 ring-1 ring-gray-100">
+                  <DollarSign className="h-3.5 w-3.5 text-gray-400" />
+                  {b.amount.toLocaleString()}₮
+                </div>
+              </div>
+            ) : null}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Company Covers</p>
+              <div className="mt-1.5 rounded-xl bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                {b.subsidyPercent}%
+                {b.amount ? ` (${Math.round(b.amount * b.subsidyPercent / 100).toLocaleString()}₮)` : ""}
+              </div>
+            </div>
+          </div>
+
+          {/* Category + Location */}
+          <div className="mt-4 grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Category</p>
               <div className="mt-1.5 rounded-xl bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-800 ring-1 ring-gray-100">
                 {category}
               </div>
             </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Subsidy</p>
-              <div className="mt-1.5 rounded-xl bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-100">
-                {b.subsidyPercent}%
+            {b.location && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Location</p>
+                <div className="mt-1.5 flex items-center gap-1.5 rounded-xl bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-800 ring-1 ring-gray-100">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  {b.location}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
-          {/* Eligibility */}
-          {totalRules > 0 && (
-            <div className="mt-5">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Eligibility</p>
-                <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                  {passedCount}/{totalRules}
-                </span>
+          {/* Eligibility status */}
+          <div className="mt-5">
+            {isEligible ? (
+              <div className="flex items-center gap-2.5 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                <p className="text-sm font-medium text-emerald-800">
+                  Та энэ benefit-ийг авах боломжтой
+                </p>
               </div>
-              <ul className="mt-3 space-y-2">
-                {benefit.ruleEvaluation.map((item) => (
-                  <li
-                    key={item.ruleType}
-                    className="flex items-center gap-3 rounded-lg py-2 px-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-                  >
-                    {item.passed ? (
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                    ) : (
-                      <XCircle className="h-4 w-4 shrink-0 text-red-400" />
-                    )}
-                    {formatRuleLabel(item.ruleType)}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Status message when not eligible */}
-          {benefit.status === BenefitEligibilityStatus.Locked && benefit.failedRule?.errorMessage && (
-            <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">
-              {benefit.failedRule.errorMessage}
-            </p>
-          )}
-          {benefit.status === BenefitEligibilityStatus.Active && (
-            <p className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 ring-1 ring-emerald-100">
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-              You are enrolled in this benefit.
-            </p>
-          )}
-          {benefit.status === BenefitEligibilityStatus.Pending && (
-            <p className="mt-4 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-100">
-              <Clock className="h-4 w-4 shrink-0 text-amber-600" />
-              Awaiting approval.
-            </p>
-          )}
+            ) : benefit.status === BenefitEligibilityStatus.Locked && failedRules.length > 0 ? (
+              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+                <p className="mb-2 text-sm font-semibold text-red-700">Дараах шаардлагуудыг хангаагүй байна:</p>
+                <ul className="space-y-1.5">
+                  {failedRules.map((r) => (
+                    <li key={r.ruleType} className="flex items-start gap-2 text-sm text-red-600">
+                      <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+                      <span>{r.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+                {benefit.failedRule?.errorMessage && (
+                  <p className="mt-2 text-xs text-red-500">{benefit.failedRule.errorMessage}</p>
+                )}
+              </div>
+            ) : benefit.status === BenefitEligibilityStatus.Pending ? (
+              <div className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+                <Clock className="h-4 w-4 shrink-0 text-amber-600" />
+                <p className="text-sm font-medium text-amber-800">Хүсэлт хянагдаж байна.</p>
+              </div>
+            ) : null}
+          </div>
         </div>
 
         {/* Footer buttons */}
@@ -182,4 +197,3 @@ export default function BenefitDetailModal({ benefit, onClose, onRequestBenefit 
     </div>
   );
 }
-
