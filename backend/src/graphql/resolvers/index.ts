@@ -7,6 +7,7 @@ import {
   BenefitEligibility,
   BenefitRequest,
   EmployeeSignedContract,
+  ScreenTimeSubmission,
 } from "./benefit";
 
 export const resolvers = {
@@ -18,4 +19,5 @@ export const resolvers = {
   BenefitEligibility,
   BenefitRequest,
   EmployeeSignedContract,
+  ScreenTimeSubmission,
 };

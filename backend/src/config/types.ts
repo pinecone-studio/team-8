@@ -12,8 +12,13 @@ export type RuleConfig = {
   errorMessage: string;
 };
 
-/** Benefit request flow: contract (sign contract → HR approve), normal (request → HR approve), down_payment (amount → employee approve → contract → HR), self_service (no request, show active/options) */
-export type BenefitFlowType = "contract" | "normal" | "down_payment" | "self_service";
+/** Benefit request flow: contract (sign contract → HR approve), normal (request → HR approve), down_payment (amount → employee approve → contract → HR), self_service (no request, show active/options), screen_time (weekly screenshot program with monthly salary uplift review) */
+export type BenefitFlowType =
+  | "contract"
+  | "normal"
+  | "down_payment"
+  | "self_service"
+  | "screen_time";
 
 /** Benefit config from eligibility-rules.json */
 export type BenefitConfig = {

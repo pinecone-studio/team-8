@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
+  BenefitFlowType,
   useGetAdminBenefitsQuery,
   useUpdateBenefitMutation,
   GetAdminBenefitsDocument,
@@ -117,7 +118,11 @@ export default function CompanyBenefits() {
     }
   };
 
-  const benefits = data?.adminBenefits ?? [];
+  const allBenefits = data?.adminBenefits ?? [];
+  const benefits = allBenefits.filter((benefit) => benefit.flowType !== BenefitFlowType.ScreenTime);
+  const screenTimePrograms = allBenefits.filter(
+    (benefit) => benefit.flowType === BenefitFlowType.ScreenTime,
+  );
   const isLoading = employeeLoading || loading;
 
   // ── Full skeleton screen ──────────────────────────────────────────────────
@@ -194,6 +199,16 @@ export default function CompanyBenefits() {
         </div>
 
         <FeedbackToast feedback={feedback} onClose={() => setFeedback(null)} />
+
+        {screenTimePrograms.length > 0 && (
+          <div className="rounded-xl border border-fuchsia-100 bg-fuchsia-50 px-4 py-3 text-sm text-fuchsia-800">
+            Screen time programs are managed separately from the benefits catalog.
+            {" "}
+            <Link href="/admin-panel/screen-time" className="font-medium underline underline-offset-2">
+              Open Screen Time
+            </Link>
+          </div>
+        )}
 
         <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
           {error ? (

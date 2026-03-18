@@ -41,6 +41,23 @@ export type AdminDashboardSummary = {
   usageByCategory: Array<AdminDashboardBucket>;
 };
 
+export type AdminScreenTimeMonthBoard = {
+  __typename?: 'AdminScreenTimeMonthBoard';
+  benefitId: Scalars['String']['output'];
+  monthKey: Scalars['String']['output'];
+  program?: Maybe<ScreenTimeProgram>;
+  rows: Array<AdminScreenTimeMonthRow>;
+  slotDates: Array<Scalars['String']['output']>;
+};
+
+export type AdminScreenTimeMonthRow = {
+  __typename?: 'AdminScreenTimeMonthRow';
+  employeeEmail: Scalars['String']['output'];
+  employeeId: Scalars['String']['output'];
+  employeeName: Scalars['String']['output'];
+  result: ScreenTimeMonthlyResult;
+};
+
 export type AttendanceImportError = {
   __typename?: 'AttendanceImportError';
   identifier: Scalars['String']['output'];
@@ -128,6 +145,7 @@ export enum BenefitFlowType {
   Contract = 'contract',
   DownPayment = 'down_payment',
   Normal = 'normal',
+  ScreenTime = 'screen_time',
   SelfService = 'self_service'
 }
 
@@ -183,6 +201,7 @@ export type CreateBenefitInput = {
   approvalPolicy?: InputMaybe<Scalars['String']['input']>;
   category: Scalars['String']['input'];
   description?: InputMaybe<Scalars['String']['input']>;
+  flowType?: InputMaybe<BenefitFlowType>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   location?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
@@ -327,6 +346,7 @@ export type Mutation = {
   updateEligibilityRule: EligibilityRule;
   updateEmployee?: Maybe<Employee>;
   updateMySettings: EmployeeSettings;
+  upsertScreenTimeProgram: ScreenTimeProgram;
 };
 
 
@@ -446,6 +466,23 @@ export type MutationUpdateMySettingsArgs = {
   input: UpdateMySettingsInput;
 };
 
+
+export type MutationUpsertScreenTimeProgramArgs = {
+  input: UpsertScreenTimeProgramInput;
+};
+
+export type MyScreenTimeMonth = {
+  __typename?: 'MyScreenTimeMonth';
+  activeSlotDate?: Maybe<Scalars['String']['output']>;
+  benefitId: Scalars['String']['output'];
+  benefitStatus: BenefitEligibilityStatus;
+  failedRuleMessage?: Maybe<Scalars['String']['output']>;
+  isUploadOpenToday: Scalars['Boolean']['output'];
+  month: ScreenTimeMonthlyResult;
+  program?: Maybe<ScreenTimeProgram>;
+  todayLocalDate: Scalars['String']['output'];
+};
+
 export type Notification = {
   __typename?: 'Notification';
   body: Scalars['String']['output'];
@@ -499,6 +536,7 @@ export type Query = {
   __typename?: 'Query';
   adminBenefits: Array<Benefit>;
   adminDashboardSummary: AdminDashboardSummary;
+  adminScreenTimeMonth: AdminScreenTimeMonthBoard;
   allBenefitRequests: Array<BenefitRequest>;
   auditLogActionTypes: Array<Scalars['String']['output']>;
   auditLogs: Array<AuditLog>;
@@ -514,10 +552,18 @@ export type Query = {
   getEmployeeByEmail?: Maybe<Employee>;
   getEmployees: Array<Employee>;
   myBenefits: Array<BenefitEligibility>;
+  myScreenTimeMonth: MyScreenTimeMonth;
   mySettings: EmployeeSettings;
   notifications: Array<Notification>;
   ruleProposals: Array<RuleProposal>;
+  screenTimeLeaderboard: Array<ScreenTimeLeaderboardRow>;
   session?: Maybe<Employee>;
+};
+
+
+export type QueryAdminScreenTimeMonthArgs = {
+  benefitId: Scalars['String']['input'];
+  monthKey?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -587,9 +633,21 @@ export type QueryGetEmployeesArgs = {
 };
 
 
+export type QueryMyScreenTimeMonthArgs = {
+  benefitId: Scalars['String']['input'];
+  monthKey?: InputMaybe<Scalars['String']['input']>;
+};
+
+
 export type QueryRuleProposalsArgs = {
   benefitId?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryScreenTimeLeaderboardArgs = {
+  benefitId: Scalars['String']['input'];
+  monthKey?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type RequestBenefitInput = {
@@ -623,11 +681,94 @@ export type RuleProposal = {
   summary: Scalars['String']['output'];
 };
 
+export type ScreenTimeLeaderboardRow = {
+  __typename?: 'ScreenTimeLeaderboardRow';
+  approvedSlotCount: Scalars['Int']['output'];
+  avgDailyMinutes?: Maybe<Scalars['Int']['output']>;
+  awardedSalaryUpliftPercent: Scalars['Int']['output'];
+  dueSlotCount: Scalars['Int']['output'];
+  employeeEmail: Scalars['String']['output'];
+  employeeId: Scalars['String']['output'];
+  employeeName: Scalars['String']['output'];
+  isProvisional: Scalars['Boolean']['output'];
+  monthKey: Scalars['String']['output'];
+  rank?: Maybe<Scalars['Int']['output']>;
+  requiredSlotCount: Scalars['Int']['output'];
+  status: Scalars['String']['output'];
+};
+
+export type ScreenTimeMonthlyResult = {
+  __typename?: 'ScreenTimeMonthlyResult';
+  approvedAt?: Maybe<Scalars['String']['output']>;
+  approvedByEmployeeId?: Maybe<Scalars['String']['output']>;
+  approvedSlotCount: Scalars['Int']['output'];
+  awardedSalaryUpliftPercent: Scalars['Int']['output'];
+  benefitId: Scalars['String']['output'];
+  decisionNote?: Maybe<Scalars['String']['output']>;
+  dueSlotDates: Array<Scalars['String']['output']>;
+  employeeId: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  missingDueSlotDates: Array<Scalars['String']['output']>;
+  monthKey: Scalars['String']['output'];
+  monthlyAvgDailyMinutes?: Maybe<Scalars['Int']['output']>;
+  requiredSlotCount: Scalars['Int']['output'];
+  requiredSlotDates: Array<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  submissions: Array<ScreenTimeSubmission>;
+  submittedSlotCount: Scalars['Int']['output'];
+};
+
+export type ScreenTimeProgram = {
+  __typename?: 'ScreenTimeProgram';
+  benefitId: Scalars['String']['output'];
+  isActive: Scalars['Boolean']['output'];
+  screenshotRetentionDays: Scalars['Int']['output'];
+  tiers: Array<ScreenTimeTier>;
+};
+
+export type ScreenTimeSubmission = {
+  __typename?: 'ScreenTimeSubmission';
+  avgDailyMinutes?: Maybe<Scalars['Int']['output']>;
+  benefitId: Scalars['String']['output'];
+  confidenceScore?: Maybe<Scalars['Int']['output']>;
+  employeeId: Scalars['String']['output'];
+  extractionStatus: Scalars['String']['output'];
+  fileName?: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  monthKey: Scalars['String']['output'];
+  periodType?: Maybe<Scalars['String']['output']>;
+  platform?: Maybe<Scalars['String']['output']>;
+  reviewNote?: Maybe<Scalars['String']['output']>;
+  reviewStatus: Scalars['String']['output'];
+  reviewedAt?: Maybe<Scalars['String']['output']>;
+  slotDate: Scalars['String']['output'];
+  submittedAt: Scalars['String']['output'];
+  viewUrl?: Maybe<Scalars['String']['output']>;
+};
+
+export type ScreenTimeTier = {
+  __typename?: 'ScreenTimeTier';
+  benefitId: Scalars['String']['output'];
+  displayOrder: Scalars['Int']['output'];
+  id: Scalars['String']['output'];
+  label: Scalars['String']['output'];
+  maxDailyMinutes: Scalars['Int']['output'];
+  salaryUpliftPercent: Scalars['Int']['output'];
+};
+
+export type ScreenTimeTierInput = {
+  displayOrder?: InputMaybe<Scalars['Int']['input']>;
+  label: Scalars['String']['input'];
+  maxDailyMinutes: Scalars['Int']['input'];
+  salaryUpliftPercent: Scalars['Int']['input'];
+};
+
 export type UpdateBenefitInput = {
   amount?: InputMaybe<Scalars['Int']['input']>;
   approvalPolicy?: InputMaybe<Scalars['String']['input']>;
   category?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
+  flowType?: InputMaybe<BenefitFlowType>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
   location?: InputMaybe<Scalars['String']['input']>;
@@ -665,6 +806,12 @@ export type UpdateMySettingsInput = {
   notificationEmail?: InputMaybe<Scalars['Boolean']['input']>;
   notificationRenewals?: InputMaybe<Scalars['Boolean']['input']>;
   timezone?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpsertScreenTimeProgramInput = {
+  benefitId: Scalars['String']['input'];
+  screenshotRetentionDays?: InputMaybe<Scalars['Int']['input']>;
+  tiers: Array<ScreenTimeTierInput>;
 };
 
 export type MarkNotificationsReadMutationVariables = Exact<{
@@ -732,6 +879,13 @@ export type DeleteBenefitMutationVariables = Exact<{
 
 
 export type DeleteBenefitMutation = { __typename?: 'Mutation', deleteBenefit: boolean };
+
+export type UpsertScreenTimeProgramMutationVariables = Exact<{
+  input: UpsertScreenTimeProgramInput;
+}>;
+
+
+export type UpsertScreenTimeProgramMutation = { __typename?: 'Mutation', upsertScreenTimeProgram: { __typename?: 'ScreenTimeProgram', benefitId: string, screenshotRetentionDays: number, isActive: boolean, tiers: Array<{ __typename?: 'ScreenTimeTier', id: string, benefitId: string, label: string, maxDailyMinutes: number, salaryUpliftPercent: number, displayOrder: number }> } };
 
 export type CreateEligibilityRuleMutationVariables = Exact<{
   input: CreateEligibilityRuleInput;
@@ -822,8 +976,7 @@ export type GetAdminDashboardSummaryQuery = { __typename?: 'Query', adminDashboa
 export type GetAdminBenefitsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetAdminBenefitsQuery = { __typename?: 'Query', adminBenefits: Array<{ __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string, amount?: number | null }> };
-export type GetAdminBenefitsQuery = { __typename?: 'Query', adminBenefits: Array<{ __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, isActive: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string }> };
+export type GetAdminBenefitsQuery = { __typename?: 'Query', adminBenefits: Array<{ __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, isActive: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string, amount?: number | null }> };
 
 export type GetAuditLogActionTypesQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -922,6 +1075,30 @@ export type GetEligibilityRulesQueryVariables = Exact<{
 
 
 export type GetEligibilityRulesQuery = { __typename?: 'Query', eligibilityRules: Array<{ __typename?: 'EligibilityRule', id: string, benefitId: string, ruleType: string, operator: string, value: string, errorMessage: string, priority: number, isActive: boolean }> };
+
+export type GetMyScreenTimeMonthQueryVariables = Exact<{
+  benefitId: Scalars['String']['input'];
+  monthKey?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type GetMyScreenTimeMonthQuery = { __typename?: 'Query', myScreenTimeMonth: { __typename?: 'MyScreenTimeMonth', benefitId: string, benefitStatus: BenefitEligibilityStatus, failedRuleMessage?: string | null, todayLocalDate: string, activeSlotDate?: string | null, isUploadOpenToday: boolean, program?: { __typename?: 'ScreenTimeProgram', benefitId: string, screenshotRetentionDays: number, isActive: boolean, tiers: Array<{ __typename?: 'ScreenTimeTier', id: string, benefitId: string, label: string, maxDailyMinutes: number, salaryUpliftPercent: number, displayOrder: number }> } | null, month: { __typename?: 'ScreenTimeMonthlyResult', id: string, benefitId: string, employeeId: string, monthKey: string, requiredSlotDates: Array<string>, dueSlotDates: Array<string>, missingDueSlotDates: Array<string>, requiredSlotCount: number, submittedSlotCount: number, approvedSlotCount: number, monthlyAvgDailyMinutes?: number | null, awardedSalaryUpliftPercent: number, status: string, approvedByEmployeeId?: string | null, approvedAt?: string | null, decisionNote?: string | null, submissions: Array<{ __typename?: 'ScreenTimeSubmission', id: string, benefitId: string, employeeId: string, monthKey: string, slotDate: string, avgDailyMinutes?: number | null, confidenceScore?: number | null, platform?: string | null, periodType?: string | null, extractionStatus: string, reviewStatus: string, reviewNote?: string | null, submittedAt: string, reviewedAt?: string | null, fileName?: string | null, viewUrl?: string | null }> } } };
+
+export type GetAdminScreenTimeMonthQueryVariables = Exact<{
+  benefitId: Scalars['String']['input'];
+  monthKey?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type GetAdminScreenTimeMonthQuery = { __typename?: 'Query', adminScreenTimeMonth: { __typename?: 'AdminScreenTimeMonthBoard', benefitId: string, monthKey: string, slotDates: Array<string>, program?: { __typename?: 'ScreenTimeProgram', benefitId: string, screenshotRetentionDays: number, isActive: boolean, tiers: Array<{ __typename?: 'ScreenTimeTier', id: string, benefitId: string, label: string, maxDailyMinutes: number, salaryUpliftPercent: number, displayOrder: number }> } | null, rows: Array<{ __typename?: 'AdminScreenTimeMonthRow', employeeId: string, employeeName: string, employeeEmail: string, result: { __typename?: 'ScreenTimeMonthlyResult', id: string, benefitId: string, employeeId: string, monthKey: string, requiredSlotDates: Array<string>, dueSlotDates: Array<string>, missingDueSlotDates: Array<string>, requiredSlotCount: number, submittedSlotCount: number, approvedSlotCount: number, monthlyAvgDailyMinutes?: number | null, awardedSalaryUpliftPercent: number, status: string, approvedByEmployeeId?: string | null, approvedAt?: string | null, decisionNote?: string | null, submissions: Array<{ __typename?: 'ScreenTimeSubmission', id: string, benefitId: string, employeeId: string, monthKey: string, slotDate: string, avgDailyMinutes?: number | null, confidenceScore?: number | null, platform?: string | null, periodType?: string | null, extractionStatus: string, reviewStatus: string, reviewNote?: string | null, submittedAt: string, reviewedAt?: string | null, fileName?: string | null, viewUrl?: string | null }> } }> } };
+
+export type GetScreenTimeLeaderboardQueryVariables = Exact<{
+  benefitId: Scalars['String']['input'];
+  monthKey?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type GetScreenTimeLeaderboardQuery = { __typename?: 'Query', screenTimeLeaderboard: Array<{ __typename?: 'ScreenTimeLeaderboardRow', rank?: number | null, employeeId: string, employeeName: string, employeeEmail: string, monthKey: string, status: string, avgDailyMinutes?: number | null, awardedSalaryUpliftPercent: number, approvedSlotCount: number, dueSlotCount: number, requiredSlotCount: number, isProvisional: boolean }> };
 
 export type GetDepartmentsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1322,6 +1499,49 @@ export function useDeleteBenefitMutation(baseOptions?: Apollo.MutationHookOption
 export type DeleteBenefitMutationHookResult = ReturnType<typeof useDeleteBenefitMutation>;
 export type DeleteBenefitMutationResult = Apollo.MutationResult<DeleteBenefitMutation>;
 export type DeleteBenefitMutationOptions = Apollo.BaseMutationOptions<DeleteBenefitMutation, DeleteBenefitMutationVariables>;
+export const UpsertScreenTimeProgramDocument = gql`
+    mutation UpsertScreenTimeProgram($input: UpsertScreenTimeProgramInput!) {
+  upsertScreenTimeProgram(input: $input) {
+    benefitId
+    screenshotRetentionDays
+    isActive
+    tiers {
+      id
+      benefitId
+      label
+      maxDailyMinutes
+      salaryUpliftPercent
+      displayOrder
+    }
+  }
+}
+    `;
+export type UpsertScreenTimeProgramMutationFn = Apollo.MutationFunction<UpsertScreenTimeProgramMutation, UpsertScreenTimeProgramMutationVariables>;
+
+/**
+ * __useUpsertScreenTimeProgramMutation__
+ *
+ * To run a mutation, you first call `useUpsertScreenTimeProgramMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpsertScreenTimeProgramMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [upsertScreenTimeProgramMutation, { data, loading, error }] = useUpsertScreenTimeProgramMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpsertScreenTimeProgramMutation(baseOptions?: Apollo.MutationHookOptions<UpsertScreenTimeProgramMutation, UpsertScreenTimeProgramMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpsertScreenTimeProgramMutation, UpsertScreenTimeProgramMutationVariables>(UpsertScreenTimeProgramDocument, options);
+      }
+export type UpsertScreenTimeProgramMutationHookResult = ReturnType<typeof useUpsertScreenTimeProgramMutation>;
+export type UpsertScreenTimeProgramMutationResult = Apollo.MutationResult<UpsertScreenTimeProgramMutation>;
+export type UpsertScreenTimeProgramMutationOptions = Apollo.BaseMutationOptions<UpsertScreenTimeProgramMutation, UpsertScreenTimeProgramMutationVariables>;
 export const CreateEligibilityRuleDocument = gql`
     mutation CreateEligibilityRule($input: CreateEligibilityRuleInput!) {
   createEligibilityRule(input: $input) {
@@ -2690,6 +2910,259 @@ export type GetEligibilityRulesQueryHookResult = ReturnType<typeof useGetEligibi
 export type GetEligibilityRulesLazyQueryHookResult = ReturnType<typeof useGetEligibilityRulesLazyQuery>;
 export type GetEligibilityRulesSuspenseQueryHookResult = ReturnType<typeof useGetEligibilityRulesSuspenseQuery>;
 export type GetEligibilityRulesQueryResult = Apollo.QueryResult<GetEligibilityRulesQuery, GetEligibilityRulesQueryVariables>;
+export const GetMyScreenTimeMonthDocument = gql`
+    query GetMyScreenTimeMonth($benefitId: String!, $monthKey: String) {
+  myScreenTimeMonth(benefitId: $benefitId, monthKey: $monthKey) {
+    benefitId
+    benefitStatus
+    failedRuleMessage
+    todayLocalDate
+    activeSlotDate
+    isUploadOpenToday
+    program {
+      benefitId
+      screenshotRetentionDays
+      isActive
+      tiers {
+        id
+        benefitId
+        label
+        maxDailyMinutes
+        salaryUpliftPercent
+        displayOrder
+      }
+    }
+    month {
+      id
+      benefitId
+      employeeId
+      monthKey
+      requiredSlotDates
+      dueSlotDates
+      missingDueSlotDates
+      requiredSlotCount
+      submittedSlotCount
+      approvedSlotCount
+      monthlyAvgDailyMinutes
+      awardedSalaryUpliftPercent
+      status
+      approvedByEmployeeId
+      approvedAt
+      decisionNote
+      submissions {
+        id
+        benefitId
+        employeeId
+        monthKey
+        slotDate
+        avgDailyMinutes
+        confidenceScore
+        platform
+        periodType
+        extractionStatus
+        reviewStatus
+        reviewNote
+        submittedAt
+        reviewedAt
+        fileName
+        viewUrl
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useGetMyScreenTimeMonthQuery__
+ *
+ * To run a query within a React component, call `useGetMyScreenTimeMonthQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetMyScreenTimeMonthQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetMyScreenTimeMonthQuery({
+ *   variables: {
+ *      benefitId: // value for 'benefitId'
+ *      monthKey: // value for 'monthKey'
+ *   },
+ * });
+ */
+export function useGetMyScreenTimeMonthQuery(baseOptions: Apollo.QueryHookOptions<GetMyScreenTimeMonthQuery, GetMyScreenTimeMonthQueryVariables> & ({ variables: GetMyScreenTimeMonthQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetMyScreenTimeMonthQuery, GetMyScreenTimeMonthQueryVariables>(GetMyScreenTimeMonthDocument, options);
+      }
+export function useGetMyScreenTimeMonthLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetMyScreenTimeMonthQuery, GetMyScreenTimeMonthQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetMyScreenTimeMonthQuery, GetMyScreenTimeMonthQueryVariables>(GetMyScreenTimeMonthDocument, options);
+        }
+// @ts-ignore
+export function useGetMyScreenTimeMonthSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetMyScreenTimeMonthQuery, GetMyScreenTimeMonthQueryVariables>): Apollo.UseSuspenseQueryResult<GetMyScreenTimeMonthQuery, GetMyScreenTimeMonthQueryVariables>;
+export function useGetMyScreenTimeMonthSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetMyScreenTimeMonthQuery, GetMyScreenTimeMonthQueryVariables>): Apollo.UseSuspenseQueryResult<GetMyScreenTimeMonthQuery | undefined, GetMyScreenTimeMonthQueryVariables>;
+export function useGetMyScreenTimeMonthSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetMyScreenTimeMonthQuery, GetMyScreenTimeMonthQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetMyScreenTimeMonthQuery, GetMyScreenTimeMonthQueryVariables>(GetMyScreenTimeMonthDocument, options);
+        }
+export type GetMyScreenTimeMonthQueryHookResult = ReturnType<typeof useGetMyScreenTimeMonthQuery>;
+export type GetMyScreenTimeMonthLazyQueryHookResult = ReturnType<typeof useGetMyScreenTimeMonthLazyQuery>;
+export type GetMyScreenTimeMonthSuspenseQueryHookResult = ReturnType<typeof useGetMyScreenTimeMonthSuspenseQuery>;
+export type GetMyScreenTimeMonthQueryResult = Apollo.QueryResult<GetMyScreenTimeMonthQuery, GetMyScreenTimeMonthQueryVariables>;
+export const GetAdminScreenTimeMonthDocument = gql`
+    query GetAdminScreenTimeMonth($benefitId: String!, $monthKey: String) {
+  adminScreenTimeMonth(benefitId: $benefitId, monthKey: $monthKey) {
+    benefitId
+    monthKey
+    slotDates
+    program {
+      benefitId
+      screenshotRetentionDays
+      isActive
+      tiers {
+        id
+        benefitId
+        label
+        maxDailyMinutes
+        salaryUpliftPercent
+        displayOrder
+      }
+    }
+    rows {
+      employeeId
+      employeeName
+      employeeEmail
+      result {
+        id
+        benefitId
+        employeeId
+        monthKey
+        requiredSlotDates
+        dueSlotDates
+        missingDueSlotDates
+        requiredSlotCount
+        submittedSlotCount
+        approvedSlotCount
+        monthlyAvgDailyMinutes
+        awardedSalaryUpliftPercent
+        status
+        approvedByEmployeeId
+        approvedAt
+        decisionNote
+        submissions {
+          id
+          benefitId
+          employeeId
+          monthKey
+          slotDate
+          avgDailyMinutes
+          confidenceScore
+          platform
+          periodType
+          extractionStatus
+          reviewStatus
+          reviewNote
+          submittedAt
+          reviewedAt
+          fileName
+          viewUrl
+        }
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useGetAdminScreenTimeMonthQuery__
+ *
+ * To run a query within a React component, call `useGetAdminScreenTimeMonthQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetAdminScreenTimeMonthQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetAdminScreenTimeMonthQuery({
+ *   variables: {
+ *      benefitId: // value for 'benefitId'
+ *      monthKey: // value for 'monthKey'
+ *   },
+ * });
+ */
+export function useGetAdminScreenTimeMonthQuery(baseOptions: Apollo.QueryHookOptions<GetAdminScreenTimeMonthQuery, GetAdminScreenTimeMonthQueryVariables> & ({ variables: GetAdminScreenTimeMonthQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetAdminScreenTimeMonthQuery, GetAdminScreenTimeMonthQueryVariables>(GetAdminScreenTimeMonthDocument, options);
+      }
+export function useGetAdminScreenTimeMonthLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetAdminScreenTimeMonthQuery, GetAdminScreenTimeMonthQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetAdminScreenTimeMonthQuery, GetAdminScreenTimeMonthQueryVariables>(GetAdminScreenTimeMonthDocument, options);
+        }
+// @ts-ignore
+export function useGetAdminScreenTimeMonthSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetAdminScreenTimeMonthQuery, GetAdminScreenTimeMonthQueryVariables>): Apollo.UseSuspenseQueryResult<GetAdminScreenTimeMonthQuery, GetAdminScreenTimeMonthQueryVariables>;
+export function useGetAdminScreenTimeMonthSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetAdminScreenTimeMonthQuery, GetAdminScreenTimeMonthQueryVariables>): Apollo.UseSuspenseQueryResult<GetAdminScreenTimeMonthQuery | undefined, GetAdminScreenTimeMonthQueryVariables>;
+export function useGetAdminScreenTimeMonthSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetAdminScreenTimeMonthQuery, GetAdminScreenTimeMonthQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetAdminScreenTimeMonthQuery, GetAdminScreenTimeMonthQueryVariables>(GetAdminScreenTimeMonthDocument, options);
+        }
+export type GetAdminScreenTimeMonthQueryHookResult = ReturnType<typeof useGetAdminScreenTimeMonthQuery>;
+export type GetAdminScreenTimeMonthLazyQueryHookResult = ReturnType<typeof useGetAdminScreenTimeMonthLazyQuery>;
+export type GetAdminScreenTimeMonthSuspenseQueryHookResult = ReturnType<typeof useGetAdminScreenTimeMonthSuspenseQuery>;
+export type GetAdminScreenTimeMonthQueryResult = Apollo.QueryResult<GetAdminScreenTimeMonthQuery, GetAdminScreenTimeMonthQueryVariables>;
+export const GetScreenTimeLeaderboardDocument = gql`
+    query GetScreenTimeLeaderboard($benefitId: String!, $monthKey: String) {
+  screenTimeLeaderboard(benefitId: $benefitId, monthKey: $monthKey) {
+    rank
+    employeeId
+    employeeName
+    employeeEmail
+    monthKey
+    status
+    avgDailyMinutes
+    awardedSalaryUpliftPercent
+    approvedSlotCount
+    dueSlotCount
+    requiredSlotCount
+    isProvisional
+  }
+}
+    `;
+
+/**
+ * __useGetScreenTimeLeaderboardQuery__
+ *
+ * To run a query within a React component, call `useGetScreenTimeLeaderboardQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetScreenTimeLeaderboardQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetScreenTimeLeaderboardQuery({
+ *   variables: {
+ *      benefitId: // value for 'benefitId'
+ *      monthKey: // value for 'monthKey'
+ *   },
+ * });
+ */
+export function useGetScreenTimeLeaderboardQuery(baseOptions: Apollo.QueryHookOptions<GetScreenTimeLeaderboardQuery, GetScreenTimeLeaderboardQueryVariables> & ({ variables: GetScreenTimeLeaderboardQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetScreenTimeLeaderboardQuery, GetScreenTimeLeaderboardQueryVariables>(GetScreenTimeLeaderboardDocument, options);
+      }
+export function useGetScreenTimeLeaderboardLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetScreenTimeLeaderboardQuery, GetScreenTimeLeaderboardQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetScreenTimeLeaderboardQuery, GetScreenTimeLeaderboardQueryVariables>(GetScreenTimeLeaderboardDocument, options);
+        }
+// @ts-ignore
+export function useGetScreenTimeLeaderboardSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetScreenTimeLeaderboardQuery, GetScreenTimeLeaderboardQueryVariables>): Apollo.UseSuspenseQueryResult<GetScreenTimeLeaderboardQuery, GetScreenTimeLeaderboardQueryVariables>;
+export function useGetScreenTimeLeaderboardSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetScreenTimeLeaderboardQuery, GetScreenTimeLeaderboardQueryVariables>): Apollo.UseSuspenseQueryResult<GetScreenTimeLeaderboardQuery | undefined, GetScreenTimeLeaderboardQueryVariables>;
+export function useGetScreenTimeLeaderboardSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetScreenTimeLeaderboardQuery, GetScreenTimeLeaderboardQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetScreenTimeLeaderboardQuery, GetScreenTimeLeaderboardQueryVariables>(GetScreenTimeLeaderboardDocument, options);
+        }
+export type GetScreenTimeLeaderboardQueryHookResult = ReturnType<typeof useGetScreenTimeLeaderboardQuery>;
+export type GetScreenTimeLeaderboardLazyQueryHookResult = ReturnType<typeof useGetScreenTimeLeaderboardLazyQuery>;
+export type GetScreenTimeLeaderboardSuspenseQueryHookResult = ReturnType<typeof useGetScreenTimeLeaderboardSuspenseQuery>;
+export type GetScreenTimeLeaderboardQueryResult = Apollo.QueryResult<GetScreenTimeLeaderboardQuery, GetScreenTimeLeaderboardQueryVariables>;
 export const GetDepartmentsDocument = gql`
     query GetDepartments {
   getDepartments

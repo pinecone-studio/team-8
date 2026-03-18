@@ -20,6 +20,7 @@ import { markNotificationsRead } from "./markNotificationsRead";
 import { importAttendance } from "./importAttendance";
 import { syncOkrStatus } from "./syncOkrStatus";
 import { updateMySettings } from "./updateMySettings";
+import { upsertScreenTimeProgram } from "./upsertScreenTimeProgram";
 
 export const mutations = {
   createBenefit,
@@ -44,4 +45,5 @@ export const mutations = {
   importAttendance,
   syncOkrStatus,
   updateMySettings,
+  upsertScreenTimeProgram,
 };

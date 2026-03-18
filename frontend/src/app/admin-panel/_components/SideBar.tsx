@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   LogOut,
   ShieldCheck,
+  Smartphone,
 } from "lucide-react";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { getAdminRoleLabel, isAdminEmployee, isHrAdmin } from "../_lib/access";
@@ -30,6 +31,12 @@ const ALL_NAV_ITEMS = [
     label: "Company Benefits",
     icon: Gift,
     hrOnly: false,
+  },
+  {
+    href: "/admin-panel/screen-time",
+    label: "Screen Time",
+    icon: Smartphone,
+    hrOnly: true,
   },
   {
     href: "/admin-panel/pending-requests",

@@ -19,6 +19,7 @@ export const updateBenefit = async (
       subsidyPercent?: number | null;
       vendorName?: string | null;
       requiresContract?: boolean | null;
+      flowType?: string | null;
       isActive?: boolean | null;
       approvalPolicy?: string | null;
       amount?: number | null;
@@ -30,6 +31,14 @@ export const updateBenefit = async (
 ) => {
   requireHrAdmin(currentEmployee);
 
+  const existingRows = await db
+    .select()
+    .from(schema.benefits)
+    .where(eq(schema.benefits.id, id))
+    .limit(1);
+  const existing = existingRows[0];
+  if (!existing) throw new Error("Benefit not found");
+
   const updates: Record<string, unknown> = {};
   if (input.name != null) updates.name = input.name;
   if ("description" in input) updates.description = input.description ?? null;
@@ -37,18 +46,25 @@ export const updateBenefit = async (
   if (input.subsidyPercent != null) updates.subsidyPercent = input.subsidyPercent;
   if ("vendorName" in input) updates.vendorName = input.vendorName ?? null;
   if (input.requiresContract != null) updates.requiresContract = input.requiresContract;
+  if (input.flowType != null) updates.flowType = input.flowType;
   if (input.isActive != null) updates.isActive = input.isActive;
   if (input.approvalPolicy != null) updates.approvalPolicy = input.approvalPolicy;
   if ("amount" in input) updates.amount = input.amount ?? null;
   if ("location" in input) updates.location = input.location ?? null;
   if ("imageUrl" in input) updates.imageUrl = input.imageUrl ?? null;
 
+  const effectiveFlowType = (input.flowType ?? existing.flowType) as string;
+  const effectiveRequiresContract =
+    input.requiresContract ?? existing.requiresContract;
+  if (effectiveFlowType === "screen_time" && effectiveRequiresContract) {
+    throw new Error("Screen time benefits cannot require a contract.");
+  }
+
   const [row] = await db
     .update(schema.benefits)
     .set(updates)
     .where(eq(schema.benefits.id, id))
     .returning();
-
   if (!row) throw new Error("Benefit not found");
 
   try {
