@@ -48,8 +48,6 @@ export const updateBenefit = async (
   if (input.requiresContract != null) updates.requiresContract = input.requiresContract;
   if (input.flowType != null) updates.flowType = input.flowType;
   if (input.isActive != null) updates.isActive = input.isActive;
-  if (input.flowType != null) updates.flowType = input.flowType;
-  if (input.isActive != null) updates.isActive = input.isActive;
   if (input.approvalPolicy != null) updates.approvalPolicy = input.approvalPolicy;
   if ("amount" in input) updates.amount = input.amount ?? null;
   if ("location" in input) updates.location = input.location ?? null;

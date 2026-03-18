@@ -265,8 +265,6 @@ export const benefitTypeDefs = gql`
     requiresContract: Boolean
     flowType: BenefitFlowType
     isActive: Boolean
-    flowType: BenefitFlowType
-    isActive: Boolean
     approvalPolicy: String
     amount: Int
     location: String
