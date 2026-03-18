@@ -298,211 +298,255 @@ export default function BenefitDetailPage() {
             ← Back
           </Link>
 
-          <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[2fr_1fr]">
-            {/* Left: benefit info */}
-            <div className="space-y-5">
-              {/* Header card */}
-              <div className="rounded-2xl border border-gray-200 bg-white p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h1 className="text-xl font-semibold text-gray-900">{benefit.name}</h1>
-                    <p className="mt-0.5 text-sm text-gray-500">{vendor}</p>
-                  </div>
-                  <StatusBadge status={benefitEligibility.status} />
+          {benefit.amount == null ? (
+            /* ── Simple layout for non-payment benefits ── */
+            <div className="mt-6 max-w-2xl rounded-2xl border border-gray-200 bg-white p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-xl font-semibold text-gray-900">{benefit.name}</h1>
+                  <p className="mt-0.5 text-sm text-gray-500">{vendor}</p>
                 </div>
+                <StatusBadge status={benefitEligibility.status} />
+              </div>
 
-                {/* Benefit image */}
-                {benefit.imageUrl && (
-                  <img
-                    src={`${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""}/api/benefits/image?key=${encodeURIComponent(benefit.imageUrl)}`}
-                    alt={benefit.name}
-                    className="mt-4 h-44 w-full rounded-xl object-cover"
-                  />
-                )}
-
-                {(benefit.description ?? benefit.optionsDescription) && (
-                  <p className="mt-4 text-sm leading-relaxed text-gray-600">
-                    {benefit.description ?? benefit.optionsDescription}
-                  </p>
-                )}
-
-                {/* Contribution split */}
-                <div className="mt-5 grid grid-cols-2 gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4">
-                  {benefit.amount ? (
-                    <>
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Total Price</p>
-                        <div className="mt-1 flex items-center gap-1">
-                          <DollarSign className="h-4 w-4 text-gray-400" />
-                          <p className="text-2xl font-bold text-gray-800">{benefit.amount.toLocaleString()}₮</p>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Company covers</p>
-                        <p className="mt-1 text-2xl font-bold text-emerald-600">
-                          {benefit.subsidyPercent}%
-                        </p>
-                        <p className="text-xs text-emerald-600">
-                          {Math.round(benefit.amount * benefit.subsidyPercent / 100).toLocaleString()}₮
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Company covers</p>
-                        <p className="mt-1 text-2xl font-bold text-emerald-600">{benefit.subsidyPercent}%</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-400">You pay</p>
-                        <p className="mt-1 text-2xl font-bold text-gray-700">{benefit.employeePercent}%</p>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Location */}
-                {benefit.location && (
-                  <div className="mt-3 flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-                    <MapPin className="h-4 w-4 shrink-0 text-gray-400" />
-                    <span className="text-sm text-gray-700">{benefit.location}</span>
-                  </div>
-                )}
-
-                {/* Meta row */}
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <ApprovalPolicyBadge policy={policy} />
-                  {benefit.requiresContract && (
-                    <div className="inline-flex items-center gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700">
-                      <FileText className="h-4 w-4" />
-                      Contract Required
-                    </div>
-                  )}
-                </div>
-
-                {/* Approval flow */}
-                <ApprovalFlow
-                  policy={policy}
-                  requiresContract={benefit.requiresContract}
-                  requestStatus={latestRequest?.status}
+              {benefit.imageUrl && (
+                <img
+                  src={`${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""}/api/benefits/image?key=${encodeURIComponent(benefit.imageUrl)}`}
+                  alt={benefit.name}
+                  className="mt-4 h-44 w-full rounded-xl object-cover"
                 />
-              </div>
+              )}
 
-              {/* Eligibility status */}
-              <div className="rounded-2xl border border-gray-200 bg-white p-6">
-                <h2 className="text-base font-semibold text-gray-900">Eligibility Status</h2>
-                <div className="mt-4">
-                  {benefitEligibility.status === "ELIGIBLE" || benefitEligibility.status === "ACTIVE" ? (
-                    <div className="flex items-center gap-2.5 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                      <p className="text-sm font-medium text-emerald-800">
-                        Та энэ benefit-ийг авах боломжтой
-                      </p>
-                    </div>
-                  ) : benefitEligibility.status === "LOCKED" ? (
-                    <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-4">
-                      <p className="mb-3 text-sm font-semibold text-red-700">
-                        Дараах шаардлагуудыг хангаагүй байна:
-                      </p>
-                      <div className="space-y-2">
-                        {benefitEligibility.ruleEvaluation
-                          .filter((r: { passed: boolean }) => !r.passed)
-                          .map((item: { ruleType: string; reason: string }) => (
-                            <div key={item.ruleType} className="flex items-start gap-2.5">
-                              <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
-                              <div>
-                                <p className="text-sm font-medium text-red-800">{formatRuleLabel(item.ruleType)}</p>
-                                <p className="text-xs text-red-600">{item.reason}</p>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                      {benefitEligibility.failedRule?.errorMessage && (
-                        <p className="mt-3 rounded-lg bg-red-100 px-3 py-2 text-xs text-red-600">
-                          {benefitEligibility.failedRule.errorMessage}
-                        </p>
-                      )}
-                      <p className="mt-3 text-xs text-red-400">
-                        Contact HR if you believe this is incorrect or if circumstances have changed.
-                      </p>
-                    </div>
-                  ) : benefitEligibility.ruleEvaluation.length === 0 ? (
-                    <p className="text-sm text-gray-400">No eligibility rules configured for this benefit.</p>
-                  ) : null}
+              {(benefit.description ?? benefit.optionsDescription) && (
+                <p className="mt-4 text-sm leading-relaxed text-gray-600">
+                  {benefit.description ?? benefit.optionsDescription}
+                </p>
+              )}
+
+              {benefit.location && (
+                <div className="mt-4 flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                  <MapPin className="h-4 w-4 shrink-0 text-gray-400" />
+                  <span className="text-sm text-gray-700">{benefit.location}</span>
                 </div>
+              )}
+
+              {/* Eligibility / status indicator */}
+              <div className="mt-5">
+                {benefitEligibility.status === "LOCKED" ? (
+                  <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <XCircle className="h-4 w-4 shrink-0 text-red-500" />
+                      <p className="text-sm font-medium text-red-700">
+                        {benefitEligibility.failedRule?.errorMessage ?? "You do not meet the eligibility requirements for this benefit."}
+                      </p>
+                    </div>
+                    <p className="mt-2 text-xs text-red-400">Contact HR if you believe this is incorrect.</p>
+                  </div>
+                ) : benefitEligibility.status === "PENDING" ? (
+                  <div className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+                    <Clock className="h-4 w-4 shrink-0 text-amber-600" />
+                    <p className="text-sm font-medium text-amber-800">Your request is being reviewed.</p>
+                  </div>
+                ) : benefitEligibility.status === "ACTIVE" ? (
+                  <div className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <p className="text-sm font-medium text-emerald-800">You are currently enrolled in this benefit.</p>
+                  </div>
+                ) : null}
               </div>
 
-              {/* Contract link */}
-              {benefit.requiresContract && (
+              {/* Request button */}
+              {benefitEligibility.status === "ELIGIBLE" && (
+                <button
+                  type="button"
+                  onClick={() => setRequestModalOpen(true)}
+                  className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98]"
+                >
+                  Request Benefit
+                </button>
+              )}
+            </div>
+          ) : (
+            /* ── Full layout for payment benefits ── */
+            <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[2fr_1fr]">
+              {/* Left: benefit info */}
+              <div className="space-y-5">
+                {/* Header card */}
                 <div className="rounded-2xl border border-gray-200 bg-white p-6">
-                  <h2 className="text-base font-semibold text-gray-900">Contract</h2>
-                  {contractsData?.contracts && contractsData.contracts.length > 0 ? (
-                    <div className="mt-3 space-y-2">
-                      {contractsData.contracts.map((c) => (
-                        <div key={c.id} className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-                          <FileText className="h-4 w-4 shrink-0 text-gray-500" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-800">
-                              {c.vendorName} — v{c.version}
-                              {c.isActive && (
-                                <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">Active</span>
-                              )}
-                            </p>
-                            <p className="text-xs text-gray-400">{c.effectiveDate} – {c.expiryDate}</p>
-                          </div>
-                          {c.viewUrl && (
-                            <a
-                              href={getContractProxyUrl(c.viewUrl) ?? c.viewUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50"
-                            >
-                              View <ExternalLink className="h-3 w-3" />
-                            </a>
-                          )}
-                        </div>
-                      ))}
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h1 className="text-xl font-semibold text-gray-900">{benefit.name}</h1>
+                      <p className="mt-0.5 text-sm text-gray-500">{vendor}</p>
                     </div>
-                  ) : (
-                    <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
-                      <FileText className="h-4 w-4 shrink-0 text-amber-600" />
-                      <p className="text-sm text-amber-800">
-                        Contract has not been uploaded yet. You will be able to review it when you submit a request.
+                    <StatusBadge status={benefitEligibility.status} />
+                  </div>
+
+                  {benefit.imageUrl && (
+                    <img
+                      src={`${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""}/api/benefits/image?key=${encodeURIComponent(benefit.imageUrl)}`}
+                      alt={benefit.name}
+                      className="mt-4 h-44 w-full rounded-xl object-cover"
+                    />
+                  )}
+
+                  {(benefit.description ?? benefit.optionsDescription) && (
+                    <p className="mt-4 text-sm leading-relaxed text-gray-600">
+                      {benefit.description ?? benefit.optionsDescription}
+                    </p>
+                  )}
+
+                  {/* Contribution split */}
+                  <div className="mt-5 grid grid-cols-2 gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Total Price</p>
+                      <div className="mt-1 flex items-center gap-1">
+                        <DollarSign className="h-4 w-4 text-gray-400" />
+                        <p className="text-2xl font-bold text-gray-800">{benefit.amount!.toLocaleString()}₮</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Company covers</p>
+                      <p className="mt-1 text-2xl font-bold text-emerald-600">{benefit.subsidyPercent}%</p>
+                      <p className="text-xs text-emerald-600">
+                        {Math.round(benefit.amount! * benefit.subsidyPercent / 100).toLocaleString()}₮
                       </p>
                     </div>
+                  </div>
+
+                  {benefit.location && (
+                    <div className="mt-3 flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                      <MapPin className="h-4 w-4 shrink-0 text-gray-400" />
+                      <span className="text-sm text-gray-700">{benefit.location}</span>
+                    </div>
                   )}
+
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <ApprovalPolicyBadge policy={policy} />
+                    {benefit.requiresContract && (
+                      <div className="inline-flex items-center gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700">
+                        <FileText className="h-4 w-4" />
+                        Contract Required
+                      </div>
+                    )}
+                  </div>
+
+                  <ApprovalFlow
+                    policy={policy}
+                    requiresContract={benefit.requiresContract}
+                    requestStatus={latestRequest?.status}
+                  />
                 </div>
-              )}
-            </div>
 
-            {/* Right: action panel */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 self-start">
-              <h2 className="text-base font-semibold text-gray-900">Next Steps</h2>
-              <div className="mt-4">
-                <NextStepsBox
-                  status={benefitEligibility.status}
-                  benefitId={benefitEligibility.benefitId}
-                  failedRuleError={benefitEligibility.failedRule?.errorMessage}
-                  approvalPolicy={policy}
-                  requiresContract={benefit.requiresContract}
-                  awaitingContract={awaitingContract}
-                  onRequestBenefit={() => setRequestModalOpen(true)}
-                />
-              </div>
-
-              {/* Contract note */}
-              {benefit.requiresContract && benefitEligibility.status === "ELIGIBLE" && (
-                <div className="mt-5 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3">
-                  <div className="flex items-start gap-2">
-                    <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
-                    <p className="text-xs text-amber-700">
-                      A vendor contract must be reviewed and accepted before your request can proceed to HR review.
-                    </p>
+                {/* Eligibility status */}
+                <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                  <h2 className="text-base font-semibold text-gray-900">Eligibility Status</h2>
+                  <div className="mt-4">
+                    {benefitEligibility.status === "ELIGIBLE" || benefitEligibility.status === "ACTIVE" ? (
+                      <div className="flex items-center gap-2.5 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                        <p className="text-sm font-medium text-emerald-800">You are eligible for this benefit</p>
+                      </div>
+                    ) : benefitEligibility.status === "LOCKED" ? (
+                      <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-4">
+                        <p className="mb-3 text-sm font-semibold text-red-700">The following requirements were not met:</p>
+                        <div className="space-y-2">
+                          {benefitEligibility.ruleEvaluation
+                            .filter((r: { passed: boolean }) => !r.passed)
+                            .map((item: { ruleType: string; reason: string }) => (
+                              <div key={item.ruleType} className="flex items-start gap-2.5">
+                                <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+                                <div>
+                                  <p className="text-sm font-medium text-red-800">{formatRuleLabel(item.ruleType)}</p>
+                                  <p className="text-xs text-red-600">{item.reason}</p>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                        {benefitEligibility.failedRule?.errorMessage && (
+                          <p className="mt-3 rounded-lg bg-red-100 px-3 py-2 text-xs text-red-600">
+                            {benefitEligibility.failedRule.errorMessage}
+                          </p>
+                        )}
+                        <p className="mt-3 text-xs text-red-400">
+                          Contact HR if you believe this is incorrect or if circumstances have changed.
+                        </p>
+                      </div>
+                    ) : benefitEligibility.ruleEvaluation.length === 0 ? (
+                      <p className="text-sm text-gray-400">No eligibility rules configured for this benefit.</p>
+                    ) : null}
                   </div>
                 </div>
-              )}
+
+                {/* Contract link */}
+                {benefit.requiresContract && (
+                  <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                    <h2 className="text-base font-semibold text-gray-900">Contract</h2>
+                    {contractsData?.contracts && contractsData.contracts.length > 0 ? (
+                      <div className="mt-3 space-y-2">
+                        {contractsData.contracts.map((c) => (
+                          <div key={c.id} className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                            <FileText className="h-4 w-4 shrink-0 text-gray-500" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-800">
+                                {c.vendorName} — v{c.version}
+                                {c.isActive && (
+                                  <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">Active</span>
+                                )}
+                              </p>
+                              <p className="text-xs text-gray-400">{c.effectiveDate} – {c.expiryDate}</p>
+                            </div>
+                            {c.viewUrl && (
+                              <a
+                                href={getContractProxyUrl(c.viewUrl) ?? c.viewUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50"
+                              >
+                                View <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+                        <FileText className="h-4 w-4 shrink-0 text-amber-600" />
+                        <p className="text-sm text-amber-800">
+                          Contract has not been uploaded yet. You will be able to review it when you submit a request.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Right: action panel */}
+              <div className="rounded-2xl border border-gray-200 bg-white p-6 self-start">
+                <h2 className="text-base font-semibold text-gray-900">Next Steps</h2>
+                <div className="mt-4">
+                  <NextStepsBox
+                    status={benefitEligibility.status}
+                    benefitId={benefitEligibility.benefitId}
+                    failedRuleError={benefitEligibility.failedRule?.errorMessage}
+                    approvalPolicy={policy}
+                    requiresContract={benefit.requiresContract}
+                    awaitingContract={awaitingContract}
+                    onRequestBenefit={() => setRequestModalOpen(true)}
+                  />
+                </div>
+                {benefit.requiresContract && benefitEligibility.status === "ELIGIBLE" && (
+                  <div className="mt-5 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3">
+                    <div className="flex items-start gap-2">
+                      <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+                      <p className="text-xs text-amber-700">
+                        A vendor contract must be reviewed and accepted before your request can proceed to HR review.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </main>
       </div>
       {requestModalOpen && (

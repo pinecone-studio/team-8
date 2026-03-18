@@ -309,6 +309,7 @@ export default function CreateBenefitPage() {
   const canCreate = isHrAdmin(employee);
 
   const [selectedType, setSelectedType] = useState<BenefitTypeKey | null>(null);
+  const [hasPricing, setHasPricing] = useState(false);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -390,7 +391,11 @@ export default function CreateBenefitPage() {
       const typeConfig = BENEFIT_TYPES.find((t) => t.key === selectedType)!;
       const apiBaseUrl = getApiBaseUrl();
       const descriptionTrimmed = form.description.trim();
-      const amountNum = form.amount.trim() ? Number(form.amount) : undefined;
+      // For normal type, only include amount when the payment toggle is on
+      const amountNum =
+        selectedType === "normal"
+          ? hasPricing && form.amount.trim() ? Number(form.amount) : undefined
+          : form.amount.trim() ? Number(form.amount) : undefined;
       const result = await createBenefit({
         variables: {
           input: {
@@ -622,24 +627,26 @@ export default function CreateBenefitPage() {
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-gray-600">
-                      Company Subsidy (%)
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={form.subsidyPercent}
-                        onChange={(e) => setForm((f) => ({ ...f, subsidyPercent: Number(e.target.value) || 0 }))}
-                        className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-gray-400 focus:outline-none"
-                      />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
-                        Employee: {100 - form.subsidyPercent}%
+                  {selectedType !== "normal" && (
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                        Company Subsidy (%)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={form.subsidyPercent}
+                          onChange={(e) => setForm((f) => ({ ...f, subsidyPercent: Number(e.target.value) || 0 }))}
+                          className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-gray-400 focus:outline-none"
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                          Employee: {100 - form.subsidyPercent}%
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                   <div className="sm:col-span-2">
                     <label className="mb-1.5 block text-xs font-medium text-gray-600">
                       Vendor Name <span className="text-gray-300">(optional)</span>
@@ -663,6 +670,73 @@ export default function CreateBenefitPage() {
                       {selectedType === "finance" && "Both Finance and HR approval are required. A repayment plan will be proposed."}
                       {selectedType === "viewonly" && "Employees can only view this benefit on their dashboard. No request needed."}
                     </p>
+                  </div>
+                )}
+
+                {/* Normal benefit — optional payment section */}
+                {selectedType === "normal" && (
+                  <div className="mt-5 border-t border-gray-100 pt-5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Payment</p>
+                        <p className="mt-0.5 text-xs text-gray-400">Toggle on if employees need to pay for this benefit</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHasPricing((v) => !v);
+                          if (hasPricing) setForm((f) => ({ ...f, amount: "" }));
+                        }}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${hasPricing ? "bg-emerald-500" : "bg-gray-200"}`}
+                        aria-pressed={hasPricing}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${hasPricing ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+
+                    {hasPricing && (
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                            Company Subsidy (%)
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={form.subsidyPercent}
+                              onChange={(e) => setForm((f) => ({ ...f, subsidyPercent: Number(e.target.value) || 0 }))}
+                              className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-emerald-400 focus:outline-none"
+                            />
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                              Employee: {100 - form.subsidyPercent}%
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                            Total Price (₮) <span className="text-red-400">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={form.amount}
+                            onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                            placeholder="e.g. 120000"
+                            className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm placeholder-gray-300 transition focus:border-emerald-400 focus:outline-none"
+                          />
+                          {form.amount && (
+                            <p className="mt-1 text-xs text-gray-400">
+                              Company: {Math.round(Number(form.amount) * form.subsidyPercent / 100).toLocaleString()}₮
+                              {100 - form.subsidyPercent > 0 && (
+                                <> · Employee: {Math.round(Number(form.amount) * (100 - form.subsidyPercent) / 100).toLocaleString()}₮</>
+                              )}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

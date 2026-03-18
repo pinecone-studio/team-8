@@ -24,6 +24,7 @@ const CANCELLABLE_STATUSES = new Set([
   "awaiting_contract_acceptance",
   "awaiting_hr_review",
   "awaiting_finance_review",
+  "hr_approved",
 ]);
 
 // ── Status helpers ─────────────────────────────────────────────────────────
@@ -88,7 +89,7 @@ function getStatusTooltip(status: string): string | null {
     case "awaiting_finance_review":
       return "Your request is in the Finance review queue. The Finance team will process it — no action needed from you.";
     case "hr_approved":
-      return "HR has approved your request. It is now awaiting Finance review.";
+      return "HR has approved your request. Please review the payment details and confirm.";
     case "finance_approved":
       return "Finance has approved your request. It is being finalised.";
     case "cancelled":
@@ -107,6 +108,7 @@ function buildTimeline(
   status: string,
   policy: string | null | undefined,
   requiresContract: boolean | null | undefined,
+  hasPayment: boolean,
 ): TimelineStep[] {
   const p = (policy ?? "hr").toLowerCase();
   const rc = requiresContract ?? false;
@@ -118,7 +120,8 @@ function buildTimeline(
   const stepIds: string[] = ["submitted"];
   if (rc) stepIds.push("contract");
   if (p === "hr" || p === "dual") stepIds.push("hr_review");
-  if (p === "finance" || p === "dual") stepIds.push("finance_review");
+  if (!hasPayment && (p === "finance" || p === "dual")) stepIds.push("finance_review");
+  if (hasPayment) stepIds.push("payment");
   stepIds.push("done");
 
   let activeIdx: number;
@@ -133,7 +136,11 @@ function buildTimeline(
       activeIdx = stepIds.indexOf("finance_review");
       break;
     case "hr_approved":
-      activeIdx = p === "dual" ? stepIds.indexOf("finance_review") : stepIds.length;
+      activeIdx = hasPayment
+        ? stepIds.indexOf("payment")
+        : p === "dual"
+          ? stepIds.indexOf("finance_review")
+          : stepIds.length;
       break;
     case "finance_approved":
       activeIdx = stepIds.length;
@@ -166,6 +173,7 @@ function buildTimeline(
     contract: "Contract",
     hr_review: "HR Review",
     finance_review: "Finance",
+    payment: "Payment",
     done: doneLabel,
   };
 
@@ -229,14 +237,16 @@ function RequestTimeline({
   status,
   policy,
   requiresContract,
+  hasPayment,
 }: {
   status: string;
   policy: string | null | undefined;
   requiresContract: boolean | null | undefined;
+  hasPayment: boolean;
 }) {
   const steps = useMemo(
-    () => buildTimeline(status, policy, requiresContract),
-    [status, policy, requiresContract],
+    () => buildTimeline(status, policy, requiresContract, hasPayment),
+    [status, policy, requiresContract, hasPayment],
   );
 
   return (
@@ -483,14 +493,20 @@ function RequestsContent() {
       const name = benefit?.name ?? req.benefitId;
       const vendor = benefit?.vendorName ?? "";
 
-      // Compute payment info for approved requests
+      // Compute payment info only when employee has to pay something (employeePercent > 0)
+      // If company covers 100% or benefit is free, no payment section is shown
       let paymentInfo: {
         total: string;
         companyPays: string;
         employeePays: string;
         subsidyPercent: number;
       } | null = null;
-      if (benefit?.unitPrice && benefit.subsidyPercent !== undefined) {
+      if (
+        benefit?.unitPrice &&
+        benefit.subsidyPercent !== undefined &&
+        benefit.employeePercent !== undefined &&
+        benefit.employeePercent > 0
+      ) {
         const unitPrice = benefit.unitPrice;
         const subsidyPercent = benefit.subsidyPercent;
         const companyAmount = Math.round(unitPrice * subsidyPercent / 100);
@@ -517,6 +533,7 @@ function RequestsContent() {
         approvalPolicy: benefit?.approvalPolicy ?? "hr",
         requiresContract: benefit?.requiresContract ?? false,
         paymentInfo,
+        hasPayment: benefit?.amount != null,
       };
     })
     .sort(
@@ -639,10 +656,42 @@ function RequestsContent() {
                         </div>
                       )}
 
-                      {/* Payment section — shown only when approved */}
+                      {/* Payment confirmation — action required after HR approves */}
+                      {normalizeRequestStatus(req.status) === "hr_approved" && req.hasPayment && req.paymentInfo && (
+                        <div className="mx-5 mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-600">Payment Confirmation Required</p>
+                          <dl className="space-y-1.5 text-xs mb-3">
+                            <div className="flex justify-between">
+                              <dt className="text-amber-700">Total Amount</dt>
+                              <dd className="font-semibold text-amber-900">{req.paymentInfo.total}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt className="text-amber-700">Company Pays ({req.paymentInfo.subsidyPercent}%)</dt>
+                              <dd className="font-semibold text-emerald-700">{req.paymentInfo.companyPays}</dd>
+                            </div>
+                            <div className="flex justify-between border-t border-amber-100 pt-1.5">
+                              <dt className="font-medium text-amber-800">Your Payment</dt>
+                              <dd className="font-bold text-amber-900">{req.paymentInfo.employeePays}</dd>
+                            </div>
+                          </dl>
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              disabled={confirming}
+                              onClick={() => confirmContract({ variables: { requestId: req.id, contractAccepted: true } })}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-amber-700 disabled:opacity-50"
+                            >
+                              <FileCheck className="h-3.5 w-3.5" />
+                              {confirming ? "Confirming…" : "Confirm Payment"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Payment info — shown after approved */}
                       {normalizeRequestStatus(req.status) === "approved" && req.paymentInfo && (
                         <div className="mx-5 mb-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-blue-500 mb-2">Payment Breakdown</p>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-blue-500 mb-2">Payment</p>
                           <dl className="space-y-1.5 text-xs">
                             <div className="flex justify-between">
                               <dt className="text-blue-700">Total Amount</dt>
@@ -692,6 +741,7 @@ function RequestsContent() {
                             status={req.status}
                             policy={req.approvalPolicy}
                             requiresContract={req.requiresContract}
+                            hasPayment={req.hasPayment}
                           />
                         </div>
                         <div className="flex items-center gap-2 shrink-0">

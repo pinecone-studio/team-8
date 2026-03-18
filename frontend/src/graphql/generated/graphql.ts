@@ -802,7 +802,7 @@ export type GetAdminDashboardSummaryQuery = { __typename?: 'Query', adminDashboa
 export type GetAdminBenefitsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetAdminBenefitsQuery = { __typename?: 'Query', adminBenefits: Array<{ __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string }> };
+export type GetAdminBenefitsQuery = { __typename?: 'Query', adminBenefits: Array<{ __typename?: 'Benefit', id: string, name: string, description?: string | null, nameEng?: string | null, category: string, subsidyPercent: number, employeePercent: number, unitPrice?: number | null, vendorName?: string | null, requiresContract: boolean, flowType: BenefitFlowType, optionsDescription?: string | null, approvalPolicy: string, amount?: number | null }> };
 
 export type GetAuditLogActionTypesQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1787,6 +1787,7 @@ export const GetAdminBenefitsDocument = gql`
     flowType
     optionsDescription
     approvalPolicy
+    amount
   }
 }
     `;
