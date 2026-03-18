@@ -13,8 +13,6 @@ import SummaryCardSkeleton from "../_components/benefits/SummaryCardSkeleton";
 import {
   BenefitEligibilityStatus,
   useGetMyBenefitsFullQuery,
-  useRequestBenefitMutation,
-  GetBenefitRequestsDocument,
   type BenefitEligibility,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
@@ -41,10 +39,6 @@ export default function DashboardPage() {
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("ALL");
   const [search, setSearch] = useState("");
   const [selectedBenefit, setSelectedBenefit] = useState<BenefitEligibility | null>(null);
-  const [requestBenefit] = useRequestBenefitMutation({
-    refetchQueries: [{ query: GetBenefitRequestsDocument }],
-    onCompleted: () => router.push("/employee-panel/requests?submitted=true"),
-  });
 
   const { employee, error, loading: employeeLoading } = useCurrentEmployee();
 
@@ -229,7 +223,7 @@ export default function DashboardPage() {
             onClose={() => setSelectedBenefit(null)}
             onRequestBenefit={(benefitId) => {
               setSelectedBenefit(null);
-              requestBenefit({ variables: { input: { benefitId } } });
+              router.push(`/employee-panel/benefits/${benefitId}/request`);
             }}
           />
         )}
