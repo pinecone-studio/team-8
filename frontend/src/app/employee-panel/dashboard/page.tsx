@@ -7,13 +7,14 @@ import Sidebar from "../_components/SideBar";
 import SummaryCard from "../_components/benefits/SummaryCard";
 import BenefitCard from "../_components/benefits/BenefitCard";
 import BenefitDetailModal from "../_components/benefits/BenefitDetailModal";
-import BenefitRequestModal from "../_components/benefits/BenefitRequestModal";
 import PageHeader from "../_components/layout/PageHeader";
 import BenefitCardSkeleton from "../_components/benefits/BenefitCardSkeleton";
 import SummaryCardSkeleton from "../_components/benefits/SummaryCardSkeleton";
 import {
   BenefitEligibilityStatus,
   useGetMyBenefitsFullQuery,
+  useRequestBenefitMutation,
+  GetBenefitRequestsDocument,
   type BenefitEligibility,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
@@ -40,7 +41,10 @@ export default function DashboardPage() {
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("ALL");
   const [search, setSearch] = useState("");
   const [selectedBenefit, setSelectedBenefit] = useState<BenefitEligibility | null>(null);
-  const [requestModalBenefitId, setRequestModalBenefitId] = useState<string | null>(null);
+  const [requestBenefit] = useRequestBenefitMutation({
+    refetchQueries: [{ query: GetBenefitRequestsDocument }],
+    onCompleted: () => router.push("/employee-panel/requests?submitted=true"),
+  });
 
   const { employee, error, loading: employeeLoading } = useCurrentEmployee();
 
@@ -223,17 +227,7 @@ export default function DashboardPage() {
             onClose={() => setSelectedBenefit(null)}
             onRequestBenefit={(benefitId) => {
               setSelectedBenefit(null);
-              setRequestModalBenefitId(benefitId);
-            }}
-          />
-        )}
-        {requestModalBenefitId && (
-          <BenefitRequestModal
-            benefitId={requestModalBenefitId}
-            onClose={() => setRequestModalBenefitId(null)}
-            onSuccess={() => {
-              setRequestModalBenefitId(null);
-              router.push("/employee-panel/requests?submitted=true");
+              requestBenefit({ variables: { input: { benefitId } } });
             }}
           />
         )}

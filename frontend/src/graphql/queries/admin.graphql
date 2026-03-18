@@ -38,6 +38,7 @@ query GetAdminBenefits {
     flowType
     optionsDescription
     approvalPolicy
+    amount
   }
 }
 
