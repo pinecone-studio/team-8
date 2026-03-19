@@ -6,9 +6,14 @@ import {
   canReviewHrBenefit,
   canReviewFinanceBenefit,
   getInternalRole,
+  isFinanceManager,
 } from "../../../auth";
 import { sendBenefitRequestRejectedEmail } from "../../../email/sendTransactionalEmail";
 import { writeAuditLog } from "../helpers/audit";
+import {
+  AWAITING_FINAL_FINANCE_APPROVAL_STATUS,
+  isFinanceBenefit,
+} from "../../../benefits/finance";
 
 const DECLINABLE_STATUSES = new Set([
   "pending",
@@ -19,7 +24,7 @@ const DECLINABLE_STATUSES = new Set([
   "awaiting_payment_review",
   "hr_approved",
   "finance_approved",
-  "awaiting_employee_signed_contract",
+  AWAITING_FINAL_FINANCE_APPROVAL_STATUS,
 ]);
 
 // States where HR reviewer is the appropriate party
@@ -30,13 +35,13 @@ const HR_PHASE_STATUSES = new Set([
   "awaiting_payment",
   "awaiting_payment_review",
   "finance_approved", // dual: finance done, HR is next
-  "awaiting_employee_signed_contract",
 ]);
 
 // States where Finance reviewer is the appropriate party
 const FINANCE_PHASE_STATUSES = new Set([
   "awaiting_finance_review",
   "hr_approved", // dual: HR done, Finance is next
+  AWAITING_FINAL_FINANCE_APPROVAL_STATUS,
 ]);
 
 /** HR / Finance admin: decline benefit request with strict role-state enforcement. */
@@ -79,6 +84,17 @@ export const declineBenefitRequest = async (
     .from(schema.benefits)
     .where(eq(schema.benefits.id, req.benefitId));
   const approvalPolicy = benefitRows[0]?.approvalPolicy ?? "hr";
+  const benefit = benefitRows[0];
+
+  if (
+    isFinanceBenefit(benefit) &&
+    req.status === AWAITING_FINAL_FINANCE_APPROVAL_STATUS &&
+    !isFinanceManager(admin)
+  ) {
+    throw new Error(
+      `Final finance approval decline requires a finance manager. Your role: ${reviewerRole}.`,
+    );
+  }
 
   const now = new Date().toISOString();
   const [updated] = await db
@@ -112,8 +128,6 @@ export const declineBenefitRequest = async (
     .from(schema.employees)
     .where(eq(schema.employees.id, req.employeeId));
   const targetEmployee = employeeRows[0];
-  const benefit = benefitRows[0];
-
   if (targetEmployee && benefit) {
     await sendBenefitRequestRejectedEmail(env, targetEmployee, benefit, reason);
   }

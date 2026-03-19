@@ -4,12 +4,14 @@ import type { GraphQLContext } from "../../context";
 import { requireAuth } from "../../../auth";
 import { writeAuditLog } from "../helpers/audit";
 import { expireOpenPaymentsForRequest } from "../../../payments/benefit-request-payments";
+import { AWAITING_EMPLOYEE_DECISION_STATUS } from "../../../benefits/finance";
 
 const CANCELLABLE_STATUSES = new Set([
   "pending",
   "awaiting_contract_acceptance",
   "awaiting_hr_review",
   "awaiting_finance_review",
+  AWAITING_EMPLOYEE_DECISION_STATUS,
   "awaiting_payment",
   "awaiting_employee_signed_contract",
 ]);

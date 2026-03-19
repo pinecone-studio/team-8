@@ -13,11 +13,13 @@ const ALL_PENDING_STATUSES = [
   "awaiting_contract_acceptance",
   "awaiting_hr_review",
   "awaiting_finance_review",
+  "awaiting_employee_decision",
   "awaiting_payment",
   "awaiting_payment_review",
   "hr_approved",
   "finance_approved",
   "awaiting_employee_signed_contract",
+  "awaiting_final_finance_approval",
 ];
 
 // HR queue: requests that an HR admin should act on
@@ -32,6 +34,7 @@ const HR_QUEUE_STATUSES = [
 const FINANCE_QUEUE_STATUSES = [
   "awaiting_finance_review",
   "hr_approved", // dual: HR done, now Finance second
+  "awaiting_final_finance_approval",
 ];
 
 /**

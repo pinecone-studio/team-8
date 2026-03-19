@@ -262,12 +262,15 @@ function getActiveStep(status: string): string {
     case "awaiting_contract_acceptance": return "Contract";
     case "awaiting_hr_review": return "HR Review";
     case "awaiting_finance_review": return "Finance Review";
+    case "awaiting_employee_decision": return "Employee Review";
     case "hr_approved": return "Finance Review";
     case "finance_approved": return "Payment";
     case "awaiting_payment":
     case "awaiting_payment_review": return "Payment";
     case "awaiting_employee_signed_contract":
-      return "Approved";
+      return "Signed Contract";
+    case "awaiting_final_finance_approval":
+      return "Final Approval";
     case "approved": return "Approved";
     default: return "Submitted";
   }
@@ -288,8 +291,60 @@ function ApprovalFlow({
 }) {
   const p = (policy ?? "hr").toLowerCase();
   const steps = ["Submitted"];
+  if (flowType === BenefitFlowType.DownPayment) {
+    const financeSteps = [
+      "Submitted",
+      "Finance Review",
+      "Employee Review",
+      "Signed Contract",
+      "Final Approval",
+      "Approved",
+    ];
+    const activeStep = requestStatus ? getActiveStep(requestStatus) : null;
+    const isTerminal =
+      requestStatus === "approved" ||
+      requestStatus === "rejected" ||
+      requestStatus === "cancelled";
+    const doneSteps = new Set<string>();
+    if (requestStatus && !isTerminal) {
+      for (const step of financeSteps) {
+        if (step === activeStep) break;
+        doneSteps.add(step);
+      }
+    }
+    if (requestStatus === "approved") financeSteps.forEach((s) => doneSteps.add(s));
+
+    return (
+      <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+        <p className="mb-2 text-sm font-semibold text-gray-800">Approval Flow</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {financeSteps.map((step, i) => {
+            const isActive = step === activeStep && !isTerminal;
+            const isDone = doneSteps.has(step);
+            return (
+              <div key={step} className="flex items-center gap-1.5">
+                {i > 0 && <ArrowRight className="h-3 w-3 text-gray-300 shrink-0" />}
+                <span
+                  className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
+                    isActive
+                      ? "bg-blue-100 text-blue-700"
+                      : isDone
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-100 text-gray-400"
+                  }`}
+                >
+                  {step}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   // Down payment finance flow: employee accepts/signs contract only after approvals.
-  if (requiresContract && flowType !== BenefitFlowType.DownPayment) {
+  if (requiresContract) {
     steps.push("Contract");
   }
   if (p === "hr" || p === "dual") steps.push("HR Review");
@@ -711,7 +766,11 @@ export default function BenefitDetailPage() {
   const canOpenFinanceContractFlow =
     benefit.flowType === BenefitFlowType.DownPayment &&
     benefitEligibility.status === BenefitEligibilityStatus.Pending &&
-    latestRequest?.status === "awaiting_employee_signed_contract";
+    [
+      "awaiting_employee_decision",
+      "awaiting_employee_signed_contract",
+      "awaiting_final_finance_approval",
+    ].includes(latestRequest?.status ?? "");
   const shouldShowPaymentDialogTrigger =
     hasPayment &&
     (latestRequestStatus === "awaiting_payment" || latestRequestStatus === "awaiting_payment_review");
@@ -824,12 +883,52 @@ export default function BenefitDetailPage() {
                       </p>
                     </div>
                   ) : benefitEligibility.status === "PENDING" ? (
-                    <div className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
-                      <Clock className="h-4 w-4 shrink-0 text-amber-600" />
-                      <p className="text-sm font-medium text-amber-800">
-                        Your request is being reviewed.
-                      </p>
-                    </div>
+                    latestRequestStatus === "awaiting_employee_decision" ? (
+                      <div className="rounded-xl border border-cyan-100 bg-cyan-50 px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 shrink-0 text-cyan-600" />
+                          <p className="text-sm font-medium text-cyan-800">
+                            Finance offer ready for your review
+                          </p>
+                        </div>
+                        <p className="mt-2 text-xs text-cyan-700">
+                          Review the offer terms and the attached contract, then accept or decline.
+                        </p>
+                      </div>
+                    ) : latestRequestStatus ===
+                        "awaiting_employee_signed_contract" ? (
+                      <div className="rounded-xl border border-violet-100 bg-violet-50 px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 shrink-0 text-violet-600" />
+                          <p className="text-sm font-medium text-violet-800">
+                            Upload your signed contract
+                          </p>
+                        </div>
+                        <p className="mt-2 text-xs text-violet-700">
+                          You accepted the finance offer. Upload the signed contract to continue.
+                        </p>
+                      </div>
+                    ) : latestRequestStatus ===
+                        "awaiting_final_finance_approval" ? (
+                      <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 shrink-0 text-indigo-600" />
+                          <p className="text-sm font-medium text-indigo-800">
+                            Waiting for final finance approval
+                          </p>
+                        </div>
+                        <p className="mt-2 text-xs text-indigo-700">
+                          Your signed contract was uploaded. A finance manager will activate the benefit after the final review.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+                        <Clock className="h-4 w-4 shrink-0 text-amber-600" />
+                        <p className="text-sm font-medium text-amber-800">
+                          Your request is being reviewed by Finance.
+                        </p>
+                      </div>
+                    )
                   ) : null
                 ) : benefitEligibility.status === "LOCKED" ? (
                   <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
@@ -885,7 +984,11 @@ export default function BenefitDetailPage() {
                           : "waiting";
                       const approvalDone =
                         latestRequestStatus ===
+                          "awaiting_employee_decision" ||
+                        latestRequestStatus ===
                           "awaiting_employee_signed_contract" ||
+                        latestRequestStatus ===
+                          "awaiting_final_finance_approval" ||
                         latestRequestStatus === "approved";
                       const approvalState: "done" | "active" | "waiting" =
                         approvalDone
@@ -971,18 +1074,34 @@ export default function BenefitDetailPage() {
               )}
 
               {/* Request button */}
-              {(benefit.flowType === BenefitFlowType.DownPayment
-                ? canRequestDownPayment
-                : benefitEligibility.status === "ELIGIBLE") &&
-                !isSelfService && (
-                <button
-                  type="button"
-                  onClick={() => setRequestModalOpen(true)}
-                  className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98]"
-                >
-                  Request Benefit
-                </button>
-              )}
+              {!isSelfService &&
+                (benefit.flowType === BenefitFlowType.DownPayment ? (
+                  canRequestDownPayment || canOpenFinanceContractFlow ? (
+                    <button
+                      type="button"
+                      onClick={() => setRequestModalOpen(true)}
+                      className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98]"
+                    >
+                      {latestRequestStatus === "awaiting_employee_decision"
+                        ? "Review Finance Offer"
+                        : latestRequestStatus ===
+                            "awaiting_employee_signed_contract"
+                          ? "Upload Signed Contract"
+                          : latestRequestStatus ===
+                              "awaiting_final_finance_approval"
+                            ? "View Finance Status"
+                            : "Request Benefit"}
+                    </button>
+                  ) : null
+                ) : benefitEligibility.status === "ELIGIBLE" ? (
+                  <button
+                    type="button"
+                    onClick={() => setRequestModalOpen(true)}
+                    className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98]"
+                  >
+                    Request Benefit
+                  </button>
+                ) : null)}
             </div>
           ) : (
             /* ── Full layout for payment benefits ── */

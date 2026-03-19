@@ -3,6 +3,10 @@ import type { GraphQLContext } from "../../context";
 import { mapBenefitRecordToGraphql } from "../helpers/employeeBenefits";
 import { requireHrAdmin } from "../../../auth";
 import { invalidateAllEmployeeEligibilityCaches } from "../helpers/benefitCatalogRefresh";
+import {
+  assertSingleActiveFinanceBenefit,
+  isFinanceBenefitFlowType,
+} from "../../../benefits/finance";
 
 export const createBenefit = async (
   _: unknown,
@@ -33,6 +37,9 @@ export const createBenefit = async (
 ) => {
   requireHrAdmin(currentEmployee);
   const flowType = input.flowType ?? (input.requiresContract ? "contract" : "normal");
+  if (isFinanceBenefitFlowType(flowType)) {
+    await assertSingleActiveFinanceBenefit(db);
+  }
   if (flowType === "screen_time" && input.requiresContract) {
     throw new Error("Screen time benefits cannot require a contract.");
   }
@@ -54,12 +61,20 @@ export const createBenefit = async (
       name: input.name,
       description: input.description ?? null,
       category: input.category,
-      subsidyPercent: input.subsidyPercent,
+      subsidyPercent: isFinanceBenefitFlowType(flowType)
+        ? 0
+        : input.subsidyPercent,
       vendorName: input.vendorName ?? null,
-      requiresContract: flowType === "screen_time" ? false : input.requiresContract ?? false,
+      requiresContract: flowType === "screen_time"
+        ? false
+        : isFinanceBenefitFlowType(flowType)
+          ? true
+          : input.requiresContract ?? false,
       flowType,
-      approvalPolicy: input.approvalPolicy ?? "hr",
-      amount: input.amount ?? null,
+      approvalPolicy: isFinanceBenefitFlowType(flowType)
+        ? "finance"
+        : input.approvalPolicy ?? "hr",
+      amount: isFinanceBenefitFlowType(flowType) ? null : input.amount ?? null,
       location: input.location ?? null,
       imageUrl: input.imageUrl ?? null,
     })

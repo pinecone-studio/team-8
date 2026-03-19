@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { CheckCircle, FileText } from "lucide-react";
 import Sidebar from "../_components/SideBar";
 import {
@@ -26,8 +27,14 @@ const STATUS_TONE: Record<string, string> = {
     "bg-yellow-50 text-yellow-700 border-yellow-200",
   awaiting_hr_review: "bg-orange-50 text-orange-600 border-orange-200",
   awaiting_finance_review: "bg-blue-50 text-blue-700 border-blue-200",
+  awaiting_employee_decision:
+    "bg-cyan-50 text-cyan-700 border-cyan-200",
   hr_approved: "bg-teal-50 text-teal-700 border-teal-200",
   finance_approved: "bg-teal-50 text-teal-700 border-teal-200",
+  awaiting_employee_signed_contract:
+    "bg-violet-50 text-violet-700 border-violet-200",
+  awaiting_final_finance_approval:
+    "bg-indigo-50 text-indigo-700 border-indigo-200",
   awaiting_payment: "bg-blue-50 text-blue-700 border-blue-200",
   awaiting_payment_review: "bg-violet-50 text-violet-700 border-violet-200",
   approved: "bg-green-50 text-green-600 border-green-200",
@@ -40,8 +47,11 @@ const STATUS_LABELS: Record<string, string> = {
   awaiting_contract_acceptance: "Contract Pending",
   awaiting_hr_review: "HR Review",
   awaiting_finance_review: "Finance Review",
+  awaiting_employee_decision: "Offer Review",
   hr_approved: "HR Approved",
   finance_approved: "Finance Approved",
+  awaiting_employee_signed_contract: "Awaiting Signed Contract",
+  awaiting_final_finance_approval: "Final Finance Approval",
   awaiting_payment: "Awaiting Payment",
   awaiting_payment_review: "Payment Review",
   approved: "Approved",
@@ -76,6 +86,7 @@ type ActionResult = { id: string; ok: boolean; message: string };
 type RequestRow = {
   id: string;
   benefitId: string;
+  flowType: string | null;
   benefitLabel: string;
   benefitName: string;
   vendorName: string;
@@ -92,6 +103,14 @@ type RequestRow = {
   unitPrice: number | null;
   requestedAmount: number | null;
   repaymentMonths: number | null;
+  financeProposedAmount: number | null;
+  financeProposedRepaymentMonths: number | null;
+  financeProposalNote: string | null;
+  financeContractViewUrl: string | null;
+  financeContractFileName: string | null;
+  financeContractUploadedAt: string | null;
+  employeeDecisionAt: string | null;
+  finalApprovedAt: string | null;
   viewContractUrl: string | null;
   employeeSignedContractViewUrl: string | null;
   employeeSignedContractFileName: string | null;
@@ -105,6 +124,7 @@ type RequestRow = {
 };
 
 export default function PendingRequestsPage() {
+  const { getToken } = useAuth();
   const { employee } = useCurrentEmployee();
   const isAdmin = isAdminEmployee(employee);
   const isHr = isHrAdmin(employee);
@@ -118,17 +138,21 @@ export default function PendingRequestsPage() {
       ? { status: "pending" as string, queue: null as string | null }
       : { status: null as string | null, queue: activeQueue as string };
 
-  const { data: requestsData, loading: requestsLoading } =
+  const {
+    data: requestsData,
+    loading: requestsLoading,
+    refetch: refetchRequests,
+  } =
     useGetAllBenefitRequestsQuery({
       variables: currentVars,
       skip: !isAdmin,
     });
 
-  const { data: hrCountData } = useGetAllBenefitRequestsQuery({
+  const { data: hrCountData, refetch: refetchHrCount } = useGetAllBenefitRequestsQuery({
     variables: { queue: "hr", status: null },
     skip: !isHr,
   });
-  const { data: financeCountData } = useGetAllBenefitRequestsQuery({
+  const { data: financeCountData, refetch: refetchFinanceCount } = useGetAllBenefitRequestsQuery({
     variables: { queue: "finance", status: null },
     skip: !isFinance,
   });
@@ -141,6 +165,7 @@ export default function PendingRequestsPage() {
 
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [decliningId, setDecliningId] = useState<string | null>(null);
+  const [sendingOfferId, setSendingOfferId] = useState<string | null>(null);
   const [declineReason, setDeclineReason] = useState("");
   const [declineModalId, setDeclineModalId] = useState<string | null>(null);
   const [results, setResults] = useState<ActionResult[]>([]);
@@ -171,6 +196,7 @@ export default function PendingRequestsPage() {
       return {
         id: req.id,
         benefitId: req.benefitId,
+        flowType: benefit?.flowType ?? null,
         benefitLabel: vendor ? `${benefitName} – ${vendor}` : benefitName,
         benefitName,
         vendorName: vendor,
@@ -187,6 +213,15 @@ export default function PendingRequestsPage() {
         unitPrice: benefit?.unitPrice ?? null,
         requestedAmount: req.requestedAmount ?? null,
         repaymentMonths: req.repaymentMonths ?? null,
+        financeProposedAmount: req.financeProposedAmount ?? null,
+        financeProposedRepaymentMonths:
+          req.financeProposedRepaymentMonths ?? null,
+        financeProposalNote: req.financeProposalNote ?? null,
+        financeContractViewUrl: req.financeContractViewUrl ?? null,
+        financeContractFileName: req.financeContractFileName ?? null,
+        financeContractUploadedAt: req.financeContractUploadedAt ?? null,
+        employeeDecisionAt: req.employeeDecisionAt ?? null,
+        finalApprovedAt: req.finalApprovedAt ?? null,
         viewContractUrl: req.viewContractUrl ?? null,
         employeeSignedContractViewUrl:
           req.employeeSignedContract?.viewUrl ?? null,
@@ -225,6 +260,59 @@ export default function PendingRequestsPage() {
       addResult(requestId, false, e instanceof Error ? e.message : "Failed");
     } finally {
       setApprovingId(null);
+    }
+  };
+
+  const handleSendFinanceOffer = async (params: {
+    requestId: string;
+    proposedAmount: number;
+    proposedRepaymentMonths: number;
+    proposalNote: string;
+    file: File;
+  }) => {
+    setSendingOfferId(params.requestId);
+    try {
+      const token = await getToken();
+      const apiBase =
+        (process.env.NEXT_PUBLIC_GRAPHQL_URL ||
+          "https://team8-api.team8pinequest.workers.dev/").replace(/\/$/, "");
+      const formData = new FormData();
+      formData.append("requestId", params.requestId);
+      formData.append("proposedAmount", String(params.proposedAmount));
+      formData.append(
+        "proposedRepaymentMonths",
+        String(params.proposedRepaymentMonths),
+      );
+      formData.append("proposalNote", params.proposalNote);
+      formData.append("file", params.file);
+
+      const response = await fetch(`${apiBase}/api/benefit-requests/finance-offer`, {
+        method: "POST",
+        body: formData,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      const json = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(json.error || "Failed to send finance offer.");
+      }
+
+      await Promise.all([
+        refetchRequests(),
+        isHr ? refetchHrCount() : Promise.resolve(),
+        isFinance ? refetchFinanceCount() : Promise.resolve(),
+      ]);
+      addResult(params.requestId, true, "Finance offer sent");
+      setDetailReq(null);
+    } catch (error) {
+      addResult(
+        params.requestId,
+        false,
+        error instanceof Error ? error.message : "Failed to send finance offer.",
+      );
+    } finally {
+      setSendingOfferId(null);
     }
   };
 
@@ -535,7 +623,14 @@ export default function PendingRequestsPage() {
                             {req.requestDate}
                           </td>
                           <td className="px-5 py-4 text-sm text-gray-700">
-                            {req.requestedAmount != null ? (
+                            {req.financeProposedAmount != null ? (
+                              <span>
+                                {req.financeProposedAmount.toLocaleString()}
+                                {req.financeProposedRepaymentMonths
+                                  ? ` / ${req.financeProposedRepaymentMonths} mo`
+                                  : ""}
+                              </span>
+                            ) : req.requestedAmount != null ? (
                               <span>
                                 {req.requestedAmount.toLocaleString()}
                                 {req.repaymentMonths
@@ -612,12 +707,14 @@ export default function PendingRequestsPage() {
           req={detailReq}
           approvingId={approvingId}
           decliningId={decliningId}
+          sendingOfferId={sendingOfferId}
           onClose={() => setDetailReq(null)}
           onApprove={() => handleApprove(detailReq.id)}
           onDecline={() => {
             setDeclineReason("");
             setDeclineModalId(detailReq.id);
           }}
+          onSendFinanceOffer={handleSendFinanceOffer}
         />
       )}
 
@@ -690,18 +787,37 @@ function RequestDetailModal({
   req,
   approvingId,
   decliningId,
+  sendingOfferId,
   onClose,
   onApprove,
   onDecline,
+  onSendFinanceOffer,
 }: {
   req: RequestRow;
   approvingId: string | null;
   decliningId: string | null;
+  sendingOfferId: string | null;
   onClose: () => void;
   onApprove: () => void;
   onDecline: () => void;
+  onSendFinanceOffer: (params: {
+    requestId: string;
+    proposedAmount: number;
+    proposedRepaymentMonths: number;
+    proposalNote: string;
+    file: File;
+  }) => Promise<void> | void;
 }) {
   const [activeTab, setActiveTab] = useState<DetailTab>("approved");
+  const [proposedAmount, setProposedAmount] = useState(
+    String(req.financeProposedAmount ?? req.requestedAmount ?? ""),
+  );
+  const [proposedRepaymentMonths, setProposedRepaymentMonths] = useState(
+    String(req.financeProposedRepaymentMonths ?? req.repaymentMonths ?? ""),
+  );
+  const [proposalNote, setProposalNote] = useState(req.financeProposalNote ?? "");
+  const [offerFile, setOfferFile] = useState<File | null>(null);
+  const [offerError, setOfferError] = useState<string | null>(null);
 
   const { data: contractsData, loading: contractsLoading } =
     useGetContractsForBenefitQuery({
@@ -711,9 +827,39 @@ function RequestDetailModal({
 
   const activeContract =
     contractsData?.contracts?.find((c) => c.isActive) ?? null;
+  const isFinanceFlow = req.flowType === "down_payment";
+  const isFinanceOfferStage =
+    isFinanceFlow && req.status === "awaiting_finance_review";
+  const isAwaitingEmployeeDecision =
+    isFinanceFlow && req.status === "awaiting_employee_decision";
+  const isAwaitingSignedContract =
+    isFinanceFlow && req.status === "awaiting_employee_signed_contract";
+  const isFinalFinanceApprovalStage =
+    isFinanceFlow && req.status === "awaiting_final_finance_approval";
+  const isTerminal = ["approved", "rejected", "cancelled"].includes(req.status);
+  const canApproveStandard = new Set([
+    "pending",
+    "awaiting_hr_review",
+    "awaiting_finance_review",
+    "hr_approved",
+    "finance_approved",
+    "awaiting_payment_review",
+  ]).has(req.status);
+  const canDecline = new Set([
+    "pending",
+    "awaiting_contract_acceptance",
+    "awaiting_hr_review",
+    "awaiting_finance_review",
+    "awaiting_payment",
+    "awaiting_payment_review",
+    "hr_approved",
+    "finance_approved",
+    "awaiting_final_finance_approval",
+  ]).has(req.status);
   const contractUrl = getContractProxyUrl(
     req.viewContractUrl ?? activeContract?.viewUrl ?? null,
   );
+  const financeContractUrl = getContractProxyUrl(req.financeContractViewUrl);
   const employeeSignedContractUrl = getContractProxyUrl(
     req.employeeSignedContractViewUrl,
   );
@@ -826,6 +972,27 @@ function RequestDetailModal({
                       value={`${req.requestedAmount.toLocaleString()}${req.repaymentMonths ? ` / ${req.repaymentMonths} months` : ""}`}
                     />
                   )}
+                  {req.financeProposedAmount != null && (
+                    <InfoRow
+                      label="Finance Offer"
+                      value={`${req.financeProposedAmount.toLocaleString()}${req.financeProposedRepaymentMonths ? ` / ${req.financeProposedRepaymentMonths} months` : ""}`}
+                    />
+                  )}
+                  {req.financeProposalNote && (
+                    <InfoRow label="Finance Note" value={req.financeProposalNote} />
+                  )}
+                  {req.employeeDecisionAt && (
+                    <InfoRow
+                      label="Employee Decision"
+                      value={req.employeeDecisionAt.split("T")[0]}
+                    />
+                  )}
+                  {req.finalApprovedAt && (
+                    <InfoRow
+                      label="Final Approved At"
+                      value={req.finalApprovedAt.split("T")[0]}
+                    />
+                  )}
                   {req.employeeApprovedAt && (
                     <InfoRow
                       label="Benefit Start Date"
@@ -838,6 +1005,109 @@ function RequestDetailModal({
                   <InfoRow label="Last Updated" value={req.updatedAt} />
                 </div>
               </section>
+
+              {isFinanceFlow && (
+                <section>
+                  <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <FileText className="h-3.5 w-3.5" />
+                    Finance Workflow
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 space-y-3">
+                    {isFinanceOfferStage && (
+                      <>
+                        <p className="text-sm text-gray-700">
+                          Prepare the final amount, repayment term, and attach the request-specific PDF contract that the employee will review.
+                        </p>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                              Proposed Amount (₮)
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={proposedAmount}
+                              onChange={(event) => setProposedAmount(event.target.value)}
+                              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                              Repayment Term (months)
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={proposedRepaymentMonths}
+                              onChange={(event) =>
+                                setProposedRepaymentMonths(event.target.value)
+                              }
+                              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none"
+                            />
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                              Finance Note
+                            </label>
+                            <textarea
+                              rows={3}
+                              value={proposalNote}
+                              onChange={(event) => setProposalNote(event.target.value)}
+                              placeholder="Optional note for the employee"
+                              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none"
+                            />
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                              Offer Contract PDF
+                            </label>
+                            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-gray-200 bg-white px-4 py-3 transition hover:border-blue-300">
+                              <FileText className="h-4 w-4 text-gray-400" />
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-gray-700">
+                                  {offerFile ? offerFile.name : "Upload finance contract PDF"}
+                                </p>
+                                <p className="text-xs text-gray-400">PDF only</p>
+                              </div>
+                              <input
+                                type="file"
+                                accept="application/pdf"
+                                className="hidden"
+                                onChange={(event) =>
+                                  setOfferFile(event.target.files?.[0] ?? null)
+                                }
+                              />
+                            </label>
+                          </div>
+                        </div>
+                        {offerError && (
+                          <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700">
+                            {offerError}
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {isAwaitingEmployeeDecision && (
+                      <p className="text-sm text-cyan-700">
+                        Finance sent the offer. The employee still needs to review the request-specific contract and accept or decline it.
+                      </p>
+                    )}
+
+                    {isAwaitingSignedContract && (
+                      <p className="text-sm text-violet-700">
+                        The employee accepted the offer. We are waiting for the signed contract upload.
+                      </p>
+                    )}
+
+                    {isFinalFinanceApprovalStage && (
+                      <p className="text-sm text-indigo-700">
+                        The signed contract has been uploaded. A finance manager can now give the final approval to activate the benefit.
+                      </p>
+                    )}
+                  </div>
+                </section>
+              )}
             </>
           )}
 
@@ -866,11 +1136,11 @@ function RequestDetailModal({
           {/* Contract Tab */}
           {activeTab === "contract" && (
             <>
-              {/* HR Contract Document */}
+              {/* Contract Document */}
               <section>
                 <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
                   <FileText className="h-3.5 w-3.5" />
-                  HR Contract
+                  {isFinanceFlow ? "Finance Offer Contract" : "HR Contract"}
                 </div>
                 <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 space-y-3">
                   {!req.requiresContract ? (
@@ -879,7 +1149,7 @@ function RequestDetailModal({
                     </p>
                   ) : (
                     <>
-                      {req.contractVersionAccepted && (
+                      {!isFinanceFlow && req.contractVersionAccepted && (
                         <div className="flex items-center gap-2 text-xs text-gray-600">
                           <CheckCircle className="h-3.5 w-3.5 text-green-500" />
                           <span>
@@ -893,15 +1163,16 @@ function RequestDetailModal({
                           )}
                         </div>
                       )}
-                      {contractsLoading && (
+                      {!isFinanceFlow && contractsLoading && (
                         <p className="text-xs text-gray-400">
                           Loading contract…
                         </p>
                       )}
-                      {!contractsLoading && contractUrl ? (
+                      {((isFinanceFlow && financeContractUrl) ||
+                        (!isFinanceFlow && !contractsLoading && contractUrl)) ? (
                         <>
                           <a
-                            href={contractUrl}
+                            href={isFinanceFlow ? financeContractUrl ?? "#" : contractUrl ?? "#"}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
@@ -910,15 +1181,17 @@ function RequestDetailModal({
                             Open Contract Document
                           </a>
                           <iframe
-                            src={contractUrl}
+                            src={isFinanceFlow ? financeContractUrl ?? undefined : contractUrl ?? undefined}
                             className="mt-2 h-56 w-full rounded-lg border border-gray-200"
                             title="Contract Document"
                           />
                         </>
                       ) : (
-                        !contractsLoading && (
+                        (!contractsLoading || isFinanceFlow) && (
                           <p className="text-xs text-gray-400">
-                            No contract document available.
+                            {isFinanceFlow
+                              ? "No request-specific finance contract has been attached yet."
+                              : "No contract document available."}
                           </p>
                         )
                       )}
@@ -982,22 +1255,82 @@ function RequestDetailModal({
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-6 py-4">
-          <button
-            type="button"
-            onClick={onDecline}
-            disabled={approvingId !== null || decliningId !== null}
-            className="rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-          >
-            Decline
-          </button>
-          <button
-            type="button"
-            onClick={onApprove}
-            disabled={approvingId !== null || decliningId !== null}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:bg-gray-300"
-          >
-            {approvingId === req.id ? "Approving…" : "Approve"}
-          </button>
+          {canDecline && (
+            <button
+              type="button"
+              onClick={onDecline}
+              disabled={
+                approvingId !== null ||
+                decliningId !== null ||
+                sendingOfferId !== null
+              }
+              className="rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+            >
+              Decline
+            </button>
+          )}
+          {isFinanceOfferStage ? (
+            <button
+              type="button"
+              onClick={async () => {
+                setOfferError(null);
+                const amount = Number(proposedAmount);
+                const months = Number(proposedRepaymentMonths);
+                if (!Number.isFinite(amount) || amount <= 0) {
+                  setOfferError("Enter a valid proposed amount.");
+                  return;
+                }
+                if (!Number.isFinite(months) || months <= 0) {
+                  setOfferError("Enter a valid repayment term.");
+                  return;
+                }
+                if (!offerFile) {
+                  setOfferError("Upload the finance contract PDF first.");
+                  return;
+                }
+                await onSendFinanceOffer({
+                  requestId: req.id,
+                  proposedAmount: Math.round(amount),
+                  proposedRepaymentMonths: Math.round(months),
+                  proposalNote,
+                  file: offerFile,
+                });
+              }}
+              disabled={
+                approvingId !== null ||
+                decliningId !== null ||
+                sendingOfferId === req.id
+              }
+              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:bg-gray-300"
+            >
+              {sendingOfferId === req.id ? "Sending…" : "Send Offer"}
+            </button>
+          ) : canApproveStandard || isFinalFinanceApprovalStage ? (
+            <button
+              type="button"
+              onClick={onApprove}
+              disabled={
+                approvingId !== null ||
+                decliningId !== null ||
+                sendingOfferId !== null
+              }
+              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:bg-gray-300"
+            >
+              {approvingId === req.id
+                ? "Approving…"
+                : isFinalFinanceApprovalStage
+                  ? "Final Approve"
+                  : "Approve"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            >
+              Close
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -73,6 +73,20 @@ export const BenefitRequest = {
 
     return fallbackRows[0] ?? null;
   },
+  async financeContractViewUrl(
+    parent: { financeContractKey?: string | null },
+    _: unknown,
+    { env, baseUrl, currentEmployee }: GraphQLContext,
+  ) {
+    if (!parent.financeContractKey || !env.CONTRACT_VIEW_TOKENS) return null;
+    const token = await getOrCreateContractViewToken(
+      env.CONTRACT_VIEW_TOKENS,
+      parent.financeContractKey,
+      undefined,
+      currentEmployee ? { employeeId: currentEmployee.id } : undefined,
+    );
+    return token ? getContractViewUrl(baseUrl, token) : null;
+  },
   async payment(
     parent: { id: string },
     _: unknown,

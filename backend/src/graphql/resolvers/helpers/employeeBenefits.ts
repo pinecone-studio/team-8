@@ -60,11 +60,13 @@ const IN_FLIGHT_REQUEST_STATUSES = new Set([
   "awaiting_contract_acceptance",
   "awaiting_hr_review",
   "awaiting_finance_review",
+  "awaiting_employee_decision",
   "awaiting_payment",
   "awaiting_payment_review",
   "hr_approved",
   "finance_approved",
   "awaiting_employee_signed_contract",
+  "awaiting_final_finance_approval",
 ]);
 
 function normalizeFlowType(

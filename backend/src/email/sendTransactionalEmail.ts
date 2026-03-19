@@ -317,6 +317,58 @@ export async function sendDownPaymentReadyForSignedContractEmail(
   });
 }
 
+export async function sendFinanceOfferReadyEmail(
+  env: Env,
+  employee: Employee,
+  benefit: Benefit,
+  proposedAmount: number,
+  proposedRepaymentMonths: number,
+): Promise<void> {
+  const name = employeeName(employee);
+  const subject = `PineQuest: finance offer ready for ${benefit.name}`;
+  const text =
+    `Hi ${name},\n\n` +
+    `Finance has prepared an offer for your ${benefit.name} request.\n` +
+    `• Offered amount: ${proposedAmount.toLocaleString("en-US")}₮\n` +
+    `• Repayment term: ${proposedRepaymentMonths} months\n\n` +
+    "Open PineQuest EBMS to review the offer, read the contract, and accept or decline it.\n\n" +
+    "PineQuest EBMS";
+
+  await sendEmail(env, {
+    to: employee.email,
+    subject,
+    text,
+    html: shell(
+      subject,
+      `${escapeHtml(name)}, Finance has prepared an offer for your <strong>${escapeHtml(benefit.name)}</strong> request. Offered amount: <strong>${proposedAmount.toLocaleString("en-US")}₮</strong>, repayment term: <strong>${proposedRepaymentMonths} months</strong>. Open PineQuest EBMS to review the offer, read the contract, and accept or decline it.`,
+    ),
+  });
+}
+
+export async function sendFinanceSignedContractReadyForFinalApprovalEmail(
+  env: Env,
+  toEmail: string,
+  employeeName: string,
+  benefitName: string,
+): Promise<void> {
+  const subject = `PineQuest: final finance approval needed — ${benefitName}`;
+  const text =
+    `Hi,\n\n` +
+    `${employeeName} uploaded a signed contract for ${benefitName}.\n` +
+    "Open PineQuest EBMS › Admin Panel to complete the final finance approval.\n\n" +
+    "PineQuest EBMS";
+
+  await sendEmail(env, {
+    to: toEmail,
+    subject,
+    text,
+    html: shell(
+      subject,
+      `<strong>${escapeHtml(employeeName)}</strong> uploaded a signed contract for <strong>${escapeHtml(benefitName)}</strong>. Open PineQuest EBMS › Admin Panel to complete the final finance approval.`,
+    ),
+  });
+}
+
 /** Notify HR / Finance that an employee uploaded a signed contract (down_payment completion). */
 export async function sendSignedContractUploadedToAdminsEmail(
   env: Env,

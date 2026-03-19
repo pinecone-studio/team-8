@@ -30,6 +30,7 @@ import Sidebar from "../../_components/SideBar";
 import {
   BenefitFlowType,
   useCreateBenefitMutation,
+  useGetAdminBenefitsQuery,
   useProposeRuleChangeMutation,
   useUpsertScreenTimeProgramMutation,
   GetAdminBenefitsDocument,
@@ -88,14 +89,14 @@ const BENEFIT_TYPES: {
   {
     key: "finance",
     label: "Finance Benefit",
-    desc: "Employee requests an amount, reviewed by Finance",
+    desc: "Short-term, interest-free employee loan managed by Finance",
     icon: <Wallet className="h-5 w-5" />,
     color: "text-blue-600",
     border: "border-blue-200",
     bg: "bg-blue-50",
     examples: ["Down Payment Assistance"],
-    requiresContract: true,
-    approvalPolicy: "dual",
+    requiresContract: false,
+    approvalPolicy: "finance",
     flowType: BenefitFlowType.DownPayment,
   },
   {
@@ -182,32 +183,32 @@ const WORKFLOWS: Record<BenefitTypeKey, WorkflowStep[]> = {
   finance: [
     {
       icon: <Wallet className="h-4 w-4" />,
-      label: "Amount Request",
-      desc: "Employee submits the amount needed",
+      label: "Loan Request",
+      desc: "Employee submits the amount and repayment term they need",
       color: "bg-slate-100 text-slate-600",
     },
     {
       icon: <LayoutGrid className="h-4 w-4" />,
-      label: "Finance Proposal",
-      desc: "Finance team proposes a repayment plan",
+      label: "Finance Offer",
+      desc: "Finance prepares the final amount, term, and request-specific contract",
       color: "bg-blue-100 text-blue-600",
     },
     {
       icon: <UserCheck className="h-4 w-4" />,
-      label: "Employee Decision",
-      desc: "Employee accepts or declines the plan",
+      label: "Employee Review",
+      desc: "Employee accepts the offer or declines it",
       color: "bg-amber-100 text-amber-600",
     },
     {
       icon: <FileText className="h-4 w-4" />,
-      label: "Contract Generated",
-      desc: "Contract is automatically created",
+      label: "Signed Contract Upload",
+      desc: "Employee signs the finance contract and uploads the signed copy",
       color: "bg-violet-100 text-violet-600",
     },
     {
       icon: <Shield className="h-4 w-4" />,
-      label: "HR / C-Level Approval",
-      desc: "Final sign-off",
+      label: "Final Finance Approval",
+      desc: "Finance manager confirms the signed contract and activates the benefit",
       color: "bg-emerald-100 text-emerald-600",
     },
   ],
@@ -483,8 +484,17 @@ export default function CreateBenefitPage() {
   const { employee } = useCurrentEmployee();
   const { getToken } = useAuth();
   const canCreate = isHrAdmin(employee);
-
   const [selectedType, setSelectedType] = useState<BenefitTypeKey | null>(null);
+  const { data: adminBenefitsData } = useGetAdminBenefitsQuery({
+    skip: !canCreate,
+  });
+  const activeFinanceBenefit = (adminBenefitsData?.adminBenefits ?? []).find(
+    (benefit) =>
+      benefit.flowType === BenefitFlowType.DownPayment && benefit.isActive,
+  );
+  const financeCreationBlocked =
+    selectedType === "finance" && Boolean(activeFinanceBenefit);
+
   const [hasPricing, setHasPricing] = useState(false);
   const [viewOnlySubsidyEnabled, setViewOnlySubsidyEnabled] = useState(false);
   const [form, setForm] = useState({
@@ -590,6 +600,14 @@ export default function CreateBenefitPage() {
         }
       }
       if (
+        selectedType === "finance" &&
+        activeFinanceBenefit
+      ) {
+        throw new Error(
+          `An active finance benefit already exists (${activeFinanceBenefit.name}). Deactivate it before creating another one.`,
+        );
+      }
+      if (
         selectedType === "contract" &&
         (!form.amount.trim() || Number(form.amount) <= 0)
       ) {
@@ -666,8 +684,13 @@ export default function CreateBenefitPage() {
         }
       }
 
-      // Upload contract if this benefit requires it (contract-based + finance)
-      if (benefitId && contractFile && typeConfig.requiresContract) {
+      // Upload contract only for generic contract-based benefits.
+      if (
+        benefitId &&
+        contractFile &&
+        typeConfig.requiresContract &&
+        selectedType !== "finance"
+      ) {
         const today = new Date().toISOString().split("T")[0];
         const ctData = new FormData();
         ctData.append("benefitId", benefitId);
@@ -962,7 +985,9 @@ export default function CreateBenefitPage() {
                       </>
                     )}
                   </div>
-                  {selectedType !== "normal" && selectedType !== "viewonly" && (
+                  {selectedType !== "normal" &&
+                    selectedType !== "viewonly" &&
+                    selectedType !== "finance" && (
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-gray-600">
                         Company Subsidy (%)
@@ -1074,10 +1099,39 @@ export default function CreateBenefitPage() {
                         (hasPricing
                           ? "Employee submits a request, HR reviews it, and the benefit activates only after the employee completes their Bonum co-payment."
                           : "Employee submits a request and HR admin reviews and makes the final decision.")}
-                      {selectedType === "finance" && "Both Finance and HR approval are required. A repayment plan will be proposed."}
+                      {selectedType === "finance" &&
+                        "Employees submit the amount and repayment term they need. Finance prepares the final offer and request-specific contract, then activates the benefit only after final finance approval."}
                       {selectedType === "viewonly" && "Employees can only view this benefit on their dashboard. No request needed."}
                       {selectedType === "screen_time" && "Employees upload a 7-day average screen-time screenshot on each required Friday. Missing or rejected required slots removes them from that month’s competition."}
                     </p>
+                  </div>
+                )}
+
+                {selectedType === "finance" && (
+                  <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+                      Finance Benefit Guardrails
+                    </p>
+                    <div className="mt-2 space-y-2 text-sm text-blue-900">
+                      <p>
+                        This benefit is a single active finance program for short-term employee loans.
+                      </p>
+                      <p>
+                        Do not upload a contract here. Finance attaches a request-specific contract later, after reviewing each employee request.
+                      </p>
+                      <p>
+                        Company subsidy and fixed total price are not used for this benefit type.
+                      </p>
+                    </div>
+                    {activeFinanceBenefit && (
+                      <div className="mt-3 rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs text-blue-700">
+                        Active finance benefit already exists:{" "}
+                        <span className="font-semibold">
+                          {activeFinanceBenefit.name}
+                        </span>
+                        . Deactivate it before creating another one.
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1523,7 +1577,7 @@ export default function CreateBenefitPage() {
               </div>
 
               {/* Step 4: Contract Upload (for benefit types that require it) */}
-              {selectedTypeConfig?.requiresContract && (
+              {selectedTypeConfig?.requiresContract && selectedType !== "finance" && (
                 <div className="rounded-2xl border border-gray-100 bg-white p-6">
                   <div className="mb-1 flex items-center gap-2">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">
@@ -1630,7 +1684,12 @@ export default function CreateBenefitPage() {
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={saving || !selectedType || !form.name.trim()}
+                  disabled={
+                    saving ||
+                    !selectedType ||
+                    !form.name.trim() ||
+                    financeCreationBlocked
+                  }
                   className="flex items-center gap-2 rounded-xl bg-gray-900 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {saving ? (

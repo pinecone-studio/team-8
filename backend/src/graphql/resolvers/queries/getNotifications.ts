@@ -32,19 +32,24 @@ const STATUS_LABELS: Record<string, { title: string; body: string; linkPath: str
     body: "Your benefit request is being reviewed by the Finance team.",
     linkPath: "/employee-panel/requests",
   },
+  awaiting_employee_decision: {
+    title: "Finance offer ready",
+    body: "Finance has prepared loan terms and a contract for your review.",
+    linkPath: "/employee-panel/requests",
+  },
   hr_approved: {
     title: "HR approved your request",
     body: "HR has approved your benefit request. It is now pending Finance review.",
     linkPath: "/employee-panel/requests",
   },
-  finance_approved: {
-    title: "Finance approved your request",
-    body: "Finance has approved your benefit request. Final approval is in progress.",
+  awaiting_employee_signed_contract: {
+    title: "Sign and upload your contract",
+    body: "You accepted the finance offer. Upload your signed contract to continue.",
     linkPath: "/employee-panel/requests",
   },
-  awaiting_employee_signed_contract: {
-    title: "HR and Finance approved your request",
-    body: "Open this benefit to download the contract, sign it, and upload your signed copy to complete enrollment.",
+  awaiting_final_finance_approval: {
+    title: "Signed contract received",
+    body: "Your signed contract is waiting for final Finance manager approval.",
     linkPath: "/employee-panel/mybenefits",
   },
   approved: {
@@ -121,7 +126,11 @@ export const getNotifications = async (
       .from(schema.benefitRequests);
 
     const financeQueueRows = requestRows.filter((r) =>
-      ["awaiting_finance_review", "hr_approved"].includes(r.status),
+      [
+        "awaiting_finance_review",
+        "hr_approved",
+        "awaiting_final_finance_approval",
+      ].includes(r.status),
     );
     const financeQueueStateRows = sortByStableKey(
       financeQueueRows,

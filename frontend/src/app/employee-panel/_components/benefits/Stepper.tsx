@@ -2,7 +2,7 @@ type Props = {
   currentStep: 1 | 2 | 3;
   /** When false, only 2 steps are shown: Contract Review → Submit Request (Upload Contract skipped) */
   requiresContract?: boolean;
-  /** Finance (down payment): 3 steps — request → approved → sign contract */
+/** Finance (down payment): request → review offer → upload signed contract */
   variant?: "default" | "finance";
 };
 
@@ -16,8 +16,8 @@ const contractSteps = [
 
 const financeSteps = [
   { id: 1, label: "Loan request" },
-  { id: 2, label: "Approved" },
-  { id: 3, label: "Sign contract" },
+  { id: 2, label: "Review offer" },
+  { id: 3, label: "Upload signed contract" },
 ];
 
 export default function Stepper({

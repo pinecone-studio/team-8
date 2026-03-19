@@ -161,8 +161,20 @@ export type BenefitRequest = {
   declineReason?: Maybe<Scalars['String']['output']>;
   employeeApprovedAt?: Maybe<Scalars['String']['output']>;
   employeeContractKey?: Maybe<Scalars['String']['output']>;
+  employeeDecisionAt?: Maybe<Scalars['String']['output']>;
   employeeId: Scalars['String']['output'];
   employeeSignedContract?: Maybe<EmployeeSignedContract>;
+  finalApprovedAt?: Maybe<Scalars['String']['output']>;
+  finalApprovedBy?: Maybe<Scalars['String']['output']>;
+  financeContractFileName?: Maybe<Scalars['String']['output']>;
+  financeContractMimeType?: Maybe<Scalars['String']['output']>;
+  financeContractUploadedAt?: Maybe<Scalars['String']['output']>;
+  financeContractViewUrl?: Maybe<Scalars['String']['output']>;
+  financeProposalNote?: Maybe<Scalars['String']['output']>;
+  financeProposedAmount?: Maybe<Scalars['Int']['output']>;
+  financeProposedAt?: Maybe<Scalars['String']['output']>;
+  financeProposedBy?: Maybe<Scalars['String']['output']>;
+  financeProposedRepaymentMonths?: Maybe<Scalars['Int']['output']>;
   id: Scalars['String']['output'];
   payment?: Maybe<BenefitRequestPayment>;
   repaymentMonths?: Maybe<Scalars['Int']['output']>;
@@ -365,6 +377,7 @@ export type Mutation = {
   proposeRuleChange: RuleProposal;
   rejectRuleProposal: RuleProposal;
   requestBenefit: BenefitRequest;
+  respondToFinanceBenefitOffer: BenefitRequest;
   seedScreenTimeSubmissions: Scalars['Int']['output'];
   syncOkrStatus: OkrSyncResult;
   updateBenefit: Benefit;
@@ -461,6 +474,11 @@ export type MutationRejectRuleProposalArgs = {
 
 export type MutationRequestBenefitArgs = {
   input: RequestBenefitInput;
+};
+
+
+export type MutationRespondToFinanceBenefitOfferArgs = {
+  input: RespondToFinanceBenefitOfferInput;
 };
 
 
@@ -689,6 +707,12 @@ export type RequestBenefitInput = {
   employeeSignedContractId?: InputMaybe<Scalars['String']['input']>;
   repaymentMonths?: InputMaybe<Scalars['Int']['input']>;
   requestedAmount?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type RespondToFinanceBenefitOfferInput = {
+  accept: Scalars['Boolean']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  requestId: Scalars['String']['input'];
 };
 
 export type RuleEvaluation = {
@@ -955,6 +979,7 @@ export type ResolversTypes = ResolversObject<{
   ProposeRuleChangeInput: ProposeRuleChangeInput;
   Query: ResolverTypeWrapper<{}>;
   RequestBenefitInput: RequestBenefitInput;
+  RespondToFinanceBenefitOfferInput: RespondToFinanceBenefitOfferInput;
   RuleEvaluation: ResolverTypeWrapper<RuleEvaluation>;
   RuleProposal: ResolverTypeWrapper<RuleProposal>;
   ScreenTimeLeaderboardRow: ResolverTypeWrapper<ScreenTimeLeaderboardRow>;
@@ -1007,6 +1032,7 @@ export type ResolversParentTypes = ResolversObject<{
   ProposeRuleChangeInput: ProposeRuleChangeInput;
   Query: {};
   RequestBenefitInput: RequestBenefitInput;
+  RespondToFinanceBenefitOfferInput: RespondToFinanceBenefitOfferInput;
   RuleEvaluation: RuleEvaluation;
   RuleProposal: RuleProposal;
   ScreenTimeLeaderboardRow: ScreenTimeLeaderboardRow;
@@ -1142,8 +1168,20 @@ export type BenefitRequestResolvers<ContextType = GraphQLContext, ParentType ext
   declineReason?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   employeeApprovedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   employeeContractKey?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  employeeDecisionAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   employeeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   employeeSignedContract?: Resolver<Maybe<ResolversTypes['EmployeeSignedContract']>, ParentType, ContextType>;
+  finalApprovedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  finalApprovedBy?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  financeContractFileName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  financeContractMimeType?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  financeContractUploadedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  financeContractViewUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  financeProposalNote?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  financeProposedAmount?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  financeProposedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  financeProposedBy?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  financeProposedRepaymentMonths?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   payment?: Resolver<Maybe<ResolversTypes['BenefitRequestPayment']>, ParentType, ContextType>;
   repaymentMonths?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
@@ -1304,6 +1342,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   proposeRuleChange?: Resolver<ResolversTypes['RuleProposal'], ParentType, ContextType, RequireFields<MutationProposeRuleChangeArgs, 'input'>>;
   rejectRuleProposal?: Resolver<ResolversTypes['RuleProposal'], ParentType, ContextType, RequireFields<MutationRejectRuleProposalArgs, 'id' | 'reason'>>;
   requestBenefit?: Resolver<ResolversTypes['BenefitRequest'], ParentType, ContextType, RequireFields<MutationRequestBenefitArgs, 'input'>>;
+  respondToFinanceBenefitOffer?: Resolver<ResolversTypes['BenefitRequest'], ParentType, ContextType, RequireFields<MutationRespondToFinanceBenefitOfferArgs, 'input'>>;
   seedScreenTimeSubmissions?: Resolver<ResolversTypes['Int'], ParentType, ContextType, RequireFields<MutationSeedScreenTimeSubmissionsArgs, 'benefitId'>>;
   syncOkrStatus?: Resolver<ResolversTypes['OkrSyncResult'], ParentType, ContextType, RequireFields<MutationSyncOkrStatusArgs, 'rows'>>;
   updateBenefit?: Resolver<ResolversTypes['Benefit'], ParentType, ContextType, RequireFields<MutationUpdateBenefitArgs, 'id' | 'input'>>;

@@ -6,6 +6,7 @@ import { typeDefs, resolvers, GraphQLContext } from "./graphql";
 import {
   getCurrentUserFromRequest,
   canUploadContracts,
+  canReviewFinanceBenefit,
   requireHrAdmin,
   getInternalRole,
 } from "./auth";
@@ -20,7 +21,11 @@ import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { schema } from "./db";
 import { writeAuditLog } from "./graphql/resolvers/helpers/audit";
 import { finalizeBenefitApproval } from "./graphql/resolvers/helpers/finalizeBenefitApproval";
-import { sendSignedContractUploadedToAdminsEmail } from "./email/sendTransactionalEmail";
+import {
+  sendFinanceOfferReadyEmail,
+  sendFinanceSignedContractReadyForFinalApprovalEmail,
+  sendSignedContractUploadedToAdminsEmail,
+} from "./email/sendTransactionalEmail";
 import { checkAndSendContractExpiryAlerts } from "./email/contractExpiryAlerts";
 import {
   handleOkrWebhook,
@@ -48,6 +53,13 @@ import {
 } from "./payments/benefit-request-payments";
 import { resolveBonumReturnUrl } from "./payments/bonum";
 import { requiresEmployeePaymentForBenefit } from "./payments/amounts";
+import {
+  AWAITING_EMPLOYEE_DECISION_STATUS,
+  AWAITING_EMPLOYEE_SIGNED_CONTRACT_STATUS,
+  AWAITING_FINAL_FINANCE_APPROVAL_STATUS,
+  AWAITING_FINANCE_REVIEW_STATUS,
+  isFinanceBenefit,
+} from "./benefits/finance";
 
 const MAX_EMPLOYEE_CONTRACT_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EMPLOYEE_CONTRACT_MIME_TYPES = new Set([
@@ -55,6 +67,7 @@ const ALLOWED_EMPLOYEE_CONTRACT_MIME_TYPES = new Set([
   "image/png",
   "image/jpeg",
 ]);
+const ALLOWED_FINANCE_CONTRACT_MIME_TYPES = new Set(["application/pdf"]);
 const MAX_SCREEN_TIME_SCREENSHOT_BYTES = 10 * 1024 * 1024;
 const ALLOWED_SCREEN_TIME_MIME_TYPES = new Set([
   "image/png",
@@ -79,6 +92,10 @@ function sanitizeUploadedFileName(fileName: string): string {
 
 function isAllowedEmployeeContractFile(file: File): boolean {
   return ALLOWED_EMPLOYEE_CONTRACT_MIME_TYPES.has(file.type);
+}
+
+function isAllowedFinanceContractFile(file: File): boolean {
+  return ALLOWED_FINANCE_CONTRACT_MIME_TYPES.has(file.type);
 }
 
 function isAllowedScreenTimeScreenshot(file: File): boolean {
@@ -534,6 +551,269 @@ async function handleContractExpiryCheck(
   );
 }
 
+async function handleFinanceBenefitOffer(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (
+    url.pathname !== "/api/benefit-requests/finance-offer" ||
+    request.method !== "POST"
+  ) {
+    return null;
+  }
+
+  const db = createDb(env.DB);
+  const currentUser = await getCurrentUserFromRequest(request, env, db);
+
+  if (!currentUser.employee) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Authentication required." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+  if (!canReviewFinanceBenefit(currentUser.employee)) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({ error: "Finance admin access required." }),
+        {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+  }
+
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Invalid form data." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const requestId = formData.get("requestId")?.toString().trim();
+  const proposalNote = formData.get("proposalNote")?.toString().trim() || null;
+  const proposedAmountRaw = formData.get("proposedAmount")?.toString().trim();
+  const proposedRepaymentMonthsRaw = formData
+    .get("proposedRepaymentMonths")
+    ?.toString()
+    .trim();
+  const file = formData.get("file") as File | null;
+
+  const proposedAmount = Number(proposedAmountRaw);
+  const proposedRepaymentMonths = Number(proposedRepaymentMonthsRaw);
+
+  if (!requestId || !file?.size) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({
+          error:
+            "requestId, proposedAmount, proposedRepaymentMonths, and contract file are required.",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+  }
+  if (!Number.isFinite(proposedAmount) || proposedAmount <= 0) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({ error: "Enter a valid proposed amount." }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+  }
+  if (
+    !Number.isFinite(proposedRepaymentMonths) ||
+    proposedRepaymentMonths <= 0
+  ) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({ error: "Enter a valid repayment term in months." }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+  }
+  if (file.size > MAX_EMPLOYEE_CONTRACT_FILE_BYTES) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({ error: "Finance contract must be 10MB or smaller." }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+  }
+  if (!isAllowedFinanceContractFile(file)) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({ error: "Finance contract must be a PDF file." }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+  }
+  if (!env.CONTRACTS_BUCKET) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({ error: "Contract storage is not configured." }),
+        {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+  }
+
+  const requestRows = await db
+    .select()
+    .from(schema.benefitRequests)
+    .where(eq(schema.benefitRequests.id, requestId))
+    .limit(1);
+  const benefitRequest = requestRows[0];
+  if (!benefitRequest) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Benefit request not found." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+  if (benefitRequest.status !== AWAITING_FINANCE_REVIEW_STATUS) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({
+          error: "This request is not waiting for a finance offer.",
+        }),
+        {
+          status: 409,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+  }
+
+  const benefitRows = await db
+    .select()
+    .from(schema.benefits)
+    .where(eq(schema.benefits.id, benefitRequest.benefitId))
+    .limit(1);
+  const benefit = benefitRows[0];
+  if (!benefit || !isFinanceBenefit(benefit)) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({ error: "This request is not a finance benefit." }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+  }
+
+  const safeName = sanitizeUploadedFileName(file.name || "finance-offer.pdf");
+  const financeContractKey = `finance-offers/${benefit.id}/${requestId}/${Date.now()}-${safeName}`;
+  const buffer = await file.arrayBuffer();
+  await env.CONTRACTS_BUCKET.put(financeContractKey, buffer, {
+    httpMetadata: { contentType: file.type || "application/pdf" },
+  });
+
+  const now = new Date().toISOString();
+  const [updated] = await db
+    .update(schema.benefitRequests)
+    .set({
+      status: AWAITING_EMPLOYEE_DECISION_STATUS,
+      reviewedBy: currentUser.employee.id,
+      financeProposedAmount: Math.round(proposedAmount),
+      financeProposedRepaymentMonths: Math.round(proposedRepaymentMonths),
+      financeProposalNote: proposalNote,
+      financeProposedBy: currentUser.employee.id,
+      financeProposedAt: now,
+      financeContractKey,
+      financeContractFileName: file.name || safeName,
+      financeContractMimeType: file.type || "application/pdf",
+      financeContractUploadedAt: now,
+      updatedAt: now,
+    })
+    .where(eq(schema.benefitRequests.id, requestId))
+    .returning();
+
+  await writeAuditLog({
+    db,
+    actor: currentUser.employee,
+    actionType: "REQUEST_FINANCE_OFFER_SENT",
+    entityType: "benefit_request",
+    entityId: requestId,
+    targetEmployeeId: benefitRequest.employeeId,
+    benefitId: benefit.id,
+    requestId,
+    before: { status: benefitRequest.status },
+    after: { status: AWAITING_EMPLOYEE_DECISION_STATUS },
+    metadata: {
+      proposedAmount: Math.round(proposedAmount),
+      proposedRepaymentMonths: Math.round(proposedRepaymentMonths),
+      proposalNote,
+      financeContractFileName: file.name || safeName,
+    },
+  });
+
+  const employeeRows = await db
+    .select()
+    .from(schema.employees)
+    .where(eq(schema.employees.id, benefitRequest.employeeId))
+    .limit(1);
+  const employee = employeeRows[0];
+  if (employee) {
+    await sendFinanceOfferReadyEmail(
+      env,
+      employee,
+      benefit,
+      Math.round(proposedAmount),
+      Math.round(proposedRepaymentMonths),
+    ).catch((error) =>
+      console.error("[handleFinanceBenefitOffer] Finance offer email failed:", error),
+    );
+  }
+
+  return withCors(
+    request,
+    new Response(JSON.stringify(updated), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+}
+
 /**
  * Employee signed contract upload: POST /api/contracts/employee-upload
  *
@@ -620,22 +900,11 @@ async function handleEmployeeContractUpload(
     ));
   }
 
-  const contractRows = await db
-    .select()
-    .from(schema.contracts)
-    .where(eq(schema.contracts.benefitId, benefitId));
-  const activeHrContract = contractRows.find((row) => row.isActive);
-  if (!activeHrContract) {
-    return withCors(request, new Response(
-      JSON.stringify({
-        error: "No active HR contract is available for this benefit yet. Please contact HR.",
-      }),
-      { status: 409, headers: { "Content-Type": "application/json" } },
-    ));
-  }
-
   let financeCompletionRequest:
     | (typeof schema.benefitRequests.$inferSelect)
+    | null = null;
+  let contractReference:
+    | { id: string | null; version: string | null; hash: string | null }
     | null = null;
   if (requestId) {
     const reqRows = await db
@@ -684,7 +953,7 @@ async function handleEmployeeContractUpload(
         ),
       );
     }
-    if (br.status !== "awaiting_employee_signed_contract") {
+    if (br.status !== AWAITING_EMPLOYEE_SIGNED_CONTRACT_STATUS) {
       return withCors(
         request,
         new Response(
@@ -697,6 +966,50 @@ async function handleEmployeeContractUpload(
       );
     }
     financeCompletionRequest = br;
+    if (isFinanceBenefit(benefit)) {
+      if (!br.financeContractKey) {
+        return withCors(
+          request,
+          new Response(
+            JSON.stringify({
+              error:
+                "Finance has not attached the request-specific contract yet.",
+            }),
+            { status: 409, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      contractReference = {
+        id: `finance-offer:${br.id}`,
+        version: br.financeContractUploadedAt ?? null,
+        hash: br.financeContractKey,
+      };
+    }
+  }
+
+  if (!contractReference) {
+    const contractRows = await db
+      .select()
+      .from(schema.contracts)
+      .where(eq(schema.contracts.benefitId, benefitId));
+    const activeHrContract = contractRows.find((row) => row.isActive);
+    if (!activeHrContract) {
+      return withCors(
+        request,
+        new Response(
+          JSON.stringify({
+            error:
+              "No active HR contract is available for this benefit yet. Please contact HR.",
+          }),
+          { status: 409, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+    }
+    contractReference = {
+      id: activeHrContract.id,
+      version: activeHrContract.version,
+      hash: activeHrContract.sha256Hash,
+    };
   }
 
   const ext = file.name.split(".").pop() ?? "pdf";
@@ -714,9 +1027,9 @@ async function handleEmployeeContractUpload(
       .values({
         employeeId: currentUser.employee.id,
         benefitId,
-        hrContractId: activeHrContract.id,
-        hrContractVersion: activeHrContract.version,
-        hrContractHash: activeHrContract.sha256Hash,
+        hrContractId: contractReference.id,
+        hrContractVersion: contractReference.version,
+        hrContractHash: contractReference.hash,
         r2ObjectKey: r2Key,
         fileName: file.name,
         mimeType: file.type || "application/pdf",
@@ -768,8 +1081,8 @@ async function handleEmployeeContractUpload(
     metadata: {
       r2Key,
       fileName: file.name,
-      hrContractId: activeHrContract.id,
-      hrContractVersion: activeHrContract.version,
+      hrContractId: contractReference.id,
+      hrContractVersion: contractReference.version,
       benefitRequestId: financeCompletionRequest?.id ?? null,
     },
   });
@@ -777,14 +1090,14 @@ async function handleEmployeeContractUpload(
   let completedEnrollment = false;
   if (financeCompletionRequest) {
     const nowIso = new Date().toISOString();
+    const financeRequest = isFinanceBenefit(benefit);
     const [updatedReq] = await db
       .update(schema.benefitRequests)
       .set({
-        status: "approved",
+        status: financeRequest
+          ? AWAITING_FINAL_FINANCE_APPROVAL_STATUS
+          : "approved",
         employeeContractKey: r2Key,
-        // Down payment completion: employee signs & uploads the contract.
-        // Persist a start/acceptance timestamp so admin UI can show it.
-        employeeApprovedAt: nowIso,
         updatedAt: nowIso,
       })
       .where(eq(schema.benefitRequests.id, financeCompletionRequest.id))
@@ -800,24 +1113,10 @@ async function handleEmployeeContractUpload(
       .where(eq(schema.employeeSignedContracts.id, inserted.id));
 
     if (updatedReq) {
-      await finalizeBenefitApproval({
-        db,
-        env,
-        actor: currentUser.employee,
-        benefitRequest: updatedReq,
-        benefit,
-        beforeStatus: "awaiting_employee_signed_contract",
-        actionType: "REQUEST_APPROVED",
-        metadata: { completedVia: "employee_signed_contract_upload" },
-      });
-      completedEnrollment = true;
-
       const displayName =
         currentUser.employee.nameEng?.trim() ||
         currentUser.employee.name.trim() ||
         currentUser.employee.email;
-      // Pick HR/Finance admins using the same internal-role logic as auth.ts.
-      // This avoids depending on `employees.role` exact string values.
       const activeEmployees = await db
         .select({
           email: schema.employees.email,
@@ -827,32 +1126,65 @@ async function handleEmployeeContractUpload(
         .from(schema.employees)
         .where(eq(schema.employees.employmentStatus, "active"));
 
-      const adminEmails = activeEmployees
-        .filter((e) => {
-          const internal = getInternalRole(e as any);
-          return (
-            internal === "hr_admin" ||
-            internal === "hr_manager" ||
-            internal === "finance_admin" ||
-            internal === "finance_manager"
-          );
-        })
-        .map((e) => e.email);
-      await Promise.all(
-        adminEmails.map((email) =>
-          sendSignedContractUploadedToAdminsEmail(
-            env,
-            email,
-            displayName,
-            benefit.name,
-          ).catch((err) =>
-            console.error(
-              "[employeeContractUpload] Admin notify email failed:",
-              err,
+      if (financeRequest) {
+        const financeManagerEmails = activeEmployees
+          .filter((e) => getInternalRole(e as any) === "finance_manager")
+          .map((e) => e.email);
+        await Promise.all(
+          financeManagerEmails.map((email) =>
+            sendFinanceSignedContractReadyForFinalApprovalEmail(
+              env,
+              email,
+              displayName,
+              benefit.name,
+            ).catch((err) =>
+              console.error(
+                "[employeeContractUpload] Final finance notify email failed:",
+                err,
+              ),
             ),
           ),
-        ),
-      );
+        );
+      } else {
+        await finalizeBenefitApproval({
+          db,
+          env,
+          actor: currentUser.employee,
+          benefitRequest: updatedReq,
+          benefit,
+          beforeStatus: "awaiting_employee_signed_contract",
+          actionType: "REQUEST_APPROVED",
+          metadata: { completedVia: "employee_signed_contract_upload" },
+        });
+        completedEnrollment = true;
+
+        const adminEmails = activeEmployees
+          .filter((e) => {
+            const internal = getInternalRole(e as any);
+            return (
+              internal === "hr_admin" ||
+              internal === "hr_manager" ||
+              internal === "finance_admin" ||
+              internal === "finance_manager"
+            );
+          })
+          .map((e) => e.email);
+        await Promise.all(
+          adminEmails.map((email) =>
+            sendSignedContractUploadedToAdminsEmail(
+              env,
+              email,
+              displayName,
+              benefit.name,
+            ).catch((err) =>
+              console.error(
+                "[employeeContractUpload] Admin notify email failed:",
+                err,
+              ),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -2052,6 +2384,8 @@ export default {
     if (screenTimeSubmissionView !== null) return screenTimeSubmissionView;
     const upload = await handleContractUpload(request, env);
     if (upload !== null) return upload;
+    const financeOffer = await handleFinanceBenefitOffer(request, env);
+    if (financeOffer !== null) return financeOffer;
     const employeeUpload = await handleEmployeeContractUpload(request, env);
     if (employeeUpload !== null) return employeeUpload;
     const paymentStart = await handleBenefitPaymentStart(request, env);
