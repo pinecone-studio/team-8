@@ -666,8 +666,8 @@ export default function CreateBenefitPage() {
         }
       }
 
-      // Upload contract if selected (contract type only)
-      if (benefitId && contractFile && selectedType === "contract") {
+      // Upload contract if this benefit requires it (contract-based + finance)
+      if (benefitId && contractFile && typeConfig.requiresContract) {
         const today = new Date().toISOString().split("T")[0];
         const ctData = new FormData();
         ctData.append("benefitId", benefitId);
@@ -1522,8 +1522,8 @@ export default function CreateBenefitPage() {
                 )}
               </div>
 
-              {/* Step 4: Contract Upload (contract type only) */}
-              {selectedType === "contract" && (
+              {/* Step 4: Contract Upload (for benefit types that require it) */}
+              {selectedTypeConfig?.requiresContract && (
                 <div className="rounded-2xl border border-gray-100 bg-white p-6">
                   <div className="mb-1 flex items-center gap-2">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">

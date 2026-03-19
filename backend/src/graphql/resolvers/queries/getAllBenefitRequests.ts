@@ -17,6 +17,7 @@ const ALL_PENDING_STATUSES = [
   "awaiting_payment_review",
   "hr_approved",
   "finance_approved",
+  "awaiting_employee_signed_contract",
 ];
 
 // HR queue: requests that an HR admin should act on

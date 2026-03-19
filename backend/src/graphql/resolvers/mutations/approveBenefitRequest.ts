@@ -10,6 +10,7 @@ import {
 import { writeAuditLog } from "../helpers/audit";
 import { finalizeBenefitApproval } from "../helpers/finalizeBenefitApproval";
 import { requiresEmployeePaymentForBenefit } from "../../../payments/amounts";
+import { sendDownPaymentReadyForSignedContractEmail } from "../../../email/sendTransactionalEmail";
 
 const HR_REVIEWABLE = new Set([
   "pending",
@@ -99,6 +100,22 @@ export const approveBenefitRequest = async (
     );
   }
 
+  // Finance-first flow: approvals finish before employee signs (down_payment, or dual+contract with loan fields on request).
+  const flowNorm = String(benefit?.flowType ?? "").trim().toLowerCase();
+  const hasLoanTermsOnRequest =
+    req.requestedAmount != null &&
+    Number(req.requestedAmount) > 0 &&
+    req.repaymentMonths != null &&
+    Number(req.repaymentMonths) > 0;
+  if (
+    nextStatus === "approved" &&
+    benefit?.requiresContract &&
+    (flowNorm === "down_payment" ||
+      (approvalPolicy === "dual" && hasLoanTermsOnRequest))
+  ) {
+    nextStatus = "awaiting_employee_signed_contract";
+  }
+
   const now = new Date().toISOString();
   const [updated] = await db
     .update(schema.benefitRequests)
@@ -135,6 +152,27 @@ export const approveBenefitRequest = async (
       after: { status: nextStatus },
       metadata: { approvalPolicy, reviewerRole, requiresEmployeePayment },
     });
+  }
+
+  if (nextStatus === "awaiting_employee_signed_contract" && benefit) {
+    const employeeRows = await db
+      .select()
+      .from(schema.employees)
+      .where(eq(schema.employees.id, req.employeeId))
+      .limit(1);
+    const targetEmployee = employeeRows[0];
+    if (targetEmployee) {
+      await sendDownPaymentReadyForSignedContractEmail(
+        env,
+        targetEmployee,
+        benefit,
+      ).catch((err) =>
+        console.error(
+          "[approveBenefitRequest] Ready-for-contract email failed:",
+          err,
+        ),
+      );
+    }
   }
 
   return updated;

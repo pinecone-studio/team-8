@@ -4,7 +4,7 @@ import { schema } from "../../db";
 import type { GraphQLContext } from "../context";
 import { mapBenefitRecordToGraphql } from "./helpers/employeeBenefits";
 import {
-  createContractViewToken,
+  getOrCreateContractViewToken,
   getContractViewUrl,
   getEmployeeSignedContractViewUrl,
 } from "../../contracts";
@@ -43,13 +43,13 @@ export const BenefitRequest = {
     // Bind token to the requesting employee so the session-scope check in
     // handleContractView can enforce that only this employee (or an HR admin)
     // may open the URL.
-    const token = await createContractViewToken(
+    const token = await getOrCreateContractViewToken(
       env.CONTRACT_VIEW_TOKENS,
       active.r2ObjectKey,
       undefined,
       { employeeId: currentEmployee?.id, contractId: active.id },
     );
-    return getContractViewUrl(baseUrl, token);
+    return token ? getContractViewUrl(baseUrl, token) : null;
   },
   async employeeSignedContract(
     parent: { id: string; employeeContractKey?: string | null },

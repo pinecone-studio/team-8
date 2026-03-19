@@ -3,7 +3,12 @@ import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin
 import { startServerAndCreateCloudflareWorkersHandler } from "@as-integrations/cloudflare-workers";
 import { createDb } from "./db";
 import { typeDefs, resolvers, GraphQLContext } from "./graphql";
-import { getCurrentUserFromRequest, canUploadContracts, requireHrAdmin } from "./auth";
+import {
+  getCurrentUserFromRequest,
+  canUploadContracts,
+  requireHrAdmin,
+  getInternalRole,
+} from "./auth";
 import {
   resolveContractViewToken,
   getContract,
@@ -11,9 +16,11 @@ import {
   putContract,
   getEmployeeSignedContractViewUrl,
 } from "./contracts";
-import { and, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { schema } from "./db";
 import { writeAuditLog } from "./graphql/resolvers/helpers/audit";
+import { finalizeBenefitApproval } from "./graphql/resolvers/helpers/finalizeBenefitApproval";
+import { sendSignedContractUploadedToAdminsEmail } from "./email/sendTransactionalEmail";
 import { checkAndSendContractExpiryAlerts } from "./email/contractExpiryAlerts";
 import {
   handleOkrWebhook,
@@ -563,6 +570,7 @@ async function handleEmployeeContractUpload(
 
   const benefitId = formData.get("benefitId")?.toString();
   const file = formData.get("file") as File | null;
+  const requestId = formData.get("requestId")?.toString().trim() || null;
 
   if (!benefitId || !file?.size) {
     return withCors(request, new Response(
@@ -624,6 +632,71 @@ async function handleEmployeeContractUpload(
       }),
       { status: 409, headers: { "Content-Type": "application/json" } },
     ));
+  }
+
+  let financeCompletionRequest:
+    | (typeof schema.benefitRequests.$inferSelect)
+    | null = null;
+  if (requestId) {
+    const reqRows = await db
+      .select()
+      .from(schema.benefitRequests)
+      .where(eq(schema.benefitRequests.id, requestId))
+      .limit(1);
+    const br = reqRows[0];
+    if (!br || br.employeeId !== currentUser.employee.id) {
+      return withCors(
+        request,
+        new Response(JSON.stringify({ error: "Invalid benefit request." }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    }
+    if (br.benefitId !== benefitId) {
+      return withCors(
+        request,
+        new Response(
+          JSON.stringify({ error: "Request does not match this benefit." }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+    }
+    const bFlow = String(benefit.flowType ?? "").trim().toLowerCase();
+    const pol = String(benefit.approvalPolicy ?? "hr").trim().toLowerCase();
+    const hasLoanTermsOnRequest =
+      br.requestedAmount != null &&
+      Number(br.requestedAmount) > 0 &&
+      br.repaymentMonths != null &&
+      Number(br.repaymentMonths) > 0;
+    const allowsRequestIdCompletion =
+      bFlow === "down_payment" ||
+      (pol === "dual" && benefit.requiresContract && hasLoanTermsOnRequest);
+    if (!allowsRequestIdCompletion) {
+      return withCors(
+        request,
+        new Response(
+          JSON.stringify({
+            error:
+              "requestId is only for finance-style benefits (loan request, then contract after approval).",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+    }
+    if (br.status !== "awaiting_employee_signed_contract") {
+      return withCors(
+        request,
+        new Response(
+          JSON.stringify({
+            error:
+              "Your request is not waiting for a signed contract upload, or it was already completed.",
+          }),
+          { status: 409, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+    }
+    financeCompletionRequest = br;
   }
 
   const ext = file.name.split(".").pop() ?? "pdf";
@@ -697,8 +770,91 @@ async function handleEmployeeContractUpload(
       fileName: file.name,
       hrContractId: activeHrContract.id,
       hrContractVersion: activeHrContract.version,
+      benefitRequestId: financeCompletionRequest?.id ?? null,
     },
   });
+
+  let completedEnrollment = false;
+  if (financeCompletionRequest) {
+    const nowIso = new Date().toISOString();
+    const [updatedReq] = await db
+      .update(schema.benefitRequests)
+      .set({
+        status: "approved",
+        employeeContractKey: r2Key,
+        // Down payment completion: employee signs & uploads the contract.
+        // Persist a start/acceptance timestamp so admin UI can show it.
+        employeeApprovedAt: nowIso,
+        updatedAt: nowIso,
+      })
+      .where(eq(schema.benefitRequests.id, financeCompletionRequest.id))
+      .returning();
+
+    await db
+      .update(schema.employeeSignedContracts)
+      .set({
+        requestId: financeCompletionRequest.id,
+        status: "attached_to_request",
+        updatedAt: nowIso,
+      })
+      .where(eq(schema.employeeSignedContracts.id, inserted.id));
+
+    if (updatedReq) {
+      await finalizeBenefitApproval({
+        db,
+        env,
+        actor: currentUser.employee,
+        benefitRequest: updatedReq,
+        benefit,
+        beforeStatus: "awaiting_employee_signed_contract",
+        actionType: "REQUEST_APPROVED",
+        metadata: { completedVia: "employee_signed_contract_upload" },
+      });
+      completedEnrollment = true;
+
+      const displayName =
+        currentUser.employee.nameEng?.trim() ||
+        currentUser.employee.name.trim() ||
+        currentUser.employee.email;
+      // Pick HR/Finance admins using the same internal-role logic as auth.ts.
+      // This avoids depending on `employees.role` exact string values.
+      const activeEmployees = await db
+        .select({
+          email: schema.employees.email,
+          department: schema.employees.department,
+          responsibilityLevel: schema.employees.responsibilityLevel,
+        })
+        .from(schema.employees)
+        .where(eq(schema.employees.employmentStatus, "active"));
+
+      const adminEmails = activeEmployees
+        .filter((e) => {
+          const internal = getInternalRole(e as any);
+          return (
+            internal === "hr_admin" ||
+            internal === "hr_manager" ||
+            internal === "finance_admin" ||
+            internal === "finance_manager"
+          );
+        })
+        .map((e) => e.email);
+      await Promise.all(
+        adminEmails.map((email) =>
+          sendSignedContractUploadedToAdminsEmail(
+            env,
+            email,
+            displayName,
+            benefit.name,
+          ).catch((err) =>
+            console.error(
+              "[employeeContractUpload] Admin notify email failed:",
+              err,
+            ),
+          ),
+        ),
+      );
+    }
+  }
 
   const baseUrl = new URL(request.url).origin;
   return withCors(request, new Response(JSON.stringify({
@@ -707,6 +863,7 @@ async function handleEmployeeContractUpload(
     fileName: inserted.fileName,
     uploadedAt: inserted.uploadedAt,
     viewUrl: getEmployeeSignedContractViewUrl(baseUrl, inserted.id),
+    completedEnrollment,
   }), {
     status: 201, headers: { "Content-Type": "application/json" },
   }));

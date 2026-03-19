@@ -1,20 +1,119 @@
 import { and, eq, notInArray } from "drizzle-orm";
 import { schema } from "../../../db";
-import { createContractViewToken, getContractViewUrl } from "../../../contracts";
+import { getOrCreateContractViewToken, getContractViewUrl } from "../../../contracts";
 import { sendBenefitRequestSubmittedEmail, sendHrNewBenefitRequestEmail } from "../../../email/sendTransactionalEmail";
 import type { GraphQLContext } from "../../context";
 import { requireAuth } from "../../../auth";
 import { getBenefitsForEmployee } from "../helpers/employeeBenefits";
 import { writeAuditLog } from "../helpers/audit";
 
+function addMonths(date: Date, months: number): Date {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + months);
+  return d;
+}
+
+function getTenureMonths(hireDateIso: string, now: Date): number {
+  const hireMs = new Date(hireDateIso).getTime();
+  const days = Math.floor((now.getTime() - hireMs) / (24 * 60 * 60 * 1000));
+  return Math.floor(days / 30);
+}
+
+async function resolveEmployeeMonthlySalaryMnt(params: {
+  envDb: any;
+  employeeId: string;
+}): Promise<number | null> {
+  // We don't have salary columns in Drizzle schema, but the underlying D1 DB
+  // may include them. To keep this resolver resilient, we discover the column
+  // name via PRAGMA table_info and then read the value.
+  const { envDb, employeeId } = params;
+
+  const pragmaStmt = envDb.prepare("PRAGMA table_info(employees)");
+  const pragma = (await pragmaStmt.all()) as unknown as {
+    results?: Array<{ name: string }>;
+  };
+
+  const cols =
+    (pragma as any)?.results?.map((r: { name: string }) => r.name).filter(Boolean) ??
+    [];
+
+  // Prefer salary/wage/pay/income-like names.
+  const candidates = cols.filter((c) => {
+    const lc = c.toLowerCase();
+    return (
+      lc.includes("salary") ||
+      lc.includes("wage") ||
+      lc.includes("pay") ||
+      lc.includes("income") ||
+      lc.includes("gross") ||
+      lc.includes("net") ||
+      lc.includes("comp") ||
+      lc.includes("earn")
+    );
+  });
+
+  const pick = (names: string[], scoreFn: (n: string) => number) =>
+    names.sort((a, b) => scoreFn(b) - scoreFn(a))[0];
+
+  const chosen =
+    pick(candidates, (n) => {
+      const lc = n.toLowerCase();
+      let score = 0;
+      if (lc.includes("monthly") || lc.includes("month")) score += 5;
+      if (lc.includes("mnt")) score += 4;
+      if (lc === "salary") score += 3;
+      if (lc.includes("salary")) score += 2;
+      if (lc.includes("wage")) score += 2;
+      if (lc.includes("income")) score += 2;
+      return score;
+    }) ??
+    null;
+
+  if (candidates.length === 0) {
+    throw new Error(
+      `Monthly salary column not found in "employees". Available columns: ${cols.join(", ")}`,
+    );
+  }
+
+  if (!chosen) {
+    throw new Error(
+      `Monthly salary column candidate was not selected. Candidates: ${candidates.join(", ")}.`,
+    );
+  }
+
+  const salaryStmt = envDb.prepare(
+    `SELECT ${chosen} AS monthly_salary_mnt FROM employees WHERE id = ?`,
+  );
+  const rows = (await salaryStmt.bind(employeeId).all()) as unknown as {
+    results?: Array<{ monthly_salary_mnt: unknown }>;
+  };
+
+  const raw = rows?.results?.[0]?.monthly_salary_mnt ?? null;
+  const salary = typeof raw === "number" ? raw : Number(raw);
+  if (raw === null) {
+    throw new Error(
+      `Monthly salary value is NULL in column "${chosen}" for this employee.`,
+    );
+  }
+  if (!Number.isFinite(salary) || salary <= 0) {
+    throw new Error(
+      `Monthly salary value in column "${chosen}" is invalid (value=${String(raw)}).`,
+    );
+  }
+  return Math.round(salary);
+}
+
 /** Derive initial request status from benefit's approvalPolicy.
- *  Contract benefits ALWAYS enter awaiting_contract_acceptance first.
+ *  Contract benefits enter awaiting_contract_acceptance first — except
+ *  down_payment (Finance Benefit): employee submits amount first; HR contract
+ *  is signed only after dual approval.
  *  Contract acceptance is ONLY recorded via confirmBenefitRequest. */
 function deriveInitialStatus(
   approvalPolicy: string,
   requiresContract: boolean,
+  financeFirstPhase: boolean,
 ): string {
-  if (requiresContract) {
+  if (requiresContract && !financeFirstPhase) {
     return "awaiting_contract_acceptance";
   }
   if (approvalPolicy === "finance") {
@@ -40,6 +139,7 @@ export const requestBenefit = async (
   { db, env, baseUrl, currentEmployee }: GraphQLContext,
 ) => {
   const employee = requireAuth(currentEmployee);
+  const now = new Date();
   const {
     benefitId,
     requestedAmount,
@@ -105,12 +205,114 @@ export const requestBenefit = async (
   }
 
   const approvalPolicy = benefitFromDb.approvalPolicy ?? "hr";
-  const initialStatus = deriveInitialStatus(approvalPolicy, benefitFromDb.requiresContract);
+  const flowNorm = String(benefitFromDb.flowType ?? "").trim().toLowerCase();
+  const isDownPaymentFlow = flowNorm === "down_payment";
+  const amt = requestedAmount ?? null;
+  const months = repaymentMonths ?? null;
+  const hasValidLoanFields =
+    amt != null &&
+    Number.isFinite(amt) &&
+    amt > 0 &&
+    months != null &&
+    Number.isFinite(months) &&
+    months > 0;
+  /** Loan request first; signed contract only after approvals (down_payment or dual+contract with loan fields). */
+  const financeFirstPhase =
+    isDownPaymentFlow ||
+    (approvalPolicy === "dual" &&
+      benefitFromDb.requiresContract &&
+      hasValidLoanFields);
+
+  if (isDownPaymentFlow && !hasValidLoanFields) {
+    throw new Error(
+      "Finance benefits require a requested loan amount and repayment term (months).",
+    );
+  }
+
+  // ── Additional finance-loan validations ────────────────────────────────
+  // The user's required business rules for "зээл олгох" (down_payment finance benefit):
+  //  1) Tenure: employee must have been working for 6+ months.
+  //  2) Cap: monthly loan installment must be <= 30% of employee monthly salary.
+  //  3) Previous loans: any previous approved down_payment request must be fully repaid.
+  if (isDownPaymentFlow) {
+    // 1) Tenure >= 6 months
+    const tenureMonths = getTenureMonths(employee.hireDate, now);
+    if (tenureMonths < 6) {
+      throw new Error("Available after 6 months of employment.");
+    }
+
+    // 2) Monthly installment cap (interest: 2.0% per month)
+    //    For reducing-balance loans, the maximum installment happens in month 1,
+    //    so we conservatively check month-1 against the 30% salary cap.
+    const interestRateMonthly = 0.02; // 2.0% per month
+    const monthlyPrincipal = (amt as number) / (months as number);
+    const monthlyInterestFirstMonth = (amt as number) * interestRateMonthly;
+    const monthlyInstallmentFirstMonth = monthlyPrincipal + monthlyInterestFirstMonth;
+
+    const monthlySalaryMnt = await resolveEmployeeMonthlySalaryMnt({
+      envDb: env.DB,
+      employeeId: employee.id,
+    });
+
+    const cappedInstallment = Math.ceil(monthlyInstallmentFirstMonth);
+    const maxAllowed = Math.floor(monthlySalaryMnt * 0.3);
+    if (cappedInstallment > maxAllowed) {
+      throw new Error(
+        `Monthly installment exceeds the 30% salary cap. Max allowed: ${maxAllowed}₮.`,
+      );
+    }
+
+    // 3) Previous approved loans must be fully repaid
+    //    We treat a down_payment request as "active loan" only after contract upload,
+    //    which sets `status=approved` and `employeeApprovedAt`.
+    const prevLoanRows = await db
+      .select({
+        id: schema.benefitRequests.id,
+        status: schema.benefitRequests.status,
+        requestedAmount: schema.benefitRequests.requestedAmount,
+        repaymentMonths: schema.benefitRequests.repaymentMonths,
+        employeeApprovedAt: schema.benefitRequests.employeeApprovedAt,
+        benefitId: schema.benefitRequests.benefitId,
+        benefitFlowType: schema.benefits.flowType,
+      })
+      .from(schema.benefitRequests)
+      .innerJoin(
+        schema.benefits,
+        eq(schema.benefits.id, schema.benefitRequests.benefitId),
+      )
+      .where(
+        and(
+          eq(schema.benefitRequests.employeeId, employee.id),
+          eq(schema.benefitRequests.status, "approved"),
+          eq(schema.benefits.flowType, "down_payment"),
+        ),
+      );
+
+    for (const row of prevLoanRows) {
+      const start = row.employeeApprovedAt ? new Date(row.employeeApprovedAt) : null;
+      const termMonths = row.repaymentMonths;
+      if (!start || !termMonths || !Number.isFinite(termMonths) || termMonths <= 0) {
+        // If we can't compute repayment end, we block to be safe.
+        throw new Error("Previous loan is not fully repaid yet.");
+      }
+
+      const repaidAt = addMonths(start, termMonths);
+      if (now.getTime() < repaidAt.getTime()) {
+        throw new Error("Previous loan is not fully repaid yet.");
+      }
+    }
+  }
+
+  const initialStatus = deriveInitialStatus(
+    approvalPolicy,
+    benefitFromDb.requiresContract,
+    financeFirstPhase,
+  );
 
   let resolvedEmployeeContractKey: string | null = null;
   let attachedEmployeeSignedContractId: string | null = null;
 
-  if (benefitFromDb.requiresContract) {
+  if (benefitFromDb.requiresContract && !financeFirstPhase) {
     if (!employeeSignedContractId && !employeeContractKey) {
       throw new Error(
         "Please upload your signed contract before submitting this request.",
@@ -280,13 +482,15 @@ export const requestBenefit = async (
       .where(eq(schema.contracts.benefitId, benefitId));
     const active = contracts.find((c) => c.isActive);
     if (active) {
-      const token = await createContractViewToken(
+      const token = await getOrCreateContractViewToken(
         env.CONTRACT_VIEW_TOKENS,
         active.r2ObjectKey,
         undefined,
         { employeeId: employee.id, contractId: active.id },
       );
-      viewContractUrl = getContractViewUrl(baseUrl, token);
+      if (token) {
+        viewContractUrl = getContractViewUrl(baseUrl, token);
+      }
     }
   }
 

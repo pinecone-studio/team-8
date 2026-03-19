@@ -142,17 +142,26 @@ function buildTimeline(
 ): TimelineStep[] {
   const p = (policy ?? "hr").toLowerCase();
   const rc = requiresContract ?? false;
+  // Down payment (finance) flow: contract upload happens AFTER HR+Finance approvals.
+  // We infer it by: dual approval + requires contract + no employee payment.
+  const isDownPaymentFlowTimeline =
+    rc &&
+    !hasPayment &&
+    p === "dual" &&
+    (status === "awaiting_hr_review" ||
+      status === "hr_approved" ||
+      status === "awaiting_finance_review" ||
+      status === "finance_approved" ||
+      status === "awaiting_employee_signed_contract");
   const isRejected = status === "rejected";
   const isDeclined = status === "declined";
   const isCancelled = status === "cancelled";
   const isTerminal = isRejected || isDeclined || isCancelled;
 
-  const stepIds: string[] = ["submitted"];
-  if (rc) stepIds.push("contract");
-  if (p === "hr" || p === "dual") stepIds.push("hr_review");
-  if (p === "finance" || p === "dual") stepIds.push("finance_review");
-  if (hasPayment) stepIds.push("payment");
-  stepIds.push("done");
+  const stepIds: string[] = isDownPaymentFlowTimeline
+    ? // submitted → HR review → Finance review → employee signs/uploads contract → done
+      ["submitted", "hr_review", "finance_review", "contract", "done"]
+    : ["submitted", ...(rc ? ["contract"] : []), ...(p === "hr" || p === "dual" ? ["hr_review"] : []), ...(p === "finance" || p === "dual" ? ["finance_review"] : []), ...(hasPayment ? ["payment"] : []), "done"];
 
   let activeIdx: number;
   switch (status) {
@@ -173,7 +182,14 @@ function buildTimeline(
           : stepIds.length;
       break;
     case "finance_approved":
-      activeIdx = hasPayment ? stepIds.indexOf("payment") : stepIds.length;
+      activeIdx = isDownPaymentFlowTimeline
+        ? stepIds.indexOf("contract")
+        : hasPayment
+          ? stepIds.indexOf("payment")
+          : stepIds.length;
+      break;
+    case "awaiting_employee_signed_contract":
+      activeIdx = stepIds.indexOf("contract");
       break;
     case "awaiting_payment":
     case "awaiting_payment_review":
@@ -406,6 +422,7 @@ function ContractAcceptModal({
 }) {
   const [accepted, setAccepted] = useState(false);
   const contractUrl = getContractProxyUrl(state.viewContractUrl);
+  const contractLinkMissing = state.requiresContract && !state.viewContractUrl;
 
   return (
     <div
@@ -456,10 +473,12 @@ function ContractAcceptModal({
             <div className="rounded-full bg-red-100 p-4">
               <X className="h-7 w-7 text-red-400" />
             </div>
-            <p className="text-sm font-medium text-red-700 text-center">No contract available</p>
+            <p className="text-sm font-medium text-red-700 text-center">
+              Contract preview unavailable
+            </p>
             <p className="text-xs text-red-600 text-center max-w-xs">
-              This benefit requires a vendor contract, but no active contract has been uploaded yet.
-              Please contact HR to resolve this before you can proceed.
+              We couldn't load the latest active vendor contract right now.
+              You can still submit acceptance; the system will verify against the latest active HR contract.
             </p>
           </div>
         ) : (
@@ -473,50 +492,43 @@ function ContractAcceptModal({
           </div>
         )}
 
-        {!state.requiresContract || state.viewContractUrl ? (
-          <div className="border-t border-gray-100 px-6 py-4 bg-white">
-            <label className="flex cursor-pointer items-start gap-3 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={accepted}
-                onChange={(e) => setAccepted(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-blue-600"
-              />
-              <span>
-                I have read and agree to the contract terms and conditions. This acceptance will be
-                legally recorded.
-              </span>
-            </label>
+        <div className="border-t border-gray-100 px-6 py-4 bg-white">
+          {contractLinkMissing && (
+            <p className="mb-3 text-xs text-red-600">
+              Preview is unavailable. You can proceed by accepting below.
+            </p>
+          )}
+          <label className="flex cursor-pointer items-start gap-3 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={accepted}
+              onChange={(e) => setAccepted(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-blue-600"
+            />
+            <span>
+              I have read and agree to the contract terms and conditions. This acceptance will be
+              legally recorded.
+            </span>
+          </label>
 
-            <div className="mt-4 flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={!accepted || confirming}
-                onClick={onConfirm}
-                className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                {confirming ? "Confirming…" : "Accept & Submit"}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="border-t border-gray-100 px-6 py-4 bg-white flex justify-end">
+          <div className="mt-4 flex gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-gray-200 bg-white px-5 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              className="flex-1 rounded-lg border border-gray-200 bg-white py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
             >
-              Close
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={!accepted || confirming}
+              onClick={onConfirm}
+              className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              {confirming ? "Confirming…" : "Accept & Submit"}
             </button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
