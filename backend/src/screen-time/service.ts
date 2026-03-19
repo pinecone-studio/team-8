@@ -809,9 +809,146 @@ export async function buildScreenTimeLeaderboard(
       };
     })
     .filter((row): row is ScreenTimeLeaderboardDraftRow => row !== null)
-    .slice(0, 5)
     .map((row, index) => ({
       rank: index + 1,
       ...row,
     }));
+}
+
+// ── Deterministic screen-time seed helpers ────────────────────────────────────
+
+function hashString(value: string): number {
+  let h = 0;
+  for (let i = 0; i < value.length; i++) {
+    h = (Math.imul(31, h) + value.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+/**
+ * Returns a deterministic avg daily minutes in [30, 300] based on the
+ * employee id.  The distribution is intentionally wide so the leaderboard
+ * shows a varied spread rather than everyone clustering around a single value.
+ */
+function deterministicBaseMinutes(employeeId: string): number {
+  return 30 + (hashString(employeeId) % 271); // 30 … 300
+}
+
+/** Returns a small ±30 minute per-slot variation to make slots look natural. */
+function deterministicSlotVariation(employeeId: string, slotDate: string): number {
+  return (hashString(employeeId + slotDate) % 61) - 30; // -30 … +30
+}
+
+/**
+ * For every active employee that does not yet have a screen-time submission for
+ * each due Monday slot of `monthKey`, inserts a synthetic "auto-approved"
+ * submission so the leaderboard is populated with real DB rows.
+ *
+ * Safe to call multiple times — existing submissions are never overwritten.
+ * Returns the number of employees that had at least one new row inserted.
+ */
+export async function seedScreenTimeSubmissionsForAllEmployees(
+  db: Database,
+  benefitId: string,
+  monthKey: string,
+): Promise<number> {
+  const todayLocalDate = resolveTodayLocalDateString();
+  const dueSlotDates = getDueMondaySlotDates(monthKey, todayLocalDate);
+  console.log(`[seed/service] monthKey=${monthKey} todayLocalDate=${todayLocalDate} dueSlotDates=${JSON.stringify(dueSlotDates)}`);
+  if (dueSlotDates.length === 0) {
+    console.log("[seed/service] no due slot dates — aborting");
+    return 0;
+  }
+
+  // Ensure a screenTimePrograms row exists so buildAdminScreenTimeMonthBoard
+  // does not exit early.  We create a bare program (no tiers) if absent.
+  const existingProgram = await db
+    .select()
+    .from(schema.screenTimePrograms)
+    .where(eq(schema.screenTimePrograms.benefitId, benefitId))
+    .limit(1);
+  if (!existingProgram[0]) {
+    console.log("[seed/service] no screenTimePrograms row found — inserting default");
+    await db.insert(schema.screenTimePrograms).values({
+      benefitId,
+      screenshotRetentionDays: 30,
+      isActive: true,
+    });
+  }
+
+  const [allEmployees, existingRows] = await Promise.all([
+    db.select().from(schema.employees),
+    db
+      .select({
+        employeeId: schema.screenTimeSubmissions.employeeId,
+        slotDate: schema.screenTimeSubmissions.slotDate,
+      })
+      .from(schema.screenTimeSubmissions)
+      .where(
+        and(
+          eq(schema.screenTimeSubmissions.benefitId, benefitId),
+          eq(schema.screenTimeSubmissions.monthKey, monthKey),
+        ),
+      ),
+  ]);
+  console.log(`[seed/service] found ${allEmployees.length} employees, ${existingRows.length} existing submission rows`);
+
+  const existingSet = new Set(existingRows.map((r) => `${r.employeeId}:${r.slotDate}`));
+  const now = new Date().toISOString();
+
+  type InsertRow = {
+    benefitId: string;
+    employeeId: string;
+    monthKey: string;
+    slotDate: string;
+    avgDailyMinutes: number;
+    confidenceScore: number;
+    platform: string;
+    periodType: string;
+    extractionStatus: string;
+    reviewStatus: string;
+    reviewedAt: string;
+    submittedAt: string;
+  };
+
+  const toInsert: InsertRow[] = [];
+
+  for (const employee of allEmployees) {
+    const base = deterministicBaseMinutes(employee.id);
+    for (const slotDate of dueSlotDates) {
+      if (existingSet.has(`${employee.id}:${slotDate}`)) continue;
+      const variation = deterministicSlotVariation(employee.id, slotDate);
+      const avgDailyMinutes = Math.max(15, Math.min(360, base + variation));
+      toInsert.push({
+        benefitId,
+        employeeId: employee.id,
+        monthKey,
+        slotDate,
+        avgDailyMinutes,
+        confidenceScore: 95,
+        platform: "ios",
+        periodType: "weekly",
+        extractionStatus: "accepted",
+        reviewStatus: "auto_approved",
+        reviewedAt: now,
+        submittedAt: now,
+      });
+    }
+  }
+
+  if (toInsert.length === 0) return 0;
+
+  console.log(`[seed/service] inserting ${toInsert.length} new submission rows`);
+  if (toInsert.length === 0) return 0;
+
+  // Drizzle/SQLite can fail with too many bound variables; batch in groups of 50
+  const BATCH = 50;
+  for (let i = 0; i < toInsert.length; i += BATCH) {
+    await db.insert(schema.screenTimeSubmissions).values(toInsert.slice(i, i + BATCH));
+  }
+
+  // Return how many distinct employees had at least one new submission inserted
+  const seededEmployeeIds = new Set(toInsert.map((r) => r.employeeId));
+  console.log(`[seed/service] inserted rows for ${seededEmployeeIds.size} employees`);
+  return seededEmployeeIds.size;
 }

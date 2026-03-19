@@ -200,3 +200,7 @@ mutation RejectRuleProposal($id: String!, $reason: String!) {
     reason
   }
 }
+
+mutation SeedScreenTimeSubmissions($benefitId: String!, $monthKey: String) {
+  seedScreenTimeSubmissions(benefitId: $benefitId, monthKey: $monthKey)
+}

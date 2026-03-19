@@ -364,6 +364,7 @@ export type Mutation = {
   proposeRuleChange: RuleProposal;
   rejectRuleProposal: RuleProposal;
   requestBenefit: BenefitRequest;
+  seedScreenTimeSubmissions: Scalars['Int']['output'];
   syncOkrStatus: OkrSyncResult;
   updateBenefit: Benefit;
   updateEligibilityRule: EligibilityRule;
@@ -459,6 +460,12 @@ export type MutationRejectRuleProposalArgs = {
 
 export type MutationRequestBenefitArgs = {
   input: RequestBenefitInput;
+};
+
+
+export type MutationSeedScreenTimeSubmissionsArgs = {
+  benefitId: Scalars['String']['input'];
+  monthKey?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -961,6 +968,14 @@ export type RejectRuleProposalMutationVariables = Exact<{
 
 
 export type RejectRuleProposalMutation = { __typename?: 'Mutation', rejectRuleProposal: { __typename?: 'RuleProposal', id: string, status: string, reviewedByEmployeeId?: string | null, reviewedAt?: string | null, reason?: string | null } };
+
+export type SeedScreenTimeSubmissionsMutationVariables = Exact<{
+  benefitId: Scalars['String']['input'];
+  monthKey?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type SeedScreenTimeSubmissionsMutation = { __typename?: 'Mutation', seedScreenTimeSubmissions: number };
 
 export type CreateEmployeeMutationVariables = Exact<{
   input: CreateEmployeeInput;
@@ -1832,6 +1847,38 @@ export function useRejectRuleProposalMutation(baseOptions?: Apollo.MutationHookO
 export type RejectRuleProposalMutationHookResult = ReturnType<typeof useRejectRuleProposalMutation>;
 export type RejectRuleProposalMutationResult = Apollo.MutationResult<RejectRuleProposalMutation>;
 export type RejectRuleProposalMutationOptions = Apollo.BaseMutationOptions<RejectRuleProposalMutation, RejectRuleProposalMutationVariables>;
+export const SeedScreenTimeSubmissionsDocument = gql`
+    mutation SeedScreenTimeSubmissions($benefitId: String!, $monthKey: String) {
+  seedScreenTimeSubmissions(benefitId: $benefitId, monthKey: $monthKey)
+}
+    `;
+export type SeedScreenTimeSubmissionsMutationFn = Apollo.MutationFunction<SeedScreenTimeSubmissionsMutation, SeedScreenTimeSubmissionsMutationVariables>;
+
+/**
+ * __useSeedScreenTimeSubmissionsMutation__
+ *
+ * To run a mutation, you first call `useSeedScreenTimeSubmissionsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSeedScreenTimeSubmissionsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [seedScreenTimeSubmissionsMutation, { data, loading, error }] = useSeedScreenTimeSubmissionsMutation({
+ *   variables: {
+ *      benefitId: // value for 'benefitId'
+ *      monthKey: // value for 'monthKey'
+ *   },
+ * });
+ */
+export function useSeedScreenTimeSubmissionsMutation(baseOptions?: Apollo.MutationHookOptions<SeedScreenTimeSubmissionsMutation, SeedScreenTimeSubmissionsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SeedScreenTimeSubmissionsMutation, SeedScreenTimeSubmissionsMutationVariables>(SeedScreenTimeSubmissionsDocument, options);
+      }
+export type SeedScreenTimeSubmissionsMutationHookResult = ReturnType<typeof useSeedScreenTimeSubmissionsMutation>;
+export type SeedScreenTimeSubmissionsMutationResult = Apollo.MutationResult<SeedScreenTimeSubmissionsMutation>;
+export type SeedScreenTimeSubmissionsMutationOptions = Apollo.BaseMutationOptions<SeedScreenTimeSubmissionsMutation, SeedScreenTimeSubmissionsMutationVariables>;
 export const CreateEmployeeDocument = gql`
     mutation CreateEmployee($input: CreateEmployeeInput!) {
   createEmployee(input: $input) {

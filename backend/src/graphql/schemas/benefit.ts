@@ -364,5 +364,6 @@ export const benefitTypeDefs = gql`
     proposeRuleChange(input: ProposeRuleChangeInput!): RuleProposal!
     approveRuleProposal(id: String!, reason: String): RuleProposal!
     rejectRuleProposal(id: String!, reason: String!): RuleProposal!
+    seedScreenTimeSubmissions(benefitId: String!, monthKey: String): Int!
   }
 `;

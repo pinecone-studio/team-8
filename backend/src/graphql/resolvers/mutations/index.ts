@@ -21,6 +21,7 @@ import { importAttendance } from "./importAttendance";
 import { syncOkrStatus } from "./syncOkrStatus";
 import { updateMySettings } from "./updateMySettings";
 import { upsertScreenTimeProgram } from "./upsertScreenTimeProgram";
+import { seedScreenTimeSubmissions } from "./seedScreenTimeSubmissions";
 
 export const mutations = {
   createBenefit,
@@ -46,4 +47,5 @@ export const mutations = {
   syncOkrStatus,
   updateMySettings,
   upsertScreenTimeProgram,
+  seedScreenTimeSubmissions,
 };
