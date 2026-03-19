@@ -19,21 +19,21 @@ function applyTheme(next: ThemeMode) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>("light");
+  const [theme, setThemeState] = useState<ThemeMode>(() => {
+    if (typeof window === "undefined") return "light";
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return stored === "dark" ? "dark" : "light";
+  });
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    const initial: ThemeMode = stored === "dark" ? "dark" : "light";
-    setThemeState(initial);
-    applyTheme(initial);
-  }, []);
+    applyTheme(theme);
+  }, [theme]);
 
   const setTheme = (next: ThemeMode) => {
     setThemeState(next);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(STORAGE_KEY, next);
     }
-    applyTheme(next);
   };
 
   const toggleTheme = () => {
