@@ -42,6 +42,9 @@ const ACTION_TYPE_LABELS: Record<string, string> = {
   ATTENDANCE_IMPORT: "Attendance Import",
   ELIGIBILITY_RECOMPUTED: "Eligibility Recomputed",
   OKR_SYNC: "OKR Sync",
+  PAYMENT_INVOICE_CREATED: "Payment Checkout Created",
+  PAYMENT_CONFIRMED: "Payment Confirmed",
+  PAYMENT_FAILED: "Payment Failed",
 };
 
 const ACTION_TONE: Record<string, string> = {
@@ -66,6 +69,9 @@ const ACTION_TONE: Record<string, string> = {
   ATTENDANCE_IMPORT: "bg-amber-50 text-amber-700",
   ELIGIBILITY_RECOMPUTED: "bg-sky-50 text-sky-700",
   OKR_SYNC: "bg-lime-50 text-lime-700",
+  PAYMENT_INVOICE_CREATED: "bg-blue-50 text-blue-700",
+  PAYMENT_CONFIRMED: "bg-emerald-50 text-emerald-700",
+  PAYMENT_FAILED: "bg-red-50 text-red-700",
 };
 
 

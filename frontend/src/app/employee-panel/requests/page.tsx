@@ -1,11 +1,18 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
-import { Building2, Check, Copy, CreditCard, Eye, ExternalLink, FileCheck, X } from "lucide-react";
+import {
+  Check,
+  CreditCard,
+  Eye,
+  ExternalLink,
+  FileCheck,
+  X,
+} from "lucide-react";
 import Sidebar from "../_components/SideBar";
 import {
   useGetBenefitRequestsQuery,
@@ -15,6 +22,14 @@ import {
   GetBenefitRequestsDocument,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
+import {
+  benefitRequiresEmployeePayment,
+  type BenefitPaymentRecord,
+  getBenefitPaymentDisplayStatus,
+  openBenefitPaymentCheckout,
+  reconcileReturnedBenefitPayment,
+  startBenefitBonumPayment,
+} from "@/lib/benefit-payments";
 import { getContractProxyUrl } from "@/lib/contracts";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 
@@ -26,22 +41,7 @@ const CANCELLABLE_STATUSES = new Set([
   "awaiting_hr_review",
   "awaiting_finance_review",
   "awaiting_payment",
-  "awaiting_payment_review",
 ]);
-
-function getApiBase(): string {
-  const base =
-    typeof process !== "undefined" && process.env?.NEXT_PUBLIC_GRAPHQL_URL
-      ? process.env.NEXT_PUBLIC_GRAPHQL_URL
-      : "https://team8-api.team8pinequest.workers.dev/";
-  return base.replace(/\/$/, "");
-}
-
-const PAYMENT_ACCOUNT_DETAILS = {
-  bankName: "PineQuest Corporate Account",
-  accountNumber: "0000 0000 0000",
-  accountHolder: "PineQuest LLC",
-} as const;
 
 function formatMoney(amount: number): string {
   return `${amount.toLocaleString("mn-MN")}₮`;
@@ -119,9 +119,9 @@ function getStatusTooltip(status: string): string | null {
     case "finance_approved":
       return "Finance approved its review step. If payment is required, you can complete the transfer next.";
     case "awaiting_payment":
-      return "Your request is approved for payment. Open the benefit details, pay your share, then mark it as paid.";
+      return "Your request is approved for payment. Open the Bonum checkout and complete your co-payment to activate the benefit automatically.";
     case "awaiting_payment_review":
-      return "You marked the payment as sent. HR is verifying the transfer before activation.";
+      return "This request is still waiting in the older manual payment-review flow. HR needs to verify the transfer before activation.";
     case "cancelled":
       return "This request was cancelled.";
     default:
@@ -390,7 +390,7 @@ type PaymentModalState = {
   companyPays: number;
   employeePays: number;
   companyPercent: number;
-  employeeName: string;
+  payment: BenefitPaymentRecord | null;
 };
 
 function ContractAcceptModal({
@@ -536,7 +536,55 @@ function PaymentDetailsModal({
   error: string | null;
 }) {
   const waitingForReview = normalizeRequestStatus(state.requestStatus) === "awaiting_payment_review";
-  const reference = `${state.benefitName} - ${state.employeeName}`;
+  const paymentStatus = getBenefitPaymentDisplayStatus(state.payment);
+  const canOpenCheckout =
+    normalizeRequestStatus(state.requestStatus) === "awaiting_payment" &&
+    paymentStatus !== "paid";
+
+  let helperTone = "text-blue-700";
+  let helperTitle = "Bonum checkout";
+  let helperBody =
+    "We will open a Bonum checkout page for your remaining payment amount.";
+
+  if (paymentStatus === "created") {
+    helperTitle = "Checkout ready";
+    helperBody = "Your Bonum invoice is ready. Open checkout to complete payment.";
+  } else if (paymentStatus === "expired") {
+    helperTone = "text-amber-700";
+    helperTitle = "Invoice expired";
+    helperBody =
+      "Your previous Bonum invoice expired. Create a fresh checkout and complete payment again.";
+  } else if (paymentStatus === "failed") {
+    helperTone = "text-red-700";
+    helperTitle = "Payment failed";
+    helperBody =
+      "Bonum reported a failed payment. You can retry by opening a fresh checkout.";
+  } else if (paymentStatus === "paid") {
+    helperTone = "text-emerald-700";
+    helperTitle = "Payment received";
+    helperBody =
+      "Your payment is already marked as paid. The benefit should activate automatically.";
+  } else if (waitingForReview) {
+    helperTone = "text-amber-700";
+    helperTitle = "Legacy payment review";
+    helperBody =
+      "This request is waiting for HR review from the earlier manual payment flow.";
+  }
+
+  const buttonLabel =
+    paymentStatus === "created"
+      ? "Open Bonum Checkout"
+      : paymentStatus === "expired"
+        ? "Create New Bonum Checkout"
+        : paymentStatus === "failed"
+          ? "Retry with Bonum"
+          : paymentStatus === "paid"
+            ? "Payment Received"
+            : waitingForReview
+              ? "Payment Submitted"
+              : submitting
+                ? "Opening..."
+                : "Pay with Bonum";
 
   return (
     <div
@@ -554,7 +602,7 @@ function PaymentDetailsModal({
           Payment Details
         </div>
         <h2 className="mt-4 text-xl font-semibold text-gray-900">{state.benefitName}</h2>
-        <p className="mt-1 text-sm text-gray-500">Review the payment details for this request.</p>
+        <p className="mt-1 text-sm text-gray-500">Complete your employee co-payment through Bonum.</p>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
@@ -573,19 +621,13 @@ function PaymentDetailsModal({
         </div>
 
         <div className="mt-5 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-            <Building2 className="h-4 w-4 text-gray-400" />
-            Company Bank Account
-          </div>
-          <div className="mt-3 space-y-2 text-sm text-gray-700">
-            <p>{PAYMENT_ACCOUNT_DETAILS.bankName}</p>
-            <p>{PAYMENT_ACCOUNT_DETAILS.accountHolder}</p>
-            <p className="font-medium">{PAYMENT_ACCOUNT_DETAILS.accountNumber}</p>
-            <p className="text-xs text-blue-700">
-              <Copy className="mr-1 inline h-3.5 w-3.5" />
-              Reference: {reference}
+          <p className="text-sm font-semibold text-gray-900">{helperTitle}</p>
+          <p className={`mt-2 text-sm ${helperTone}`}>{helperBody}</p>
+          {state.payment?.expiresAt && paymentStatus === "created" && (
+            <p className="mt-2 text-xs text-gray-500">
+              Expires at {new Date(state.payment.expiresAt).toLocaleString("mn-MN")}
             </p>
-          </div>
+          )}
         </div>
 
         {waitingForReview && (
@@ -611,14 +653,14 @@ function PaymentDetailsModal({
           <button
             type="button"
             onClick={onSubmit}
-            disabled={submitting || waitingForReview}
+            disabled={submitting || waitingForReview || !canOpenCheckout}
             className={`inline-flex h-11 items-center justify-center rounded-xl px-5 text-sm font-semibold text-white transition ${
-              waitingForReview
+              waitingForReview || !canOpenCheckout
                 ? "cursor-not-allowed bg-gray-300"
                 : "bg-blue-600 hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             }`}
           >
-            {waitingForReview ? "Төлбөр илгээгдсэн" : submitting ? "Submitting..." : "Төлбөр төлсөн — Submit"}
+            {buttonLabel}
           </button>
         </div>
       </div>
@@ -631,6 +673,9 @@ function PaymentDetailsModal({
 function RequestsContent() {
   const searchParams = useSearchParams();
   const submitted = searchParams.get("submitted") === "true";
+  const paymentReturned = searchParams.get("payment") === "returned";
+  const returnedRequestId = searchParams.get("requestId");
+  const returnedTransactionId = searchParams.get("transactionId");
   const { getToken } = useAuth();
   const { employee, loading: employeeLoading } = useCurrentEmployee();
   const {
@@ -639,7 +684,7 @@ function RequestsContent() {
     previousData: requestsPreviousData,
     refetch: refetchRequests,
   } = useGetBenefitRequestsQuery({
-    fetchPolicy: submitted ? "network-only" : "cache-first",
+    fetchPolicy: submitted || paymentReturned ? "network-only" : "cache-and-network",
   });
   const { data: benefitsData } = useGetBenefitsQuery();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -685,6 +730,67 @@ function RequestsContent() {
     },
   });
 
+  useEffect(() => {
+    if (!paymentReturned) return;
+
+    const timers = [2000, 5000, 9000].map((delay) =>
+      window.setTimeout(() => {
+        void refetchRequests();
+      }, delay),
+    );
+
+    return () => {
+      for (const timer of timers) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [paymentReturned, refetchRequests]);
+
+  useEffect(() => {
+    if (!paymentReturned || !returnedRequestId || !returnedTransactionId) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        await reconcileReturnedBenefitPayment(
+          returnedRequestId,
+          returnedTransactionId,
+          getToken,
+        );
+        if (cancelled) return;
+        await refetchRequests();
+        setFeedback({
+          type: "success",
+          message: "Payment confirmed. Your benefit is now being activated.",
+        });
+        setTimeout(() => setFeedback(null), 5000);
+      } catch (error) {
+        if (cancelled) return;
+        setFeedback({
+          type: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to confirm your Bonum payment.",
+        });
+        setTimeout(() => setFeedback(null), 6000);
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    getToken,
+    paymentReturned,
+    refetchRequests,
+    returnedRequestId,
+    returnedTransactionId,
+  ]);
+
   const benefitsById = new Map((benefitsData?.benefits ?? []).map((b) => [b.id, b]));
 
   const REQUEST_STATUS_ORDER: Record<string, number> = {
@@ -710,13 +816,13 @@ function RequestsContent() {
 
       // Contract-based benefits always pass through the payment step.
       let paymentInfo: {
-        total: string;
-        companyPays: string;
-        employeePays: string;
+        totalAmount: number;
+        companyPays: number;
+        employeePays: number;
         subsidyPercent: number;
       } | null = null;
       if (
-        benefit?.flowType === "contract" &&
+        benefitRequiresEmployeePayment(benefit) &&
         benefit?.amount &&
         benefit.subsidyPercent !== undefined &&
         benefit.employeePercent !== undefined
@@ -725,13 +831,14 @@ function RequestsContent() {
         const subsidyPercent = benefit.subsidyPercent;
         const companyAmount = Math.round(unitPrice * subsidyPercent / 100);
         const employeeAmount = unitPrice - companyAmount;
-        const fmt = (n: number) => n.toLocaleString("mn-MN") + "₮";
-        paymentInfo = {
-          total: fmt(unitPrice),
-          companyPays: fmt(companyAmount),
-          employeePays: fmt(employeeAmount),
-          subsidyPercent,
-        };
+        if (employeeAmount > 0) {
+          paymentInfo = {
+            totalAmount: unitPrice,
+            companyPays: companyAmount,
+            employeePays: employeeAmount,
+            subsidyPercent,
+          };
+        }
       }
 
       return {
@@ -750,7 +857,8 @@ function RequestsContent() {
         approvalPolicy: benefit?.approvalPolicy ?? "hr",
         requiresContract: benefit?.requiresContract ?? false,
         paymentInfo,
-        hasPayment: benefit?.flowType === "contract" && benefit?.amount != null,
+        payment: req.payment ?? null,
+        hasPayment: paymentInfo !== null,
       };
     })
     .sort(
@@ -763,29 +871,23 @@ function RequestsContent() {
   const submitPayment = async (requestId: string) => {
     setSubmittingPaymentId(requestId);
     try {
-      const token = await getToken();
-      const res = await fetch(`${getApiBase()}/api/benefit-requests/payment-submit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ requestId }),
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({ error: "Failed to submit payment." }));
-        throw new Error((json as { error?: string }).error ?? "Failed to submit payment.");
-      }
+      const payment = await startBenefitBonumPayment(requestId, getToken);
       await refetchRequests();
-      setFeedback({ type: "success", message: "Payment submitted for HR verification." });
+      setPaymentModal(null);
+      setFeedback({
+        type: "success",
+        message: "Bonum checkout opened in a new tab. Complete payment there to activate your benefit automatically.",
+      });
       setTimeout(() => setFeedback(null), 5000);
-      setPaymentModal((current) =>
-        current ? { ...current, requestStatus: "awaiting_payment_review" } : current,
-      );
+      if (payment.checkoutUrl) {
+        openBenefitPaymentCheckout(payment.checkoutUrl);
+      } else {
+        throw new Error("Bonum checkout URL was not returned.");
+      }
     } catch (err) {
       setFeedback({
         type: "error",
-        message: err instanceof Error ? err.message : "Failed to submit payment.",
+        message: err instanceof Error ? err.message : "Failed to start Bonum payment.",
       });
       setTimeout(() => setFeedback(null), 6000);
     } finally {
@@ -956,33 +1058,53 @@ function RequestsContent() {
                           <dl className="space-y-1.5 text-xs mb-3">
                             <div className="flex justify-between">
                               <dt className="text-blue-700">Total Amount</dt>
-                              <dd className="font-semibold text-blue-900">{req.paymentInfo.total}</dd>
+                              <dd className="font-semibold text-blue-900">{formatMoney(req.paymentInfo.totalAmount)}</dd>
                             </div>
                             <div className="flex justify-between">
                               <dt className="text-blue-700">Company Pays ({req.paymentInfo.subsidyPercent}%)</dt>
-                              <dd className="font-semibold text-emerald-700">{req.paymentInfo.companyPays}</dd>
+                              <dd className="font-semibold text-emerald-700">{formatMoney(req.paymentInfo.companyPays)}</dd>
                             </div>
                             <div className="flex justify-between border-t border-blue-100 pt-1.5">
                               <dt className="font-medium text-blue-800">Your Payment</dt>
-                              <dd className="font-bold text-blue-900">{req.paymentInfo.employeePays}</dd>
+                              <dd className="font-bold text-blue-900">{formatMoney(req.paymentInfo.employeePays)}</dd>
                             </div>
                           </dl>
+                          <p className="mb-3 text-xs text-blue-700">
+                            {getBenefitPaymentDisplayStatus(req.payment) === "created"
+                              ? "Your Bonum invoice is ready. Open checkout to complete payment."
+                              : getBenefitPaymentDisplayStatus(req.payment) === "expired"
+                                ? "Your previous Bonum invoice expired. Create a fresh checkout."
+                                : getBenefitPaymentDisplayStatus(req.payment) === "failed"
+                                  ? "Bonum reported a failed payment. Retry with a new checkout."
+                                  : "Open Bonum checkout and complete your co-payment."}
+                          </p>
                           <div className="flex flex-wrap justify-end gap-2">
-                            <Link
-                              href={`/employee-panel/benefits/${req.benefitId}`}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const paymentInfo = req.paymentInfo;
+                                if (!paymentInfo) return;
+                                setPaymentModal({
+                                  requestId: req.id,
+                                  benefitName: req.benefitLabel,
+                                  requestStatus: req.status,
+                                  totalAmount: paymentInfo.totalAmount,
+                                  companyPays: paymentInfo.companyPays,
+                                  employeePays: paymentInfo.employeePays,
+                                  companyPercent: paymentInfo.subsidyPercent,
+                                  payment: req.payment,
+                                });
+                              }}
                               className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100"
                             >
                               <Eye className="h-3.5 w-3.5" />
-                              Open Payment Dialog
-                            </Link>
-                            <button
-                              type="button"
-                              disabled={submittingPaymentId === req.id}
-                              onClick={() => submitPayment(req.id)}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
-                            >
-                              <FileCheck className="h-3.5 w-3.5" />
-                              {submittingPaymentId === req.id ? "Submitting..." : "I Paid"}
+                              {getBenefitPaymentDisplayStatus(req.payment) === "created"
+                                ? "Open Bonum Checkout"
+                                : getBenefitPaymentDisplayStatus(req.payment) === "expired"
+                                  ? "Create New Checkout"
+                                  : getBenefitPaymentDisplayStatus(req.payment) === "failed"
+                                    ? "Retry with Bonum"
+                                    : "Pay with Bonum"}
                             </button>
                           </div>
                         </div>
@@ -992,7 +1114,7 @@ function RequestsContent() {
                         <div className="mx-5 mb-3 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
                           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-600">Payment Under Review</p>
                           <p className="text-xs text-indigo-700">
-                            You already marked this payment as sent. HR is verifying the transfer before activating the benefit.
+                            This request is still in the older manual payment review flow. HR is verifying the transfer before activating the benefit.
                           </p>
                         </div>
                       )}
@@ -1004,15 +1126,15 @@ function RequestsContent() {
                           <dl className="space-y-1.5 text-xs">
                             <div className="flex justify-between">
                               <dt className="text-blue-700">Total Amount</dt>
-                              <dd className="font-semibold text-blue-900">{req.paymentInfo.total}</dd>
+                              <dd className="font-semibold text-blue-900">{formatMoney(req.paymentInfo.totalAmount)}</dd>
                             </div>
                             <div className="flex justify-between">
                               <dt className="text-blue-700">Company Pays ({req.paymentInfo.subsidyPercent}%)</dt>
-                              <dd className="font-semibold text-emerald-700">{req.paymentInfo.companyPays}</dd>
+                              <dd className="font-semibold text-emerald-700">{formatMoney(req.paymentInfo.companyPays)}</dd>
                             </div>
                             <div className="flex justify-between border-t border-blue-100 pt-1.5">
                               <dt className="font-medium text-blue-800">Your Payment</dt>
-                              <dd className="font-bold text-blue-900">{req.paymentInfo.employeePays}</dd>
+                              <dd className="font-bold text-blue-900">{formatMoney(req.paymentInfo.employeePays)}</dd>
                             </div>
                           </dl>
                         </div>
@@ -1100,24 +1222,25 @@ function RequestsContent() {
                             <button
                               type="button"
                               onClick={() => {
-                                const paymentInfo = req.paymentInfo!;
-                                return (
+                                const paymentInfo = req.paymentInfo;
+                                if (!paymentInfo) return;
                                 setPaymentModal({
                                   requestId: req.id,
                                   benefitName: req.benefitLabel,
                                   requestStatus: req.status,
-                                  totalAmount: Number(paymentInfo.total.replace(/[^\d]/g, "")),
-                                  companyPays: Number(paymentInfo.companyPays.replace(/[^\d]/g, "")),
-                                  employeePays: Number(paymentInfo.employeePays.replace(/[^\d]/g, "")),
+                                  totalAmount: paymentInfo.totalAmount,
+                                  companyPays: paymentInfo.companyPays,
+                                  employeePays: paymentInfo.employeePays,
                                   companyPercent: paymentInfo.subsidyPercent,
-                                  employeeName: employee?.name ?? "Employee",
-                                })
-                              );
+                                  payment: req.payment,
+                                });
                               }}
                               className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-1.5 text-xs font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:border-gray-300 whitespace-nowrap"
                             >
                               <Eye className="h-3 w-3" aria-hidden="true" />
-                              View Benefit
+                              {normalizeRequestStatus(req.status) === "awaiting_payment_review"
+                                ? "View Payment"
+                                : "Open Payment"}
                             </button>
                           ) : (
                             <Link

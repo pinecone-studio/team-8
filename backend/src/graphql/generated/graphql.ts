@@ -160,12 +160,34 @@ export type BenefitRequest = {
   employeeId: Scalars['String']['output'];
   employeeSignedContract?: Maybe<EmployeeSignedContract>;
   id: Scalars['String']['output'];
+  payment?: Maybe<BenefitRequestPayment>;
   repaymentMonths?: Maybe<Scalars['Int']['output']>;
   requestedAmount?: Maybe<Scalars['Int']['output']>;
   reviewedBy?: Maybe<Scalars['String']['output']>;
   status: Scalars['String']['output'];
   updatedAt: Scalars['String']['output'];
   viewContractUrl?: Maybe<Scalars['String']['output']>;
+};
+
+export type BenefitRequestPayment = {
+  __typename?: 'BenefitRequestPayment';
+  amount: Scalars['Int']['output'];
+  benefitId: Scalars['String']['output'];
+  bonumInvoiceId?: Maybe<Scalars['String']['output']>;
+  checkoutUrl?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['String']['output'];
+  currency: Scalars['String']['output'];
+  employeeId: Scalars['String']['output'];
+  expiresAt?: Maybe<Scalars['String']['output']>;
+  failedAt?: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  localTransactionId: Scalars['String']['output'];
+  paidAt?: Maybe<Scalars['String']['output']>;
+  paymentVendor?: Maybe<Scalars['String']['output']>;
+  provider: Scalars['String']['output'];
+  requestId: Scalars['String']['output'];
+  status: Scalars['String']['output'];
+  updatedAt: Scalars['String']['output'];
 };
 
 export type Contract = {
@@ -897,6 +919,7 @@ export type ResolversTypes = ResolversObject<{
   BenefitEligibilityStatus: BenefitEligibilityStatus;
   BenefitFlowType: BenefitFlowType;
   BenefitRequest: ResolverTypeWrapper<BenefitRequest>;
+  BenefitRequestPayment: ResolverTypeWrapper<BenefitRequestPayment>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
   Contract: ResolverTypeWrapper<Contract>;
   ContractAcceptance: ResolverTypeWrapper<ContractAcceptance>;
@@ -952,6 +975,7 @@ export type ResolversParentTypes = ResolversObject<{
   Benefit: Benefit;
   BenefitEligibility: BenefitEligibility;
   BenefitRequest: BenefitRequest;
+  BenefitRequestPayment: BenefitRequestPayment;
   Boolean: Scalars['Boolean']['output'];
   Contract: Contract;
   ContractAcceptance: ContractAcceptance;
@@ -1112,12 +1136,34 @@ export type BenefitRequestResolvers<ContextType = GraphQLContext, ParentType ext
   employeeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   employeeSignedContract?: Resolver<Maybe<ResolversTypes['EmployeeSignedContract']>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  payment?: Resolver<Maybe<ResolversTypes['BenefitRequestPayment']>, ParentType, ContextType>;
   repaymentMonths?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   requestedAmount?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   reviewedBy?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   updatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   viewContractUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type BenefitRequestPaymentResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['BenefitRequestPayment'] = ResolversParentTypes['BenefitRequestPayment']> = ResolversObject<{
+  amount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  benefitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  bonumInvoiceId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  checkoutUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  currency?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  employeeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  expiresAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  failedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  localTransactionId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  paidAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  paymentVendor?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  provider?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  requestId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -1431,6 +1477,7 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   Benefit?: BenefitResolvers<ContextType>;
   BenefitEligibility?: BenefitEligibilityResolvers<ContextType>;
   BenefitRequest?: BenefitRequestResolvers<ContextType>;
+  BenefitRequestPayment?: BenefitRequestPaymentResolvers<ContextType>;
   Contract?: ContractResolvers<ContextType>;
   ContractAcceptance?: ContractAcceptanceResolvers<ContextType>;
   DateTime?: GraphQLScalarType;

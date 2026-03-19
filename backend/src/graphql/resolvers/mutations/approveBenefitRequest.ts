@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
 import type { GraphQLContext } from "../../context";
 import {
@@ -7,8 +7,9 @@ import {
   canReviewFinanceBenefit,
   getInternalRole,
 } from "../../../auth";
-import { sendBenefitRequestApprovedEmail } from "../../../email/sendTransactionalEmail";
 import { writeAuditLog } from "../helpers/audit";
+import { finalizeBenefitApproval } from "../helpers/finalizeBenefitApproval";
+import { requiresEmployeePaymentForBenefit } from "../../../payments/amounts";
 
 const HR_REVIEWABLE = new Set([
   "pending",
@@ -42,8 +43,7 @@ export const approveBenefitRequest = async (
     .where(eq(schema.benefits.id, req.benefitId));
   const benefit = benefitRows[0];
   const approvalPolicy = benefit?.approvalPolicy ?? "hr";
-  const requiresEmployeePayment =
-    benefit?.flowType === "contract" && Boolean(benefit?.amount);
+  const requiresEmployeePayment = requiresEmployeePaymentForBenefit(benefit);
 
   const reviewerRole = getInternalRole(admin);
   const reviewerIsHr = canReviewHrBenefit(admin);
@@ -111,67 +111,30 @@ export const approveBenefitRequest = async (
     .returning();
 
   if (nextStatus === "approved" && benefit) {
-    const existingEnrollments = await db
-      .select()
-      .from(schema.employeeBenefitEnrollments)
-      .where(
-        and(
-          eq(schema.employeeBenefitEnrollments.employeeId, req.employeeId),
-          eq(schema.employeeBenefitEnrollments.benefitId, req.benefitId),
-          eq(schema.employeeBenefitEnrollments.status, "active"),
-        ),
-      );
-
-    if (!existingEnrollments[0]) {
-      await db.insert(schema.employeeBenefitEnrollments).values({
-        employeeId: req.employeeId,
-        benefitId: req.benefitId,
-        requestId: req.id,
-        status: "active",
-        subsidyPercentApplied: benefit.subsidyPercent,
-        employeePercentApplied: 100 - benefit.subsidyPercent,
-        approvedBy: admin.id,
-        startedAt: now,
-      });
-
-      await writeAuditLog({
-        db,
-        actor: admin,
-        actionType: "ENROLLMENT_CREATED",
-        entityType: "enrollment",
-        entityId: req.id,
-        targetEmployeeId: req.employeeId,
-        benefitId: req.benefitId,
-        requestId: req.id,
-        metadata: { subsidyPercentApplied: benefit.subsidyPercent },
-      });
-    }
-  }
-
-  await writeAuditLog({
-    db,
-    actor: admin,
-    actionType: auditAction,
-    entityType: "benefit_request",
-    entityId: requestId,
-    targetEmployeeId: req.employeeId,
-    benefitId: req.benefitId,
-    requestId,
-    before: { status },
-    after: { status: nextStatus },
-    metadata: { approvalPolicy, reviewerRole, requiresEmployeePayment },
-  });
-
-  if (nextStatus === "approved" && benefit) {
-    const employeeRows = await db
-      .select()
-      .from(schema.employees)
-      .where(eq(schema.employees.id, req.employeeId));
-    const targetEmployee = employeeRows[0];
-
-    if (targetEmployee) {
-      await sendBenefitRequestApprovedEmail(env, targetEmployee, benefit);
-    }
+    await finalizeBenefitApproval({
+      db,
+      env,
+      actor: admin,
+      benefitRequest: updated,
+      benefit,
+      beforeStatus: status,
+      actionType: auditAction,
+      metadata: { approvalPolicy, reviewerRole, requiresEmployeePayment },
+    });
+  } else {
+    await writeAuditLog({
+      db,
+      actor: admin,
+      actionType: auditAction,
+      entityType: "benefit_request",
+      entityId: requestId,
+      targetEmployeeId: req.employeeId,
+      benefitId: req.benefitId,
+      requestId,
+      before: { status },
+      after: { status: nextStatus },
+      metadata: { approvalPolicy, reviewerRole, requiresEmployeePayment },
+    });
   }
 
   return updated;

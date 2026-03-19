@@ -42,6 +42,12 @@ export const createBenefit = async (
   if (flowType === "contract" && input.subsidyPercent >= 100) {
     throw new Error("Contract-based benefits must leave an employee payment share. Set company subsidy below 100%.");
   }
+  if (flowType === "normal" && input.amount != null && input.amount <= 0) {
+    throw new Error("Paid normal benefits must include a valid total price.");
+  }
+  if (flowType === "normal" && input.amount != null && input.subsidyPercent >= 100) {
+    throw new Error("Paid normal benefits must leave an employee payment share. Set company subsidy below 100%.");
+  }
   const [row] = await db
     .insert(schema.benefits)
     .values({

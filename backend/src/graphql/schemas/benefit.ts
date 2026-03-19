@@ -169,6 +169,7 @@ export const benefitTypeDefs = gql`
     declineReason: String
     employeeContractKey: String
     employeeSignedContract: EmployeeSignedContract
+    payment: BenefitRequestPayment
     createdAt: String!
     updatedAt: String!
     viewContractUrl: String
@@ -187,6 +188,26 @@ export const benefitTypeDefs = gql`
     status: String!
     uploadedAt: String!
     viewUrl: String
+  }
+
+  type BenefitRequestPayment {
+    id: String!
+    requestId: String!
+    employeeId: String!
+    benefitId: String!
+    provider: String!
+    status: String!
+    amount: Int!
+    currency: String!
+    checkoutUrl: String
+    expiresAt: String
+    paidAt: String
+    failedAt: String
+    paymentVendor: String
+    localTransactionId: String!
+    bonumInvoiceId: String
+    createdAt: String!
+    updatedAt: String!
   }
 
   type Contract {
