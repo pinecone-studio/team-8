@@ -8,6 +8,7 @@ export {
 } from "./r2";
 export {
   createContractViewToken,
+  getOrCreateContractViewToken,
   getContractViewUrl,
   getEmployeeSignedContractViewUrl,
   resolveContractViewToken,

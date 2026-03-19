@@ -11,6 +11,7 @@ const CANCELLABLE_STATUSES = new Set([
   "awaiting_hr_review",
   "awaiting_finance_review",
   "awaiting_payment",
+  "awaiting_employee_signed_contract",
 ]);
 
 /** Employee: cancel own non-terminal benefit request. */

@@ -42,6 +42,11 @@ const STATUS_LABELS: Record<string, { title: string; body: string; linkPath: str
     body: "Finance has approved your benefit request. Final approval is in progress.",
     linkPath: "/employee-panel/requests",
   },
+  awaiting_employee_signed_contract: {
+    title: "HR and Finance approved your request",
+    body: "Open this benefit to download the contract, sign it, and upload your signed copy to complete enrollment.",
+    linkPath: "/employee-panel/mybenefits",
+  },
   approved: {
     title: "Benefit request approved",
     body: "Your benefit request has been fully approved. You are now enrolled.",
@@ -115,7 +120,9 @@ export const getNotifications = async (
       })
       .from(schema.benefitRequests);
 
-    const financeQueueRows = requestRows.filter((r) => r.status === "awaiting_finance_review");
+    const financeQueueRows = requestRows.filter((r) =>
+      ["awaiting_finance_review", "hr_approved"].includes(r.status),
+    );
     const financeQueueStateRows = sortByStableKey(
       financeQueueRows,
       (row) => `${row.id}|${row.updatedAt ?? row.createdAt}|${row.status}`,

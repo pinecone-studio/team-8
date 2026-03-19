@@ -226,6 +226,36 @@ export default function BenefitRequestPage() {
     );
   }
 
+  if (benefit.flowType === BenefitFlowType.DownPayment) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar />
+        <div className="flex flex-1 flex-col items-center">
+          <main className="w-full max-w-7xl p-8">
+            <Link
+              href={`/employee-panel/benefits/${id}`}
+              className="inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground active:opacity-80"
+            >
+              ← Back to Benefit
+            </Link>
+            <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/80 p-8 text-blue-900">
+              <p className="text-sm font-medium">Finance benefit requests use the benefit page</p>
+              <p className="mt-2 text-sm text-blue-800">
+                Open the benefit to submit your loan amount and repayment term, then — after HR and Finance approve — sign and upload your contract.
+              </p>
+              <Link
+                href={`/employee-panel/benefits/${id}`}
+                className="mt-5 inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-6 text-sm font-semibold text-white transition hover:bg-blue-700"
+              >
+                Go to benefit page
+              </Link>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   // ── Derived pricing ───────────────────────────────────────────────────────
   const unitPrice = (benefit as { unitPrice?: number | null }).unitPrice;
   const companyPays = unitPrice ? Math.round(unitPrice * benefit.subsidyPercent / 100) : null;
