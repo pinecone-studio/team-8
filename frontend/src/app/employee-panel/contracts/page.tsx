@@ -1,27 +1,10 @@
 "use client";
 
-import { use, useState } from "react";
-import { gql, useQuery } from "@apollo/client";
+import { use, useEffect, useState } from "react";
 import { CheckCircle2, ExternalLink, FileText, X } from "lucide-react";
 import Sidebar from "../_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
 import { getContractProxyUrl } from "@/lib/contracts";
-
-const GET_CONTRACTS = gql`
-  query Contracts {
-    contracts {
-      id
-      benefitId
-      benefitName
-      vendorName
-      version
-      effectiveDate
-      expiryDate
-      isActive
-      viewUrl
-    }
-  }
-`;
 
 type ContractRow = {
   id: string;
@@ -313,25 +296,75 @@ type PageProps = { params?: Promise<Record<string, string | string[]>> };
 
 export default function ContractsPage({ params }: PageProps) {
   if (params) use(params);
-  const { data, loading, error, previousData } = useQuery<{
-    contracts: ContractRow[];
-  }>(GET_CONTRACTS);
+  const [contracts, setContracts] = useState<ContractRow[]>([]);
+  const [previousContracts, setPreviousContracts] = useState<ContractRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [previewContract, setPreviewContract] = useState<ContractRow | null>(
     null,
   );
 
-  const contracts = data?.contracts ?? [];
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadContracts() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await fetch("/api/contracts", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        let data: { contracts?: ContractRow[]; error?: string } | null = null;
+        try {
+          data = await res.json();
+        } catch {
+          throw new Error("Contracts API did not return valid JSON.");
+        }
+
+        if (!res.ok) {
+          throw new Error(data?.error || "Failed to fetch contracts");
+        }
+
+        console.log("contracts data:", data);
+
+        const nextContracts = data?.contracts ?? [];
+        if (!cancelled) {
+          setPreviousContracts(nextContracts);
+          setContracts(nextContracts);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : "Failed to fetch contracts",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadContracts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const active = contracts.filter((c) => c.isActive);
   const historical = contracts.filter((c) => !c.isActive);
 
-  const prevContracts = previousData?.contracts ?? [];
   const activeSkeletonCount =
-    active.length || prevContracts.filter((c) => c.isActive).length || 4;
+    active.length || previousContracts.filter((c) => c.isActive).length || 4;
   const historicalSkeletonRows =
-    historical.length || prevContracts.filter((c) => !c.isActive).length || 3;
+    historical.length || previousContracts.filter((c) => !c.isActive).length || 3;
 
   // Only declare these states true once data has actually been received
-  const dataReceived = data !== undefined;
+  const dataReceived = !loading;
   const hasCurrentContracts = active.length > 0;
   const hasHistoricalVersions = historical.length > 0;
   const showEmptyState =
@@ -383,7 +416,7 @@ export default function ContractsPage({ params }: PageProps) {
               </>
             ) : error ? (
               <div className="mt-8 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
-                Failed to load contracts. Please try again.
+                {error}
               </div>
             ) : showEmptyState ? (
               <div className="mt-8 rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-14 text-center">
