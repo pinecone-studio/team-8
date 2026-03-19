@@ -29,7 +29,7 @@ export interface Env {
   // Gemini image extraction for screen-time screenshots.
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
-  // Local/dev-only override for testing Monday slot flows on non-Monday days.
+  // Local/dev-only override for testing Friday slot flows on non-Friday days.
   SCREEN_TIME_DEBUG_TODAY_LOCAL_DATE?: string;
   // Bonum payment integration.
   BONUM_API_BASE_URL?: string;

@@ -4,7 +4,12 @@ import {
   ensureScreenTimeBenefit,
   seedScreenTimeSubmissionsForAllEmployees,
 } from "../../../screen-time/service";
-import { getCurrentMonthKey } from "../../../screen-time/calendar";
+import {
+  getActiveFridaySlotDate,
+  getAssignedMonthKeyForSlotDate,
+  getMonthKeyFromDateString,
+  resolveTodayLocalDateString,
+} from "../../../screen-time/calendar";
 
 export const seedScreenTimeSubmissions = async (
   _: unknown,
@@ -30,7 +35,13 @@ export const seedScreenTimeSubmissions = async (
     throw benefitErr;
   }
 
-  const resolvedMonthKey = monthKey ?? getCurrentMonthKey();
+  const todayLocalDate = resolveTodayLocalDateString();
+  const activeSlotMonthKey = getAssignedMonthKeyForSlotDate(todayLocalDate);
+  const resolvedMonthKey =
+    monthKey ??
+    (getActiveFridaySlotDate(activeSlotMonthKey, todayLocalDate) != null
+      ? activeSlotMonthKey
+      : getMonthKeyFromDateString(todayLocalDate));
   console.log(`[seed] resolvedMonthKey=${resolvedMonthKey}`);
 
   try {

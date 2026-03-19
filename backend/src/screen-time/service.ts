@@ -1,26 +1,24 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import type {
   Database,
   Employee,
   ScreenTimeMonthlyResult as ScreenTimeMonthlyResultRow,
   ScreenTimeProgram,
-  ScreenTimeProgramTier,
   ScreenTimeSubmission,
 } from "../db";
 import { schema } from "../db";
 import { getBenefitsForEmployee } from "../graphql/resolvers/helpers/employeeBenefits";
 import {
-  compareDateStrings,
-  getActiveMondaySlotDate,
-  getDueMondaySlotDates,
+  getActiveFridaySlotDate,
+  getAssignedMonthKeyForSlotDate,
+  getDueFridaySlotDates,
+  getFridaySlotDates,
   getMonthKeyFromDateString,
-  getMondaySlotDates,
   resolveTodayLocalDateString,
 } from "./calendar";
 
-export type ScreenTimeProgramView = ScreenTimeProgram & {
-  tiers: ScreenTimeProgramTier[];
-};
+export type ScreenTimeProgramView = ScreenTimeProgram;
 
 export type ScreenTimeMonthlyResultView = {
   id: string;
@@ -30,15 +28,24 @@ export type ScreenTimeMonthlyResultView = {
   requiredSlotDates: string[];
   dueSlotDates: string[];
   missingDueSlotDates: string[];
+  rejectedDueSlotDates: string[];
   requiredSlotCount: number;
+  dueSlotCount: number;
   submittedSlotCount: number;
   approvedSlotCount: number;
   monthlyAvgDailyMinutes: number | null;
-  awardedSalaryUpliftPercent: number;
+  competitionParticipantCount: number;
+  rankedParticipantCount: number;
+  rankPosition: number | null;
+  winnerCutoffRank: number;
+  isWinner: boolean;
+  rewardAmountMnt: number;
+  isProvisional: boolean;
   status: string;
   approvedByEmployeeId: string | null;
   approvedAt: string | null;
   decisionNote: string | null;
+  disqualificationReason: string | null;
   submissions: ScreenTimeSubmission[];
 };
 
@@ -50,36 +57,25 @@ export type ScreenTimeLeaderboardRowView = {
   monthKey: string;
   status: string;
   avgDailyMinutes: number | null;
-  awardedSalaryUpliftPercent: number;
+  rewardAmountMnt: number;
   approvedSlotCount: number;
   dueSlotCount: number;
   requiredSlotCount: number;
   isProvisional: boolean;
+  winnerCutoffRank: number;
+  competitionParticipantCount: number;
 };
 
-type ScreenTimeLeaderboardDraftRow = {
+type ScreenTimeCompetitionRowView = {
   employeeId: string;
   employeeName: string;
   employeeEmail: string;
-  monthKey: string;
-  status: string;
-  avgDailyMinutes: number;
-  awardedSalaryUpliftPercent: number;
-  approvedSlotCount: number;
-  dueSlotCount: number;
-  requiredSlotCount: number;
-  isProvisional: boolean;
+  benefitStatus: string;
+  result: ScreenTimeMonthlyResultView;
 };
 
 const APPROVED_SUBMISSION_STATUSES = new Set(["auto_approved", "approved"]);
-const SCREEN_TIME_VISIBLE_ELIGIBILITY_STATUSES = [
-  "ACTIVE",
-  "ELIGIBLE",
-  "PENDING",
-  "active",
-  "eligible",
-  "pending",
-] as const;
+const COMPETITION_ELIGIBILITY_STATUSES = new Set(["ACTIVE", "ELIGIBLE", "PENDING"]);
 
 function safeJsonArray(raw: string | null | undefined): string[] {
   if (!raw) return [];
@@ -97,42 +93,27 @@ function averageRounded(values: number[]): number | null {
   return Math.round(total / values.length);
 }
 
-function resolveAwardedPercent(
-  tiers: ScreenTimeProgramTier[],
-  avgDailyMinutes: number | null,
-): number {
-  if (avgDailyMinutes == null) return 0;
-
-  const sorted = [...tiers].sort((left, right) => {
-    if (left.maxDailyMinutes !== right.maxDailyMinutes) {
-      return left.maxDailyMinutes - right.maxDailyMinutes;
-    }
-    return left.displayOrder - right.displayOrder;
-  });
-
-  const matched = sorted.find((tier) => avgDailyMinutes <= tier.maxDailyMinutes);
-  return matched?.salaryUpliftPercent ?? 0;
+function normalizeBenefitStatus(status: string | null | undefined): string {
+  const normalized = String(status ?? "").trim().toUpperCase();
+  if (normalized === "ACTIVE") return "ACTIVE";
+  if (normalized === "ELIGIBLE") return "ELIGIBLE";
+  if (normalized === "PENDING") return "PENDING";
+  return "LOCKED";
 }
 
-function resolveAutomaticDecisionNote(status: string): string | null {
-  switch (status) {
-    case "eligible":
-      return "Computed automatically from all required Monday screenshots.";
-    case "not_qualified":
-      return "Computed automatically; the monthly average did not meet a payout band.";
-    case "ineligible_missing_slots":
-      return "Computed automatically; at least one required Monday screenshot is missing.";
-    default:
-      return null;
-  }
+function isCompetitionEligibleStatus(status: string): boolean {
+  return COMPETITION_ELIGIBILITY_STATUSES.has(normalizeBenefitStatus(status));
 }
 
-function buildApprovedSubmissionMap(
+function getEmployeeDisplayName(employee: Employee): string {
+  return employee.nameEng?.trim() || employee.name;
+}
+
+function buildLatestSubmissionBySlot(
   submissions: ScreenTimeSubmission[],
 ): Map<string, ScreenTimeSubmission> {
   const latestBySlot = new Map<string, ScreenTimeSubmission>();
   for (const submission of submissions) {
-    if (!APPROVED_SUBMISSION_STATUSES.has(submission.reviewStatus)) continue;
     const existing = latestBySlot.get(submission.slotDate);
     if (!existing || existing.updatedAt < submission.updatedAt) {
       latestBySlot.set(submission.slotDate, submission);
@@ -141,133 +122,370 @@ function buildApprovedSubmissionMap(
   return latestBySlot;
 }
 
-function resolveLeaderboardSnapshot(input: {
-  result: ScreenTimeMonthlyResultView;
-  tiers: ScreenTimeProgramTier[];
-}): {
-  avgDailyMinutes: number;
-  awardedSalaryUpliftPercent: number;
-  approvedSlotCount: number;
-  dueSlotCount: number;
-  requiredSlotCount: number;
+function resolveAutomaticDecisionNote(input: {
+  status: string;
+  winnerPercent: number;
+  rewardAmountMnt: number;
   isProvisional: boolean;
-} | null {
-  const { result, tiers } = input;
-  if (result.dueSlotDates.length === 0) return null;
-
-  const approvedBySlot = buildApprovedSubmissionMap(result.submissions);
-  const dueMinutes: number[] = [];
-  for (const slotDate of result.dueSlotDates) {
-    const submission = approvedBySlot.get(slotDate);
-    if (!submission || typeof submission.avgDailyMinutes !== "number") {
+}): string | null {
+  const { status, winnerPercent, rewardAmountMnt, isProvisional } = input;
+  switch (status) {
+    case "winner":
+      return isProvisional
+        ? `Currently inside the provisional top ${winnerPercent}% winner zone for ${rewardAmountMnt.toLocaleString()} MNT.`
+        : `Finished inside the top ${winnerPercent}% winner zone and receives ${rewardAmountMnt.toLocaleString()} MNT.`;
+    case "qualified":
+      return isProvisional
+        ? `All due Friday slots are approved, but the current rank is outside the provisional top ${winnerPercent}%.`
+        : `All required Friday slots are approved, but the final rank finished outside the top ${winnerPercent}%.`;
+    case "disqualified_missing_slot":
+      return "Disqualified automatically because at least one required Friday slot is missing.";
+    case "disqualified_rejected_submission":
+      return "Disqualified automatically because a required Friday submission was rejected.";
+    case "in_progress":
+      return isProvisional
+        ? "Waiting for all due Friday submissions to be approved before ranking."
+        : "Waiting for all required Friday submissions to be approved before final ranking.";
+    case "not_eligible":
+      return "This employee is not eligible for the screen time competition right now.";
+    default:
       return null;
-    }
-    dueMinutes.push(submission.avgDailyMinutes);
   }
-
-  const avgDailyMinutes = averageRounded(dueMinutes);
-  if (avgDailyMinutes == null) return null;
-
-  return {
-    avgDailyMinutes,
-    awardedSalaryUpliftPercent: resolveAwardedPercent(tiers, avgDailyMinutes),
-    approvedSlotCount: dueMinutes.length,
-    dueSlotCount: result.dueSlotDates.length,
-    requiredSlotCount: result.requiredSlotCount,
-    isProvisional: result.dueSlotDates.length < result.requiredSlotCount,
-  };
 }
 
-function buildMonthlyResultView(input: {
+function buildEmptyMonthlyResultView(input: {
   benefitId: string;
   employeeId: string;
   monthKey: string;
-  tiers: ScreenTimeProgramTier[];
+  todayLocalDate: string;
+}): ScreenTimeMonthlyResultView {
+  const requiredSlotDates = getFridaySlotDates(input.monthKey);
+  const dueSlotDates = getDueFridaySlotDates(input.monthKey, input.todayLocalDate);
+
+  return {
+    id: `${input.benefitId}:${input.employeeId}:${input.monthKey}`,
+    benefitId: input.benefitId,
+    employeeId: input.employeeId,
+    monthKey: input.monthKey,
+    requiredSlotDates,
+    dueSlotDates,
+    missingDueSlotDates: [],
+    rejectedDueSlotDates: [],
+    requiredSlotCount: requiredSlotDates.length,
+    dueSlotCount: dueSlotDates.length,
+    submittedSlotCount: 0,
+    approvedSlotCount: 0,
+    monthlyAvgDailyMinutes: null,
+    competitionParticipantCount: 0,
+    rankedParticipantCount: 0,
+    rankPosition: null,
+    winnerCutoffRank: 0,
+    isWinner: false,
+    rewardAmountMnt: 0,
+    isProvisional: dueSlotDates.length < requiredSlotDates.length,
+    status: "not_eligible",
+    approvedByEmployeeId: null,
+    approvedAt: null,
+    decisionNote: "This screen time program is not configured yet.",
+    disqualificationReason: null,
+    submissions: [],
+  };
+}
+
+function buildBaseMonthlyResultView(input: {
+  benefitId: string;
+  employeeId: string;
+  monthKey: string;
+  benefitStatus: string;
   submissions: ScreenTimeSubmission[];
   storedResult?: ScreenTimeMonthlyResultRow | null;
-  todayLocalDate?: string;
+  todayLocalDate: string;
 }): ScreenTimeMonthlyResultView {
-  const {
-    benefitId,
-    employeeId,
-    monthKey,
-    tiers,
-    submissions,
-    storedResult,
-    todayLocalDate = resolveTodayLocalDateString(),
-  } = input;
+  const requiredSlotDates = getFridaySlotDates(input.monthKey);
+  const dueSlotDates = getDueFridaySlotDates(input.monthKey, input.todayLocalDate);
+  const latestBySlot = buildLatestSubmissionBySlot(input.submissions);
+  const orderedSubmissions = requiredSlotDates
+    .map((slotDate) => latestBySlot.get(slotDate))
+    .filter((submission): submission is ScreenTimeSubmission => submission != null);
 
-  const requiredSlotDates = getMondaySlotDates(monthKey);
-  const dueSlotDates = getDueMondaySlotDates(monthKey, todayLocalDate);
-
-  const latestBySlot = new Map<string, ScreenTimeSubmission>();
-  for (const submission of submissions) {
-    const existing = latestBySlot.get(submission.slotDate);
-    if (!existing || existing.updatedAt < submission.updatedAt) {
-      latestBySlot.set(submission.slotDate, submission);
-    }
-  }
-
-  const orderedSubmissions = [...latestBySlot.values()].sort((left, right) =>
-    compareDateStrings(left.slotDate, right.slotDate),
+  const missingDueSlotDates = dueSlotDates.filter((slotDate) => !latestBySlot.has(slotDate));
+  const rejectedDueSlotDates = dueSlotDates.filter(
+    (slotDate) => latestBySlot.get(slotDate)?.reviewStatus === "rejected",
   );
-
-  const missingDueSlotDates = dueSlotDates.filter((slotDate) => {
+  const submittedSlotCount = requiredSlotDates.filter((slotDate) => latestBySlot.has(slotDate)).length;
+  const approvedSlotCount = requiredSlotDates.filter((slotDate) => {
     const submission = latestBySlot.get(slotDate);
-    if (!submission) return true;
-    return submission.reviewStatus === "rejected";
-  });
+    return submission != null && APPROVED_SUBMISSION_STATUSES.has(submission.reviewStatus);
+  }).length;
 
-  const approvedSubmissions = orderedSubmissions.filter((submission) =>
-    APPROVED_SUBMISSION_STATUSES.has(submission.reviewStatus),
-  );
+  const approvedDueMinutes = dueSlotDates
+    .map((slotDate) => latestBySlot.get(slotDate))
+    .filter(
+      (submission): submission is ScreenTimeSubmission =>
+        submission != null &&
+        APPROVED_SUBMISSION_STATUSES.has(submission.reviewStatus) &&
+        typeof submission.avgDailyMinutes === "number",
+    )
+    .map((submission) => submission.avgDailyMinutes as number);
 
-  const hasAllApprovedSlots =
-    requiredSlotDates.length > 0 &&
-    requiredSlotDates.every((slotDate) => {
+  const hasAllDueApproved =
+    dueSlotDates.length > 0 &&
+    dueSlotDates.every((slotDate) => {
       const submission = latestBySlot.get(slotDate);
       return submission != null && APPROVED_SUBMISSION_STATUSES.has(submission.reviewStatus);
     });
 
-  const monthlyAvgDailyMinutes = hasAllApprovedSlots
-    ? averageRounded(
-        requiredSlotDates
-          .map((slotDate) => latestBySlot.get(slotDate)?.avgDailyMinutes ?? null)
-          .filter((value): value is number => typeof value === "number"),
-      )
+  const isProvisional = dueSlotDates.length < requiredSlotDates.length;
+  const monthlyAvgDailyMinutes = hasAllDueApproved
+    ? averageRounded(approvedDueMinutes)
     : null;
-  const awardedSalaryUpliftPercent = resolveAwardedPercent(tiers, monthlyAvgDailyMinutes);
 
-  let status = "in_progress";
-  if (missingDueSlotDates.length > 0) {
-    status = "ineligible_missing_slots";
-  } else if (!hasAllApprovedSlots) {
+  let status = "qualified";
+  let disqualificationReason: string | null = null;
+
+  if (!isCompetitionEligibleStatus(input.benefitStatus)) {
+    status = "not_eligible";
+  } else if (rejectedDueSlotDates.length > 0) {
+    status = "disqualified_rejected_submission";
+    disqualificationReason = "A required Friday submission was rejected.";
+  } else if (missingDueSlotDates.length > 0) {
+    status = "disqualified_missing_slot";
+    disqualificationReason = "A required Friday slot is missing.";
+  } else if (!hasAllDueApproved) {
     status = "in_progress";
-  } else if (awardedSalaryUpliftPercent <= 0) {
-    status = "not_qualified";
-  } else {
-    status = "eligible";
   }
-  const decisionNote = resolveAutomaticDecisionNote(status);
 
   return {
-    id: storedResult?.id ?? `${benefitId}:${employeeId}:${monthKey}`,
-    benefitId,
-    employeeId,
-    monthKey,
+    id: input.storedResult?.id ?? nanoid(),
+    benefitId: input.benefitId,
+    employeeId: input.employeeId,
+    monthKey: input.monthKey,
     requiredSlotDates,
     dueSlotDates,
     missingDueSlotDates,
+    rejectedDueSlotDates,
     requiredSlotCount: requiredSlotDates.length,
-    submittedSlotCount: orderedSubmissions.length,
-    approvedSlotCount: approvedSubmissions.length,
+    dueSlotCount: dueSlotDates.length,
+    submittedSlotCount,
+    approvedSlotCount,
     monthlyAvgDailyMinutes,
-    awardedSalaryUpliftPercent,
+    competitionParticipantCount: 0,
+    rankedParticipantCount: 0,
+    rankPosition: null,
+    winnerCutoffRank: 0,
+    isWinner: false,
+    rewardAmountMnt: 0,
+    isProvisional,
     status,
     approvedByEmployeeId: null,
     approvedAt: null,
-    decisionNote,
+    decisionNote: null,
+    disqualificationReason,
     submissions: orderedSubmissions,
+  };
+}
+
+function sortCompetitionRows(
+  left: ScreenTimeCompetitionRowView,
+  right: ScreenTimeCompetitionRowView,
+): number {
+  const leftRank = left.result.rankPosition ?? Number.POSITIVE_INFINITY;
+  const rightRank = right.result.rankPosition ?? Number.POSITIVE_INFINITY;
+  if (leftRank !== rightRank) return leftRank - rightRank;
+
+  const statusOrder = new Map<string, number>([
+    ["winner", 0],
+    ["qualified", 1],
+    ["in_progress", 2],
+    ["disqualified_missing_slot", 3],
+    ["disqualified_rejected_submission", 4],
+    ["not_eligible", 5],
+  ]);
+
+  const leftStatus = statusOrder.get(left.result.status) ?? 99;
+  const rightStatus = statusOrder.get(right.result.status) ?? 99;
+  if (leftStatus !== rightStatus) return leftStatus - rightStatus;
+
+  return left.employeeName.localeCompare(right.employeeName);
+}
+
+async function recomputeScreenTimeCompetitionMonth(
+  db: Database,
+  input: {
+    benefitId: string;
+    monthKey: string;
+    todayLocalDate: string;
+  },
+): Promise<{
+  benefitId: string;
+  monthKey: string;
+  slotDates: string[];
+  program: ScreenTimeProgramView;
+  rows: ScreenTimeCompetitionRowView[];
+  competitionParticipantCount: number;
+  winnerCount: number;
+}> {
+  const program = await getScreenTimeProgramByBenefit(db, input.benefitId);
+  if (!program) {
+    throw new Error("Screen time program is not configured for this benefit.");
+  }
+
+  const [employees, eligibilityRows, submissionRows, existingRows] = await Promise.all([
+    db.select().from(schema.employees),
+    db
+      .select({
+        employeeId: schema.benefitEligibility.employeeId,
+        status: schema.benefitEligibility.status,
+      })
+      .from(schema.benefitEligibility)
+      .where(eq(schema.benefitEligibility.benefitId, input.benefitId)),
+    db
+      .select()
+      .from(schema.screenTimeSubmissions)
+      .where(
+        and(
+          eq(schema.screenTimeSubmissions.benefitId, input.benefitId),
+          eq(schema.screenTimeSubmissions.monthKey, input.monthKey),
+        ),
+      ),
+    db
+      .select()
+      .from(schema.screenTimeMonthlyResults)
+      .where(
+        and(
+          eq(schema.screenTimeMonthlyResults.benefitId, input.benefitId),
+          eq(schema.screenTimeMonthlyResults.monthKey, input.monthKey),
+        ),
+      ),
+  ]);
+
+  const eligibilityByEmployee = new Map(
+    eligibilityRows.map((row) => [row.employeeId, normalizeBenefitStatus(row.status)]),
+  );
+  const existingByEmployee = new Map(existingRows.map((row) => [row.employeeId, row]));
+  const submissionsByEmployee = new Map<string, ScreenTimeSubmission[]>();
+
+  for (const submission of submissionRows) {
+    const list = submissionsByEmployee.get(submission.employeeId) ?? [];
+    list.push(submission);
+    submissionsByEmployee.set(submission.employeeId, list);
+  }
+
+  const rows = employees.map((employee) => ({
+    employeeId: employee.id,
+    employeeName: getEmployeeDisplayName(employee),
+    employeeEmail: employee.email,
+    benefitStatus: eligibilityByEmployee.get(employee.id) ?? "LOCKED",
+    result: buildBaseMonthlyResultView({
+      benefitId: input.benefitId,
+      employeeId: employee.id,
+      monthKey: input.monthKey,
+      benefitStatus: eligibilityByEmployee.get(employee.id) ?? "LOCKED",
+      submissions: submissionsByEmployee.get(employee.id) ?? [],
+      storedResult: existingByEmployee.get(employee.id) ?? null,
+      todayLocalDate: input.todayLocalDate,
+    }),
+  }));
+
+  const winnerPercent = Math.min(100, Math.max(1, program.winnerPercent || 20));
+  const competitionParticipantCount = rows.filter((row) =>
+    isCompetitionEligibleStatus(row.benefitStatus),
+  ).length;
+  const winnerCount =
+    competitionParticipantCount > 0
+      ? Math.max(1, Math.ceil((competitionParticipantCount * winnerPercent) / 100))
+      : 0;
+
+  const rankedRows = rows
+    .filter(
+      (row) =>
+        row.result.status === "qualified" &&
+        typeof row.result.monthlyAvgDailyMinutes === "number",
+    )
+    .sort((left, right) => {
+      const leftMinutes = left.result.monthlyAvgDailyMinutes ?? Number.POSITIVE_INFINITY;
+      const rightMinutes = right.result.monthlyAvgDailyMinutes ?? Number.POSITIVE_INFINITY;
+      if (leftMinutes !== rightMinutes) return leftMinutes - rightMinutes;
+      return left.employeeName.localeCompare(right.employeeName);
+    });
+
+  rankedRows.forEach((row, index) => {
+    const rankPosition = index + 1;
+    row.result.rankPosition = rankPosition;
+    row.result.rankedParticipantCount = rankedRows.length;
+    row.result.competitionParticipantCount = competitionParticipantCount;
+    row.result.winnerCutoffRank = winnerCount;
+    if (winnerCount > 0 && rankPosition <= winnerCount) {
+      row.result.isWinner = true;
+      row.result.status = "winner";
+      row.result.rewardAmountMnt = program.rewardAmountMnt;
+    }
+  });
+
+  for (const row of rows) {
+    if (row.result.rankPosition == null) {
+      row.result.competitionParticipantCount = competitionParticipantCount;
+      row.result.rankedParticipantCount = rankedRows.length;
+      row.result.winnerCutoffRank = winnerCount;
+    }
+
+    row.result.decisionNote = resolveAutomaticDecisionNote({
+      status: row.result.status,
+      winnerPercent,
+      rewardAmountMnt: program.rewardAmountMnt,
+      isProvisional: row.result.isProvisional,
+    });
+  }
+
+  const now = new Date().toISOString();
+  await Promise.all(
+    rows.map((row) => {
+      const existing = existingByEmployee.get(row.employeeId);
+      const payload = {
+        benefitId: input.benefitId,
+        employeeId: row.employeeId,
+        monthKey: input.monthKey,
+        requiredSlotCount: row.result.requiredSlotCount,
+        submittedSlotCount: row.result.submittedSlotCount,
+        approvedSlotCount: row.result.approvedSlotCount,
+        missingDueSlotDatesJson: JSON.stringify(row.result.missingDueSlotDates),
+        monthlyAvgDailyMinutes: row.result.monthlyAvgDailyMinutes,
+        competitionParticipantCount: row.result.competitionParticipantCount,
+        rankedParticipantCount: row.result.rankedParticipantCount,
+        rankPosition: row.result.rankPosition,
+        winnerCutoffRank: row.result.winnerCutoffRank,
+        isWinner: row.result.isWinner,
+        rewardAmountMnt: row.result.rewardAmountMnt,
+        disqualificationReason: row.result.disqualificationReason,
+        status: row.result.status,
+        approvedByEmployeeId: null,
+        approvedAt: null,
+        decisionNote: row.result.decisionNote,
+        updatedAt: now,
+      };
+
+      if (existing) {
+        return db
+          .update(schema.screenTimeMonthlyResults)
+          .set(payload)
+          .where(eq(schema.screenTimeMonthlyResults.id, existing.id));
+      }
+
+      return db.insert(schema.screenTimeMonthlyResults).values({
+        id: row.result.id,
+        ...payload,
+      });
+    }),
+  );
+
+  return {
+    benefitId: input.benefitId,
+    monthKey: input.monthKey,
+    slotDates: getFridaySlotDates(input.monthKey),
+    program,
+    rows: [...rows].sort(sortCompetitionRows),
+    competitionParticipantCount,
+    winnerCount,
   };
 }
 
@@ -275,25 +493,13 @@ export async function getScreenTimeProgramByBenefit(
   db: Database,
   benefitId: string,
 ): Promise<ScreenTimeProgramView | null> {
-  const [program, tiers] = await Promise.all([
-    db
-      .select()
-      .from(schema.screenTimePrograms)
-      .where(eq(schema.screenTimePrograms.benefitId, benefitId))
-      .limit(1),
-    db
-      .select()
-      .from(schema.screenTimeProgramTiers)
-      .where(eq(schema.screenTimeProgramTiers.benefitId, benefitId)),
-  ]);
+  const rows = await db
+    .select()
+    .from(schema.screenTimePrograms)
+    .where(eq(schema.screenTimePrograms.benefitId, benefitId))
+    .limit(1);
 
-  const row = program[0];
-  if (!row) return null;
-
-  return {
-    ...row,
-    tiers: tiers.sort((left, right) => left.displayOrder - right.displayOrder),
-  };
+  return rows[0] ?? null;
 }
 
 export async function ensureScreenTimeBenefit(
@@ -324,101 +530,23 @@ export async function recomputeScreenTimeMonthlyResult(
     todayLocalDate?: string;
   },
 ): Promise<ScreenTimeMonthlyResultView> {
-  const { benefitId, employeeId, monthKey, todayLocalDate } = input;
-  const program = await getScreenTimeProgramByBenefit(db, benefitId);
-  if (!program) {
-    throw new Error("Screen time program is not configured for this benefit.");
-  }
-
-  const [submissionRows, existingRows] = await Promise.all([
-    db
-      .select()
-      .from(schema.screenTimeSubmissions)
-      .where(
-        and(
-          eq(schema.screenTimeSubmissions.benefitId, benefitId),
-          eq(schema.screenTimeSubmissions.employeeId, employeeId),
-          eq(schema.screenTimeSubmissions.monthKey, monthKey),
-        ),
-      ),
-    db
-      .select()
-      .from(schema.screenTimeMonthlyResults)
-      .where(
-        and(
-          eq(schema.screenTimeMonthlyResults.benefitId, benefitId),
-          eq(schema.screenTimeMonthlyResults.employeeId, employeeId),
-          eq(schema.screenTimeMonthlyResults.monthKey, monthKey),
-        ),
-      )
-      .limit(1),
-  ]);
-
-  const existing = existingRows[0] ?? null;
-  const view = buildMonthlyResultView({
-    benefitId,
-    employeeId,
-    monthKey,
-    tiers: program.tiers,
-    submissions: submissionRows,
-    storedResult: existing,
+  const todayLocalDate = input.todayLocalDate ?? resolveTodayLocalDateString();
+  const board = await recomputeScreenTimeCompetitionMonth(db, {
+    benefitId: input.benefitId,
+    monthKey: input.monthKey,
     todayLocalDate,
   });
 
-  if (existing) {
-    await db
-      .update(schema.screenTimeMonthlyResults)
-      .set({
-        requiredSlotCount: view.requiredSlotCount,
-        submittedSlotCount: view.submittedSlotCount,
-        approvedSlotCount: view.approvedSlotCount,
-        missingDueSlotDatesJson: JSON.stringify(view.missingDueSlotDates),
-        monthlyAvgDailyMinutes: view.monthlyAvgDailyMinutes,
-        awardedSalaryUpliftPercent: view.awardedSalaryUpliftPercent,
-        status: view.status,
-        approvedByEmployeeId: null,
-        approvedAt: null,
-        decisionNote: view.decisionNote,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(schema.screenTimeMonthlyResults.id, existing.id));
-  } else {
-    await db.insert(schema.screenTimeMonthlyResults).values({
-      benefitId,
-      employeeId,
-      monthKey,
-      requiredSlotCount: view.requiredSlotCount,
-      submittedSlotCount: view.submittedSlotCount,
-      approvedSlotCount: view.approvedSlotCount,
-      missingDueSlotDatesJson: JSON.stringify(view.missingDueSlotDates),
-      monthlyAvgDailyMinutes: view.monthlyAvgDailyMinutes,
-      awardedSalaryUpliftPercent: view.awardedSalaryUpliftPercent,
-      status: view.status,
-      decisionNote: view.decisionNote,
+  const row = board.rows.find((item) => item.employeeId === input.employeeId);
+  if (!row) {
+    return buildEmptyMonthlyResultView({
+      benefitId: input.benefitId,
+      employeeId: input.employeeId,
+      monthKey: input.monthKey,
+      todayLocalDate,
     });
   }
-
-  const refreshedRows = await db
-    .select()
-    .from(schema.screenTimeMonthlyResults)
-    .where(
-      and(
-        eq(schema.screenTimeMonthlyResults.benefitId, benefitId),
-        eq(schema.screenTimeMonthlyResults.employeeId, employeeId),
-        eq(schema.screenTimeMonthlyResults.monthKey, monthKey),
-      ),
-    )
-    .limit(1);
-
-  return buildMonthlyResultView({
-    benefitId,
-    employeeId,
-    monthKey,
-    tiers: program.tiers,
-    submissions: submissionRows,
-    storedResult: refreshedRows[0] ?? null,
-    todayLocalDate,
-  });
+  return row.result;
 }
 
 export async function buildMyScreenTimeMonth(
@@ -429,8 +557,13 @@ export async function buildMyScreenTimeMonth(
   todayLocalDateOverride?: string | null,
 ) {
   const todayLocalDate = resolveTodayLocalDateString(todayLocalDateOverride);
-  const normalizedMonthKey = monthKey || getMonthKeyFromDateString(todayLocalDate);
-  const activeSlotDate = getActiveMondaySlotDate(normalizedMonthKey, todayLocalDate);
+  const activeSlotMonthKey = getAssignedMonthKeyForSlotDate(todayLocalDate);
+  const defaultMonthKey =
+    getActiveFridaySlotDate(activeSlotMonthKey, todayLocalDate) != null
+      ? activeSlotMonthKey
+      : getMonthKeyFromDateString(todayLocalDate);
+  const normalizedMonthKey = monthKey || defaultMonthKey;
+  const activeSlotDate = getActiveFridaySlotDate(normalizedMonthKey, todayLocalDate);
 
   const [program, benefits] = await Promise.all([
     getScreenTimeProgramByBenefit(db, benefitId),
@@ -449,13 +582,10 @@ export async function buildMyScreenTimeMonth(
         monthKey: normalizedMonthKey,
         todayLocalDate,
       })
-    : buildMonthlyResultView({
+    : buildEmptyMonthlyResultView({
         benefitId,
         employeeId: employee.id,
         monthKey: normalizedMonthKey,
-        tiers: [],
-        submissions: [],
-        storedResult: null,
         todayLocalDate,
       });
 
@@ -481,110 +611,41 @@ export async function buildAdminScreenTimeMonthBoard(
   todayLocalDateOverride?: string | null,
 ) {
   const todayLocalDate = resolveTodayLocalDateString(todayLocalDateOverride);
-  const normalizedMonthKey = monthKey || getMonthKeyFromDateString(todayLocalDate);
+  const activeSlotMonthKey = getAssignedMonthKeyForSlotDate(todayLocalDate);
+  const defaultMonthKey =
+    getActiveFridaySlotDate(activeSlotMonthKey, todayLocalDate) != null
+      ? activeSlotMonthKey
+      : getMonthKeyFromDateString(todayLocalDate);
+  const normalizedMonthKey = monthKey || defaultMonthKey;
   const program = await getScreenTimeProgramByBenefit(db, benefitId);
   if (!program) {
     return {
       benefitId,
       monthKey: normalizedMonthKey,
-      slotDates: getMondaySlotDates(normalizedMonthKey),
+      slotDates: getFridaySlotDates(normalizedMonthKey),
       program: null,
       rows: [],
+      competitionParticipantCount: 0,
+      winnerCount: 0,
+      totalEmployeeCount: 0,
     };
   }
 
-  const [resultRows, submissionRows, eligibilityRows, employees] = await Promise.all([
-    db
-      .select()
-      .from(schema.screenTimeMonthlyResults)
-      .where(
-        and(
-          eq(schema.screenTimeMonthlyResults.benefitId, benefitId),
-          eq(schema.screenTimeMonthlyResults.monthKey, normalizedMonthKey),
-        ),
-      ),
-    db
-      .select()
-      .from(schema.screenTimeSubmissions)
-      .where(
-        and(
-          eq(schema.screenTimeSubmissions.benefitId, benefitId),
-          eq(schema.screenTimeSubmissions.monthKey, normalizedMonthKey),
-        ),
-      )
-      .orderBy(desc(schema.screenTimeSubmissions.submittedAt)),
-    db
-      .select({
-        employeeId: schema.benefitEligibility.employeeId,
-        status: schema.benefitEligibility.status,
-      })
-      .from(schema.benefitEligibility)
-      .where(
-        and(
-          eq(schema.benefitEligibility.benefitId, benefitId),
-          inArray(
-            schema.benefitEligibility.status,
-            [...SCREEN_TIME_VISIBLE_ELIGIBILITY_STATUSES],
-          ),
-        ),
-      ),
-    db.select().from(schema.employees),
-  ]);
-
-  const employeeIds = new Set<string>();
-  for (const row of eligibilityRows) employeeIds.add(row.employeeId);
-  for (const row of resultRows) employeeIds.add(row.employeeId);
-  for (const row of submissionRows) employeeIds.add(row.employeeId);
-
-  const employeeMap = new Map(employees.map((employee) => [employee.id, employee]));
-  const resultMap = new Map(resultRows.map((row) => [row.employeeId, row]));
-  const submissionsByEmployee = new Map<string, ScreenTimeSubmission[]>();
-  for (const submission of submissionRows) {
-    const list = submissionsByEmployee.get(submission.employeeId) ?? [];
-    list.push(submission);
-    submissionsByEmployee.set(submission.employeeId, list);
-  }
-
-  const rows = [...employeeIds]
-    .map((employeeId) => {
-      const employee = employeeMap.get(employeeId);
-      if (!employee) return null;
-
-      const result = buildMonthlyResultView({
-        benefitId,
-        employeeId,
-        monthKey: normalizedMonthKey,
-        tiers: program.tiers,
-        submissions: submissionsByEmployee.get(employeeId) ?? [],
-        storedResult: resultMap.get(employeeId) ?? null,
-        todayLocalDate,
-      });
-
-      return {
-        employeeId,
-        employeeName: employee.nameEng?.trim() || employee.name,
-        employeeEmail: employee.email,
-        result,
-      };
-    })
-    .filter(
-      (
-        row,
-      ): row is {
-        employeeId: string;
-        employeeName: string;
-        employeeEmail: string;
-        result: ScreenTimeMonthlyResultView;
-      } => row !== null,
-    )
-    .sort((left, right) => left.employeeName.localeCompare(right.employeeName));
+  const board = await recomputeScreenTimeCompetitionMonth(db, {
+    benefitId,
+    monthKey: normalizedMonthKey,
+    todayLocalDate,
+  });
 
   return {
     benefitId,
     monthKey: normalizedMonthKey,
-    slotDates: getMondaySlotDates(normalizedMonthKey),
+    slotDates: board.slotDates,
     program,
-    rows,
+    rows: board.rows,
+    competitionParticipantCount: board.competitionParticipantCount,
+    winnerCount: board.winnerCount,
+    totalEmployeeCount: board.rows.length,
   };
 }
 
@@ -593,13 +654,8 @@ export async function upsertScreenTimeProgramConfig(
   input: {
     benefitId: string;
     screenshotRetentionDays?: number | null;
-    tiers: Array<{
-      id?: string | null;
-      label: string;
-      maxDailyMinutes: number;
-      salaryUpliftPercent: number;
-      displayOrder?: number | null;
-    }>;
+    winnerPercent: number;
+    rewardAmountMnt: number;
   },
 ) {
   const now = new Date().toISOString();
@@ -609,12 +665,17 @@ export async function upsertScreenTimeProgramConfig(
     .where(eq(schema.screenTimePrograms.benefitId, input.benefitId))
     .limit(1);
 
+  const normalizedWinnerPercent = Math.min(100, Math.max(1, Math.round(input.winnerPercent)));
+  const normalizedRewardAmount = Math.max(0, Math.round(input.rewardAmountMnt));
+
   if (existingProgram[0]) {
     await db
       .update(schema.screenTimePrograms)
       .set({
         screenshotRetentionDays:
           input.screenshotRetentionDays ?? existingProgram[0].screenshotRetentionDays,
+        winnerPercent: normalizedWinnerPercent,
+        rewardAmountMnt: normalizedRewardAmount,
         updatedAt: now,
       })
       .where(eq(schema.screenTimePrograms.benefitId, input.benefitId));
@@ -622,24 +683,10 @@ export async function upsertScreenTimeProgramConfig(
     await db.insert(schema.screenTimePrograms).values({
       benefitId: input.benefitId,
       screenshotRetentionDays: input.screenshotRetentionDays ?? 30,
+      winnerPercent: normalizedWinnerPercent,
+      rewardAmountMnt: normalizedRewardAmount,
       isActive: true,
     });
-  }
-
-  await db
-    .delete(schema.screenTimeProgramTiers)
-    .where(eq(schema.screenTimeProgramTiers.benefitId, input.benefitId));
-
-  if (input.tiers.length > 0) {
-    await db.insert(schema.screenTimeProgramTiers).values(
-      input.tiers.map((tier, index) => ({
-        benefitId: input.benefitId,
-        label: tier.label,
-        maxDailyMinutes: tier.maxDailyMinutes,
-        salaryUpliftPercent: tier.salaryUpliftPercent,
-        displayOrder: tier.displayOrder ?? index,
-      })),
-    );
   }
 
   const program = await getScreenTimeProgramByBenefit(db, input.benefitId);
@@ -713,23 +760,36 @@ export function hydrateStoredMonthlyResult(
   stored: ScreenTimeMonthlyResultRow,
   submissions: ScreenTimeSubmission[],
 ): ScreenTimeMonthlyResultView {
+  const todayLocalDate = resolveTodayLocalDateString();
+  const requiredSlotDates = getFridaySlotDates(stored.monthKey);
+  const dueSlotDates = getDueFridaySlotDates(stored.monthKey, todayLocalDate);
+
   return {
     id: stored.id,
     benefitId: stored.benefitId,
     employeeId: stored.employeeId,
     monthKey: stored.monthKey,
-    requiredSlotDates: getMondaySlotDates(stored.monthKey),
-    dueSlotDates: getDueMondaySlotDates(stored.monthKey, resolveTodayLocalDateString()),
+    requiredSlotDates,
+    dueSlotDates,
     missingDueSlotDates: safeJsonArray(stored.missingDueSlotDatesJson),
+    rejectedDueSlotDates: [],
     requiredSlotCount: stored.requiredSlotCount,
+    dueSlotCount: dueSlotDates.length,
     submittedSlotCount: stored.submittedSlotCount,
     approvedSlotCount: stored.approvedSlotCount,
     monthlyAvgDailyMinutes: stored.monthlyAvgDailyMinutes,
-    awardedSalaryUpliftPercent: stored.awardedSalaryUpliftPercent,
+    competitionParticipantCount: stored.competitionParticipantCount,
+    rankedParticipantCount: stored.rankedParticipantCount,
+    rankPosition: stored.rankPosition,
+    winnerCutoffRank: stored.winnerCutoffRank,
+    isWinner: stored.isWinner,
+    rewardAmountMnt: stored.rewardAmountMnt,
+    isProvisional: dueSlotDates.length < requiredSlotDates.length,
     status: stored.status,
     approvedByEmployeeId: null,
     approvedAt: null,
     decisionNote: stored.decisionNote,
+    disqualificationReason: stored.disqualificationReason,
     submissions,
   };
 }
@@ -747,71 +807,29 @@ export async function buildScreenTimeLeaderboard(
     todayLocalDateOverride,
   );
 
-  const statusOrder = new Map<string, number>([
-    ["eligible", 0],
-    ["not_qualified", 1],
-    ["in_progress", 2],
-    ["ineligible_missing_slots", 3],
-  ]);
-
-  const sorted = [...board.rows].sort((left, right) => {
-    const leftSnapshot = resolveLeaderboardSnapshot({
-      result: left.result,
-      tiers: board.program?.tiers ?? [],
-    });
-    const rightSnapshot = resolveLeaderboardSnapshot({
-      result: right.result,
-      tiers: board.program?.tiers ?? [],
-    });
-    const leftHasScore = leftSnapshot != null;
-    const rightHasScore = rightSnapshot != null;
-
-    if (leftHasScore !== rightHasScore) {
-      return leftHasScore ? -1 : 1;
-    }
-
-    if (leftHasScore && rightHasScore) {
-      if (leftSnapshot.avgDailyMinutes !== rightSnapshot.avgDailyMinutes) {
-        return leftSnapshot.avgDailyMinutes - rightSnapshot.avgDailyMinutes;
-      }
-      if (leftSnapshot.awardedSalaryUpliftPercent !== rightSnapshot.awardedSalaryUpliftPercent) {
-        return rightSnapshot.awardedSalaryUpliftPercent - leftSnapshot.awardedSalaryUpliftPercent;
-      }
-    }
-
-    const leftStatus = statusOrder.get(left.result.status) ?? 99;
-    const rightStatus = statusOrder.get(right.result.status) ?? 99;
-    if (leftStatus !== rightStatus) return leftStatus - rightStatus;
-
-    return left.employeeName.localeCompare(right.employeeName);
-  });
-
-  return sorted
-    .map((row) => {
-      const snapshot = resolveLeaderboardSnapshot({
-        result: row.result,
-        tiers: board.program?.tiers ?? [],
-      });
-      if (!snapshot) return null;
-
-      return {
-        employeeId: row.employeeId,
-        employeeName: row.employeeName,
-        employeeEmail: row.employeeEmail,
-        monthKey: row.result.monthKey,
-        status: row.result.status,
-        avgDailyMinutes: snapshot.avgDailyMinutes,
-        awardedSalaryUpliftPercent: snapshot.awardedSalaryUpliftPercent,
-        approvedSlotCount: snapshot.approvedSlotCount,
-        dueSlotCount: snapshot.dueSlotCount,
-        requiredSlotCount: snapshot.requiredSlotCount,
-        isProvisional: snapshot.isProvisional,
-      };
-    })
-    .filter((row): row is ScreenTimeLeaderboardDraftRow => row !== null)
-    .map((row, index) => ({
-      rank: index + 1,
-      ...row,
+  return board.rows
+    .filter(
+      (row) =>
+        row.result.isWinner &&
+        typeof row.result.monthlyAvgDailyMinutes === "number" &&
+        row.result.rankPosition != null,
+    )
+    .sort(sortCompetitionRows)
+    .map((row) => ({
+      rank: row.result.rankPosition,
+      employeeId: row.employeeId,
+      employeeName: row.employeeName,
+      employeeEmail: row.employeeEmail,
+      monthKey: row.result.monthKey,
+      status: row.result.status,
+      avgDailyMinutes: row.result.monthlyAvgDailyMinutes,
+      rewardAmountMnt: row.result.rewardAmountMnt,
+      approvedSlotCount: row.result.approvedSlotCount,
+      dueSlotCount: row.result.dueSlotCount,
+      requiredSlotCount: row.result.requiredSlotCount,
+      isProvisional: row.result.isProvisional,
+      winnerCutoffRank: row.result.winnerCutoffRank,
+      competitionParticipantCount: row.result.competitionParticipantCount,
     }));
 }
 
@@ -840,8 +858,8 @@ function deterministicSlotVariation(employeeId: string, slotDate: string): numbe
 }
 
 /**
- * For every active employee that does not yet have a screen-time submission for
- * each due Monday slot of `monthKey`, inserts a synthetic "auto-approved"
+ * For every employee that does not yet have a screen-time submission for each
+ * due Friday slot of `monthKey`, inserts a synthetic "auto-approved"
  * submission so the leaderboard is populated with real DB rows.
  *
  * Safe to call multiple times — existing submissions are never overwritten.
@@ -853,7 +871,7 @@ export async function seedScreenTimeSubmissionsForAllEmployees(
   monthKey: string,
 ): Promise<number> {
   const todayLocalDate = resolveTodayLocalDateString();
-  const dueSlotDates = getDueMondaySlotDates(monthKey, todayLocalDate);
+  const dueSlotDates = getDueFridaySlotDates(monthKey, todayLocalDate);
   console.log(`[seed/service] monthKey=${monthKey} todayLocalDate=${todayLocalDate} dueSlotDates=${JSON.stringify(dueSlotDates)}`);
   if (dueSlotDates.length === 0) {
     console.log("[seed/service] no due slot dates — aborting");
@@ -861,7 +879,7 @@ export async function seedScreenTimeSubmissionsForAllEmployees(
   }
 
   // Ensure a screenTimePrograms row exists so buildAdminScreenTimeMonthBoard
-  // does not exit early.  We create a bare program (no tiers) if absent.
+  // does not exit early. We create a bare program if absent.
   const existingProgram = await db
     .select()
     .from(schema.screenTimePrograms)
@@ -939,7 +957,6 @@ export async function seedScreenTimeSubmissionsForAllEmployees(
   if (toInsert.length === 0) return 0;
 
   console.log(`[seed/service] inserting ${toInsert.length} new submission rows`);
-  if (toInsert.length === 0) return 0;
 
   // Drizzle/SQLite can fail with too many bound variables; batch in groups of 50
   const BATCH = 50;

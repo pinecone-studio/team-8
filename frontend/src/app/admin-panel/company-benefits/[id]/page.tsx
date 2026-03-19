@@ -334,11 +334,11 @@ function ScreenTimeProgramLinkSection({ benefitId }: { benefitId: string }) {
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-fuchsia-100 bg-fuchsia-50 p-4">
         <div>
           <p className="text-sm font-semibold text-gray-900">
-            Weekly screenshot tracker and automatic monthly salary uplift
+            Weekly screenshot competition and automatic monthly ranking
           </p>
           <p className="mt-1 text-sm text-gray-600">
-            Manage Monday slots, Gemini extraction, and automatic month-end
-            payout rules from the dedicated screen time program page.
+            Manage Friday slots, Gemini extraction, rankings, and winner rewards
+            from the dedicated screen time program page.
           </p>
         </div>
         <Link

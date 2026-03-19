@@ -11,12 +11,8 @@ export const upsertScreenTimeProgram = async (
     input: {
       benefitId: string;
       screenshotRetentionDays?: number | null;
-      tiers: Array<{
-        label: string;
-        maxDailyMinutes: number;
-        salaryUpliftPercent: number;
-        displayOrder?: number | null;
-      }>;
+      winnerPercent: number;
+      rewardAmountMnt: number;
     };
   },
   { db, currentEmployee }: GraphQLContext,
@@ -35,12 +31,8 @@ export const upsertScreenTimeProgram = async (
     benefitId: input.benefitId,
     metadata: {
       screenshotRetentionDays: program.screenshotRetentionDays,
-      tiers: program.tiers.map((tier) => ({
-        id: tier.id,
-        label: tier.label,
-        maxDailyMinutes: tier.maxDailyMinutes,
-        salaryUpliftPercent: tier.salaryUpliftPercent,
-      })),
+      winnerPercent: program.winnerPercent,
+      rewardAmountMnt: program.rewardAmountMnt,
     },
   });
 

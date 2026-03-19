@@ -85,7 +85,7 @@ export default function EmployeeScreenTimeHubPage() {
               <div>
                 <h1 className="text-2xl font-semibold text-gray-900">Screen Time</h1>
                 <p className="mt-1 text-sm text-gray-600">
-                  Weekly Monday screenshots, Gemini extraction, and month-based salary uplift tracking all live here.
+                  Friday screenshots, Gemini extraction, and monthly ranking-based cash rewards all live here.
                 </p>
               </div>
             </div>
@@ -117,7 +117,7 @@ export default function EmployeeScreenTimeHubPage() {
                           </h3>
                           <p className="mt-1 text-sm text-gray-500">
                             {program.benefit.description ||
-                              "Upload one 7-day average screenshot on each required Monday to stay eligible for the month."}
+                              "Upload one 7-day average screenshot on each required Friday to stay eligible for the monthly ranking."}
                           </p>
                         </div>
                         <span
@@ -140,8 +140,8 @@ export default function EmployeeScreenTimeHubPage() {
                         <div className="text-sm text-gray-500">
                           {program.status === BenefitEligibilityStatus.Active ||
                           program.status === BenefitEligibilityStatus.Eligible
-                            ? "Open the tracker to upload the current Monday screenshot and monitor the monthly uplift."
-                            : "You can still open the tracker to review requirements and current month status."}
+                            ? "Open the tracker to upload the current Friday screenshot and monitor your rank."
+                            : "You can still open the tracker to review the rules and your current month standing."}
                         </div>
                         <Link
                           href={`/employee-panel/screen-time/${program.benefitId}`}

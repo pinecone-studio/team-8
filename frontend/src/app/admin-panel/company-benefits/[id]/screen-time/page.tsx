@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
-  ChevronDown,
-  Clock3,
+  Calendar,
   ExternalLink,
+  Medal,
   Save,
   Sparkles,
+  Trophy,
+  Users,
 } from "lucide-react";
 import Sidebar from "../../../_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
@@ -22,20 +24,8 @@ import {
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { getContractProxyUrl } from "@/lib/contracts";
+import { getInitialScreenTimeMonthKey, getScreenTimeWindowForSlotDate } from "@/lib/screen-time-calendar";
 import { isHrAdmin } from "../../../_lib/access";
-
-type EditableTier = {
-  id: string;
-  label: string;
-  maxDailyMinutes: string;
-  salaryUpliftPercent: string;
-};
-
-type ResultSnapshot = {
-  avgDailyMinutes: number;
-  awardedSalaryUpliftPercent: number;
-  isProvisional: boolean;
-};
 
 function formatMinutes(totalMinutes: number | null | undefined): string {
   if (typeof totalMinutes !== "number" || totalMinutes <= 0) return "—";
@@ -46,209 +36,122 @@ function formatMinutes(totalMinutes: number | null | undefined): string {
   return `${hours}h ${minutes}m`;
 }
 
-function initialMonthKey(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Ulaanbaatar",
-    year: "numeric",
-    month: "2-digit",
-  }).format(new Date());
+function formatMoney(amount: number | null | undefined): string {
+  if (typeof amount !== "number" || amount <= 0) return "—";
+  return `${amount.toLocaleString()} MNT`;
 }
 
-function averageRounded(values: number[]): number | null {
-  if (!values.length) return null;
-  return Math.round(
-    values.reduce((sum, value) => sum + value, 0) / values.length,
-  );
+function formatStatusLabel(status: string | null | undefined): string {
+  return String(status ?? "unknown").replaceAll("_", " ");
 }
 
-function resolveAwardedPercent(
-  tiers: EditableTier[],
-  avgDailyMinutes: number | null,
-): number {
-  if (avgDailyMinutes == null) return 0;
-  const sorted = [...tiers]
-    .map((tier) => ({
-      maxDailyMinutes: Number(tier.maxDailyMinutes),
-      salaryUpliftPercent: Number(tier.salaryUpliftPercent),
-    }))
-    .filter(
-      (tier) =>
-        Number.isFinite(tier.maxDailyMinutes) &&
-        Number.isFinite(tier.salaryUpliftPercent),
-    )
-    .sort((left, right) => left.maxDailyMinutes - right.maxDailyMinutes);
-  return (
-    sorted.find((tier) => avgDailyMinutes <= tier.maxDailyMinutes)
-      ?.salaryUpliftPercent ?? 0
-  );
-}
-
-function resolveCurrentSnapshot(
-  result: {
-    dueSlotDates: string[];
-    requiredSlotCount: number;
-    submissions: Array<{
-      slotDate: string;
-      avgDailyMinutes?: number | null;
-      reviewStatus: string;
-    }>;
-  },
-  tiers: EditableTier[],
-): ResultSnapshot | null {
-  if (!result.dueSlotDates.length) return null;
-
-  const approvedBySlot = new Map(
-    result.submissions
-      .filter((submission) =>
-        ["approved", "auto_approved"].includes(submission.reviewStatus),
-      )
-      .map((submission) => [submission.slotDate, submission]),
-  );
-
-  const dueMinutes: number[] = [];
-  for (const slotDate of result.dueSlotDates) {
-    const submission = approvedBySlot.get(slotDate);
-    if (!submission || typeof submission.avgDailyMinutes !== "number") {
-      return null;
-    }
-    dueMinutes.push(submission.avgDailyMinutes);
+function getStatusBadgeClass(status: string): string {
+  switch (status) {
+    case "winner":
+      return "bg-emerald-100 text-emerald-700";
+    case "qualified":
+      return "bg-blue-100 text-blue-700";
+    case "disqualified_missing_slot":
+    case "disqualified_rejected_submission":
+      return "bg-red-100 text-red-700";
+    case "not_eligible":
+      return "bg-gray-200 text-gray-700";
+    default:
+      return "bg-amber-100 text-amber-700";
   }
+}
 
-  const avgDailyMinutes = averageRounded(dueMinutes);
-  if (avgDailyMinutes == null) return null;
-
-  return {
-    avgDailyMinutes,
-    awardedSalaryUpliftPercent: resolveAwardedPercent(tiers, avgDailyMinutes),
-    isProvisional: result.dueSlotDates.length < result.requiredSlotCount,
-  };
+function getBenefitStatusBadgeClass(status: string): string {
+  switch (status) {
+    case "ACTIVE":
+      return "bg-emerald-100 text-emerald-700";
+    case "ELIGIBLE":
+      return "bg-blue-100 text-blue-700";
+    case "PENDING":
+      return "bg-amber-100 text-amber-700";
+    default:
+      return "bg-gray-200 text-gray-700";
+  }
 }
 
 export default function AdminScreenTimeProgramPage() {
   const params = useParams();
   const benefitId = typeof params.id === "string" ? params.id : "";
-  const [monthKey, setMonthKey] = useState(initialMonthKey);
+  const [monthKey, setMonthKey] = useState(getInitialScreenTimeMonthKey);
+  const [winnerPercentOverride, setWinnerPercentOverride] = useState<string | null>(null);
+  const [rewardAmountOverride, setRewardAmountOverride] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tiers, setTiers] = useState<EditableTier[]>([]);
 
   const { employee, loading: employeeLoading } = useCurrentEmployee();
   const canManage = isHrAdmin(employee);
-  const { data: adminBenefitsData, loading: benefitsLoading } =
-    useGetAdminBenefitsQuery({
-      skip: !canManage,
-    });
+  const { data: adminBenefitsData, loading: benefitsLoading } = useGetAdminBenefitsQuery({
+    skip: !canManage,
+  });
   const { data, loading } = useGetAdminScreenTimeMonthQuery({
     variables: { benefitId, monthKey },
     skip: !canManage || !benefitId,
+    fetchPolicy: "cache-and-network",
   });
-  const { data: leaderboardData, loading: leaderboardLoading } =
-    useGetScreenTimeLeaderboardQuery({
-      variables: { benefitId, monthKey },
-      skip: !canManage || !benefitId,
-    });
+  const { data: leaderboardData, loading: leaderboardLoading } = useGetScreenTimeLeaderboardQuery({
+    variables: { benefitId, monthKey },
+    skip: !canManage || !benefitId,
+    fetchPolicy: "cache-and-network",
+  });
 
-  const [upsertProgram, { loading: savingProgram }] =
-    useUpsertScreenTimeProgramMutation({
-      refetchQueries: [
-        {
-          query: GetAdminScreenTimeMonthDocument,
-          variables: { benefitId, monthKey },
-        },
-      ],
-    });
+  const [upsertProgram, { loading: savingProgram }] = useUpsertScreenTimeProgramMutation({
+    refetchQueries: [{ query: GetAdminScreenTimeMonthDocument, variables: { benefitId, monthKey } }],
+  });
 
-  const benefit = adminBenefitsData?.adminBenefits.find(
-    (item) => item.id === benefitId,
-  );
-
-  useEffect(() => {
-    if (data?.adminScreenTimeMonth.program) {
-      setTiers(
-        data.adminScreenTimeMonth.program.tiers.map((tier) => ({
-          id: tier.id,
-          label: tier.label,
-          maxDailyMinutes: String(tier.maxDailyMinutes),
-          salaryUpliftPercent: String(tier.salaryUpliftPercent),
-        })),
-      );
-    }
-  }, [data?.adminScreenTimeMonth.program]);
-
-  const slotDates = data?.adminScreenTimeMonth.slotDates ?? [];
+  const benefit = adminBenefitsData?.adminBenefits.find((item) => item.id === benefitId);
+  const board = data?.adminScreenTimeMonth;
   const leaderboard = leaderboardData?.screenTimeLeaderboard ?? [];
-  const hasData = (data?.adminScreenTimeMonth.rows?.length ?? 0) > 0;
 
-  const sortedRows = useMemo(
-    () =>
-      [...(data?.adminScreenTimeMonth.rows ?? [])].sort((left, right) => {
-        const statusOrder = [
-          "eligible",
-          "not_qualified",
-          "in_progress",
-          "ineligible_missing_slots",
-        ];
-        const leftIndex = statusOrder.indexOf(left.result.status);
-        const rightIndex = statusOrder.indexOf(right.result.status);
-        if (leftIndex !== rightIndex) return leftIndex - rightIndex;
-        return left.employeeName.localeCompare(right.employeeName);
-      }),
-    [data?.adminScreenTimeMonth.rows],
-  );
+  const winnerPercent = winnerPercentOverride ?? String(board?.program?.winnerPercent ?? 20);
+  const rewardAmountMnt = rewardAmountOverride ?? String(board?.program?.rewardAmountMnt ?? 100000);
+
+  const sortedRows = useMemo(() => {
+    return [...(board?.rows ?? [])].sort((left, right) => {
+      const leftRank = left.result.rankPosition ?? Number.POSITIVE_INFINITY;
+      const rightRank = right.result.rankPosition ?? Number.POSITIVE_INFINITY;
+      if (leftRank !== rightRank) return leftRank - rightRank;
+      return left.employeeName.localeCompare(right.employeeName);
+    });
+  }, [board?.rows]);
 
   async function handleSaveProgram() {
     setError(null);
     setFeedback(null);
+
+    const parsedWinnerPercent = Number(winnerPercent);
+    const parsedRewardAmount = Number(rewardAmountMnt);
+
+    if (!Number.isFinite(parsedWinnerPercent) || parsedWinnerPercent <= 0 || parsedWinnerPercent > 100) {
+      setError("Top winner percent must be between 1 and 100.");
+      return;
+    }
+
+    if (!Number.isFinite(parsedRewardAmount) || parsedRewardAmount <= 0) {
+      setError("Reward amount must be a positive MNT value.");
+      return;
+    }
+
     try {
-      if (!tiers.length)
-        throw new Error("Add at least one salary uplift tier.");
       await upsertProgram({
         variables: {
           input: {
             benefitId,
-            tiers: tiers.map((tier, index) => ({
-              label: tier.label.trim(),
-              maxDailyMinutes: Number(tier.maxDailyMinutes),
-              salaryUpliftPercent: Number(tier.salaryUpliftPercent),
-              displayOrder: index,
-            })),
+            winnerPercent: parsedWinnerPercent,
+            rewardAmountMnt: parsedRewardAmount,
           },
         },
       });
-      setFeedback("Program settings saved.");
+      setWinnerPercentOverride(null);
+      setRewardAmountOverride(null);
+      setFeedback("Competition settings saved.");
     } catch (saveError) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : "Failed to save program settings.",
-      );
+      setError(saveError instanceof Error ? saveError.message : "Failed to save competition settings.");
     }
-  }
-
-  function fillDemo() {
-    setMonthKey(initialMonthKey());
-    setTiers([
-      {
-        id: Math.random().toString(36).slice(2),
-        label: "Deep focus",
-        maxDailyMinutes: "45",
-        salaryUpliftPercent: "20",
-      },
-      {
-        id: Math.random().toString(36).slice(2),
-        label: "Balanced",
-        maxDailyMinutes: "90",
-        salaryUpliftPercent: "12",
-      },
-      {
-        id: Math.random().toString(36).slice(2),
-        label: "Healthy",
-        maxDailyMinutes: "150",
-        salaryUpliftPercent: "6",
-      },
-    ]);
-    setFeedback(null);
-    setError(null);
   }
 
   if (employeeLoading || benefitsLoading || loading) {
@@ -256,7 +159,7 @@ export default function AdminScreenTimeProgramPage() {
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar />
         <div className="flex flex-1 items-center justify-center">
-          <PageLoading message="Loading screen time program…" />
+          <PageLoading message="Loading screen time competition…" />
         </div>
       </div>
     );
@@ -281,7 +184,7 @@ export default function AdminScreenTimeProgramPage() {
         <Sidebar />
         <main className="flex flex-1 items-center justify-center p-8">
           <div className="rounded-2xl border border-red-100 bg-red-50 p-8 text-sm text-red-700">
-            This benefit is not configured as a screen time program.
+            This benefit is not configured as a screen time competition.
           </div>
         </main>
       </div>
@@ -292,7 +195,7 @@ export default function AdminScreenTimeProgramPage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
       <div className="flex flex-1 flex-col">
-        <main className="mx-auto w-full max-w-6xl px-8 py-8">
+        <main className="mx-auto w-full max-w-7xl px-8 py-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <Link
@@ -302,14 +205,15 @@ export default function AdminScreenTimeProgramPage() {
                 ← Back to screen time
               </Link>
               <h1 className="mt-3 text-2xl font-semibold text-gray-900">
-                {benefit.name} · Screen Time Program
+                {benefit.name} · Screen Time Competition
               </h1>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                Gemini extracts the weekly screenshot automatically, and the
-                system computes the month result without manual approval.
+              <p className="mt-1 max-w-3xl text-sm text-gray-500">
+                Employees upload one 7-day average screenshot on each required Friday. If any required slot is missing or rejected, that employee is disqualified for the month. The lowest averages win a fixed cash reward.
               </p>
             </div>
+
             <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 shadow-sm">
+              <Calendar className="h-4 w-4" />
               <span>Month</span>
               <input
                 type="month"
@@ -320,361 +224,301 @@ export default function AdminScreenTimeProgramPage() {
             </label>
           </div>
 
-          {error && (
+          {error ? (
             <div className="mt-6 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
-          )}
-          {feedback && (
+          ) : null}
+          {feedback ? (
             <div className="mt-6 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
               {feedback}
             </div>
-          )}
+          ) : null}
 
-          <div className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_1.85fr]">
+          <div className="mt-6 grid gap-4 md:grid-cols-4">
+            <div className="rounded-2xl border border-gray-100 bg-white p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Total Employees</p>
+              <p className="mt-2 text-2xl font-semibold text-gray-900">{board?.totalEmployeeCount ?? 0}</p>
+            </div>
+            <div className="rounded-2xl border border-gray-100 bg-white p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Competition Pool</p>
+              <p className="mt-2 text-2xl font-semibold text-gray-900">{board?.competitionParticipantCount ?? 0}</p>
+            </div>
+            <div className="rounded-2xl border border-gray-100 bg-white p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Winner Cutoff</p>
+              <p className="mt-2 text-2xl font-semibold text-gray-900">Top {board?.program?.winnerPercent ?? 0}%</p>
+              <p className="mt-1 text-xs text-gray-500">{board?.winnerCount ?? 0} employees win</p>
+            </div>
+            <div className="rounded-2xl border border-gray-100 bg-white p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Reward Per Winner</p>
+              <p className="mt-2 text-2xl font-semibold text-emerald-700">
+                {formatMoney(board?.program?.rewardAmountMnt)}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-6 xl:grid-cols-[1.05fr_1.95fr]">
             <section className="rounded-2xl border border-gray-100 bg-white p-6">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-semibold text-gray-900">
-                    Program Configuration
-                  </h2>
+                  <h2 className="text-base font-semibold text-gray-900">Competition Configuration</h2>
                   <p className="mt-1 text-sm text-gray-500">
-                    Salary uplift bands based on monthly average daily screen
-                    time.
+                    Admin chooses what percentage of the competition wins and how much cash each winner receives.
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={fillDemo}
-                    className="inline-flex items-center gap-2 rounded-xl bg-yellow-400 border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-                  >
-                    Fill demo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveProgram}
-                    disabled={savingProgram}
-                    className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-40"
-                  >
-                    <Save className="h-4 w-4" />
-                    Save
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleSaveProgram}
+                  disabled={savingProgram}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-40"
+                >
+                  <Save className="h-4 w-4" />
+                  Save
+                </button>
               </div>
 
-              <div className="mt-5 space-y-3">
-                {tiers.map((tier, index) => (
-                  <div
-                    key={tier.id}
-                    className="grid gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4 sm:grid-cols-3"
-                  >
-                    <div>
-                      <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-gray-400">
-                        Tier Label
-                      </label>
-                      <input
-                        type="text"
-                        value={tier.label}
-                        onChange={(event) =>
-                          setTiers((prev) =>
-                            prev.map((item) =>
-                              item.id === tier.id
-                                ? { ...item, label: event.target.value }
-                                : item,
-                            ),
-                          )
-                        }
-                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-gray-400">
-                        Max Daily Minutes
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={tier.maxDailyMinutes}
-                        onChange={(event) =>
-                          setTiers((prev) =>
-                            prev.map((item) =>
-                              item.id === tier.id
-                                ? {
-                                    ...item,
-                                    maxDailyMinutes: event.target.value,
-                                  }
-                                : item,
-                            ),
-                          )
-                        }
-                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-gray-400">
-                        Salary Uplift %
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={tier.salaryUpliftPercent}
-                        onChange={(event) =>
-                          setTiers((prev) =>
-                            prev.map((item) =>
-                              item.id === tier.id
-                                ? {
-                                    ...item,
-                                    salaryUpliftPercent: event.target.value,
-                                  }
-                                : item,
-                            ),
-                          )
-                        }
-                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none"
-                      />
-                    </div>
-                    <div className="sm:col-span-3 text-xs text-gray-500">
-                      Band {index + 1}: up to{" "}
-                      {formatMinutes(Number(tier.maxDailyMinutes))} → +
-                      {tier.salaryUpliftPercent || 0}%
-                    </div>
+              <div className="mt-5 grid gap-4">
+                <label className="block">
+                  <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                    Top Winner Percent
+                  </span>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={winnerPercent}
+                      onChange={(event) => setWinnerPercentOverride(event.target.value)}
+                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none"
+                    />
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-gray-400">%</span>
                   </div>
-                ))}
+                </label>
+
+                <label className="block">
+                  <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                    Fixed Reward Amount
+                  </span>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={1}
+                      step={1000}
+                      value={rewardAmountMnt}
+                      onChange={(event) => setRewardAmountOverride(event.target.value)}
+                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none"
+                    />
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-gray-400">MNT</span>
+                  </div>
+                </label>
+
+                <div className="rounded-2xl border border-fuchsia-100 bg-fuchsia-50 p-4 text-sm text-fuchsia-900">
+                  <p className="font-semibold">How winners are decided</p>
+                  <ul className="mt-2 space-y-2 text-sm text-fuchsia-900">
+                    <li>1. Employees upload one screenshot every required Friday.</li>
+                    <li>2. Each screenshot covers the last 7 days, and the slot is assigned to the month with the majority of days in that window.</li>
+                    <li>3. Missing or rejected required slots disqualify that employee for the month.</li>
+                    <li>4. Among the qualified employees, the lowest averages win the fixed reward.</li>
+                  </ul>
+                </div>
               </div>
             </section>
 
             <section className="rounded-2xl border border-gray-100 bg-white p-6">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-semibold text-gray-900">
-                    Month Board
-                  </h2>
+                  <h2 className="text-base font-semibold text-gray-900">Winner Zone</h2>
                   <p className="mt-1 text-sm text-gray-500">
-                    Monday slots: {slotDates.join(", ") || "—"}
+                    Current winners for {monthKey}. Each ranked employee here is inside the top {board?.program?.winnerPercent ?? 0}% zone.
                   </p>
                 </div>
+                <Trophy className="h-5 w-5 text-fuchsia-600" />
               </div>
 
-              <div className="mt-5 rounded-2xl border border-fuchsia-100 bg-fuchsia-50 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900">
-                      Leaderboard
-                    </h3>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Showing the top 5 employees with the lowest monthly
-                      average for {monthKey}.
-                    </p>
-                  </div>
+              {leaderboardLoading ? (
+                <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+                  Loading leaderboard…
                 </div>
-
-                {leaderboardLoading ? (
-                  <div className="mt-3 rounded-xl border border-fuchsia-100 bg-white px-4 py-3 text-sm text-gray-500">
-                    Loading leaderboard…
-                  </div>
-                ) : leaderboard.length === 0 ? (
-                  <div className="mt-3 rounded-xl border border-fuchsia-100 bg-white px-4 py-3 text-sm text-gray-500">
-                    No ranked results yet for this month.
-                  </div>
-                ) : (
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    {leaderboard.map((row) => (
-                      <div
-                        key={row.employeeId}
-                        className="rounded-xl border border-fuchsia-100 bg-white px-4 py-3"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex min-w-9 items-center justify-center rounded-full bg-fuchsia-100 px-2 py-1 text-xs font-semibold text-fuchsia-700">
-                                #{row.rank}
-                              </span>
-                              <p className="text-sm font-semibold text-gray-900">
-                                {row.employeeName}
-                              </p>
-                            </div>
-                            <p className="mt-1 text-xs text-gray-500">
-                              {row.approvedSlotCount}/{row.dueSlotCount}{" "}
-                              completed Monday slots so far
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-semibold text-gray-900">
-                              {formatMinutes(row.avgDailyMinutes)}
-                            </p>
-                            <p className="mt-1 text-xs font-medium text-emerald-700">
-                              +{row.awardedSalaryUpliftPercent}%
-                            </p>
-                            {row.isProvisional ? (
-                              <p className="mt-1 text-[11px] font-medium text-fuchsia-700">
-                                Provisional
-                              </p>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {!hasData ? (
-                <div className="mt-6 rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-6 py-10 text-center text-sm text-gray-500">
-                  No employee submissions yet for this month.
+              ) : leaderboard.length === 0 ? (
+                <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+                  No employees are inside the winner zone yet for this month.
                 </div>
               ) : (
-                <div className="mt-6 space-y-4">
-                  {sortedRows.map((row) => (
-                    <details
-                      key={row.employeeId}
-                      className="group rounded-2xl border border-gray-100 bg-gray-50 p-5"
-                    >
-                      <summary className="list-none cursor-pointer">
-                        {(() => {
-                          const currentSnapshot = resolveCurrentSnapshot(
-                            row.result,
-                            tiers,
-                          );
-                          const displayAvg =
-                            currentSnapshot?.avgDailyMinutes ??
-                            row.result.monthlyAvgDailyMinutes;
-                          const displayUplift =
-                            currentSnapshot?.awardedSalaryUpliftPercent ??
-                            row.result.awardedSalaryUpliftPercent;
-
-                          return (
-                            <>
-                              <div className="flex flex-wrap items-start justify-between gap-3">
-                                <div>
-                                  <p className="text-sm font-semibold text-gray-900">
-                                    {row.employeeName}
-                                  </p>
-                                  <p className="mt-0.5 text-xs text-gray-500">
-                                    {row.employeeEmail}
-                                  </p>
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-600 ring-1 ring-gray-200">
-                                    {row.result.status.replaceAll("_", " ")}
-                                  </span>
-                                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
-                                    +{displayUplift}% uplift
-                                  </span>
-                                  {currentSnapshot?.isProvisional ? (
-                                    <span className="rounded-full bg-fuchsia-100 px-3 py-1 text-xs font-semibold text-fuchsia-700 ring-1 ring-fuchsia-200">
-                                      Provisional
-                                    </span>
-                                  ) : null}
-                                  <ChevronDown className="h-4 w-4 text-gray-400 transition group-open:rotate-180" />
-                                </div>
-                              </div>
-
-                              <div className="mt-4 grid gap-3 md:grid-cols-4">
-                                <div className="rounded-xl border border-white bg-white p-3">
-                                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                                    Slots So Far
-                                  </p>
-                                  <p className="mt-1 text-lg font-semibold text-gray-900">
-                                    {row.result.approvedSlotCount}/
-                                    {row.result.dueSlotDates.length}
-                                  </p>
-                                </div>
-                                <div className="rounded-xl border border-white bg-white p-3">
-                                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                                    Current Avg
-                                  </p>
-                                  <p className="mt-1 text-lg font-semibold text-gray-900">
-                                    {formatMinutes(displayAvg)}
-                                  </p>
-                                </div>
-                                <div className="rounded-xl border border-white bg-white p-3">
-                                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                                    Missing Due
-                                  </p>
-                                  <p className="mt-1 text-sm font-semibold text-red-600">
-                                    {row.result.missingDueSlotDates.length
-                                      ? row.result.missingDueSlotDates.length
-                                      : 0}
-                                  </p>
-                                </div>
-                                <div className="rounded-xl border border-white bg-white p-3">
-                                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                                    Submitted
-                                  </p>
-                                  <p className="mt-1 text-lg font-semibold text-gray-900">
-                                    {row.result.submittedSlotCount}/
-                                    {row.result.requiredSlotCount}
-                                  </p>
-                                </div>
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </summary>
-
-                      <div className="mt-4 border-t border-gray-200 pt-4">
-                        <div className="mb-4 flex items-center gap-2 text-xs text-gray-500">
-                          {row.result.status === "eligible" ? (
-                            <Sparkles className="h-4 w-4 text-blue-500" />
-                          ) : (
-                            <Clock3 className="h-4 w-4 text-gray-400" />
-                          )}
-                          Month result is computed automatically from the
-                          accepted Monday screenshots.
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  {leaderboard.map((row) => (
+                    <div key={row.employeeId} className="rounded-xl border border-fuchsia-100 bg-fuchsia-50 px-4 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex min-w-9 items-center justify-center rounded-full bg-white px-2 py-1 text-xs font-semibold text-fuchsia-700 ring-1 ring-fuchsia-200">
+                              #{row.rank}
+                            </span>
+                            <p className="text-sm font-semibold text-gray-900">{row.employeeName}</p>
+                          </div>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {row.approvedSlotCount}/{row.requiredSlotCount} Friday slots approved
+                          </p>
                         </div>
-
-                        <div className="grid gap-3 lg:grid-cols-2">
-                          {row.result.submissions.map((submission) => (
-                            <div
-                              key={submission.id}
-                              className="rounded-xl border border-white bg-white p-4"
-                            >
-                              <div className="flex flex-wrap items-start justify-between gap-3">
-                                <div>
-                                  <p className="text-sm font-semibold text-gray-900">
-                                    {submission.slotDate}
-                                  </p>
-                                  <p className="mt-0.5 text-xs text-gray-500">
-                                    {formatMinutes(submission.avgDailyMinutes)}{" "}
-                                    · confidence{" "}
-                                    {submission.confidenceScore ?? 0}% ·{" "}
-                                    {submission.reviewStatus.replaceAll(
-                                      "_",
-                                      " ",
-                                    )}
-                                  </p>
-                                  <p className="mt-2 text-xs text-gray-500">
-                                    {submission.reviewNote ||
-                                      "Accepted automatically from Gemini extraction."}
-                                  </p>
-                                </div>
-                                {submission.viewUrl && submission.fileName && (
-                                  <a
-                                    href={
-                                      getContractProxyUrl(submission.viewUrl) ??
-                                      submission.viewUrl
-                                    }
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
-                                  >
-                                    <ExternalLink className="h-3.5 w-3.5" />
-                                    Open screenshot
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          ))}
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-gray-900">{formatMinutes(row.avgDailyMinutes)}</p>
+                          <p className="mt-1 text-xs font-medium text-emerald-700">
+                            {formatMoney(row.rewardAmountMnt)}
+                          </p>
+                          {row.isProvisional ? (
+                            <p className="mt-1 text-[11px] font-medium text-fuchsia-700">Provisional</p>
+                          ) : null}
                         </div>
                       </div>
-                    </details>
+                    </div>
                   ))}
                 </div>
               )}
             </section>
           </div>
+
+          <section className="mt-6 rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">All Employee Screen-Time Data</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Required Friday slots assigned to {monthKey}: {board?.slotDates.join(", ") || "—"}
+                </p>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                <Users className="h-3.5 w-3.5" />
+                {sortedRows.length} employees
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {sortedRows.map((row) => (
+                <details key={row.employeeId} className="group rounded-2xl border border-gray-100 bg-gray-50 p-5">
+                  <summary className="list-none cursor-pointer">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-gray-900">{row.employeeName}</p>
+                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${getBenefitStatusBadgeClass(row.benefitStatus)}`}>
+                            {row.benefitStatus.toLowerCase()}
+                          </span>
+                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${getStatusBadgeClass(row.result.status)}`}>
+                            {formatStatusLabel(row.result.status)}
+                          </span>
+                          {row.result.isWinner ? (
+                            <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                              Winner
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">{row.employeeEmail}</p>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        {row.result.rankPosition ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-700 ring-1 ring-gray-200">
+                            <Medal className="h-3.5 w-3.5" />
+                            #{row.result.rankPosition}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-6">
+                      <div className="rounded-xl border border-white bg-white p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Average</p>
+                        <p className="mt-1 text-lg font-semibold text-gray-900">
+                          {formatMinutes(row.result.monthlyAvgDailyMinutes)}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-white bg-white p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Rank</p>
+                        <p className="mt-1 text-lg font-semibold text-gray-900">
+                          {row.result.rankPosition ? `#${row.result.rankPosition}` : "—"}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-white bg-white p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Approved Slots</p>
+                        <p className="mt-1 text-lg font-semibold text-gray-900">
+                          {row.result.approvedSlotCount}/{row.result.requiredSlotCount}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-white bg-white p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Missing</p>
+                        <p className="mt-1 text-lg font-semibold text-red-600">
+                          {row.result.missingDueSlotDates.length}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-white bg-white p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Winner Cutoff</p>
+                        <p className="mt-1 text-lg font-semibold text-gray-900">
+                          {row.result.winnerCutoffRank ? `#${row.result.winnerCutoffRank}` : "—"}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-white bg-white p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Reward</p>
+                        <p className="mt-1 text-lg font-semibold text-emerald-700">
+                          {row.result.isWinner
+                            ? formatMoney(row.result.rewardAmountMnt)
+                            : "—"}
+                        </p>
+                      </div>
+                    </div>
+                  </summary>
+
+                  <div className="mt-4 border-t border-gray-200 pt-4">
+                    <div className="rounded-xl border border-gray-100 bg-white px-4 py-3 text-sm text-gray-600">
+                      {row.result.decisionNote || "Competition status will update automatically from the accepted Friday screenshots."}
+                    </div>
+
+                    {row.result.disqualificationReason ? (
+                      <div className="mt-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        {row.result.disqualificationReason}
+                      </div>
+                    ) : null}
+
+                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                      {row.result.requiredSlotDates.map((slotDate) => {
+                        const submission = row.result.submissions.find((item) => item.slotDate === slotDate);
+                        const window = getScreenTimeWindowForSlotDate(slotDate);
+                        return (
+                          <div key={slotDate} className="rounded-xl border border-white bg-white p-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">{slotDate}</p>
+                                <p className="mt-0.5 text-xs text-gray-500">
+                                  Window: {window.startDate} → {window.endDate}
+                                </p>
+                                <p className="mt-2 text-xs text-gray-500">
+                                  {submission
+                                    ? `${formatMinutes(submission.avgDailyMinutes)} · ${submission.reviewStatus.replaceAll("_", " ")}`
+                                    : row.result.missingDueSlotDates.includes(slotDate)
+                                      ? "Missing required Friday submission"
+                                      : "No submission yet"}
+                                </p>
+                                {submission?.reviewNote ? (
+                                  <p className="mt-2 text-xs text-gray-500">{submission.reviewNote}</p>
+                                ) : null}
+                              </div>
+                              {submission?.viewUrl && submission.fileName ? (
+                                <a
+                                  href={getContractProxyUrl(submission.viewUrl) ?? submission.viewUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                                >
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                  Open screenshot
+                                </a>
+                              ) : null}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </section>
         </main>
       </div>
     </div>

@@ -44,14 +44,18 @@ export type AdminDashboardSummary = {
 export type AdminScreenTimeMonthBoard = {
   __typename?: 'AdminScreenTimeMonthBoard';
   benefitId: Scalars['String']['output'];
+  competitionParticipantCount: Scalars['Int']['output'];
   monthKey: Scalars['String']['output'];
   program?: Maybe<ScreenTimeProgram>;
   rows: Array<AdminScreenTimeMonthRow>;
   slotDates: Array<Scalars['String']['output']>;
+  totalEmployeeCount: Scalars['Int']['output'];
+  winnerCount: Scalars['Int']['output'];
 };
 
 export type AdminScreenTimeMonthRow = {
   __typename?: 'AdminScreenTimeMonthRow';
+  benefitStatus: BenefitEligibilityStatus;
   employeeEmail: Scalars['String']['output'];
   employeeId: Scalars['String']['output'];
   employeeName: Scalars['String']['output'];
@@ -715,7 +719,7 @@ export type ScreenTimeLeaderboardRow = {
   __typename?: 'ScreenTimeLeaderboardRow';
   approvedSlotCount: Scalars['Int']['output'];
   avgDailyMinutes?: Maybe<Scalars['Int']['output']>;
-  awardedSalaryUpliftPercent: Scalars['Int']['output'];
+  competitionParticipantCount: Scalars['Int']['output'];
   dueSlotCount: Scalars['Int']['output'];
   employeeEmail: Scalars['String']['output'];
   employeeId: Scalars['String']['output'];
@@ -724,7 +728,9 @@ export type ScreenTimeLeaderboardRow = {
   monthKey: Scalars['String']['output'];
   rank?: Maybe<Scalars['Int']['output']>;
   requiredSlotCount: Scalars['Int']['output'];
+  rewardAmountMnt: Scalars['Int']['output'];
   status: Scalars['String']['output'];
+  winnerCutoffRank: Scalars['Int']['output'];
 };
 
 export type ScreenTimeMonthlyResult = {
@@ -732,28 +738,38 @@ export type ScreenTimeMonthlyResult = {
   approvedAt?: Maybe<Scalars['String']['output']>;
   approvedByEmployeeId?: Maybe<Scalars['String']['output']>;
   approvedSlotCount: Scalars['Int']['output'];
-  awardedSalaryUpliftPercent: Scalars['Int']['output'];
   benefitId: Scalars['String']['output'];
+  competitionParticipantCount: Scalars['Int']['output'];
   decisionNote?: Maybe<Scalars['String']['output']>;
+  disqualificationReason?: Maybe<Scalars['String']['output']>;
+  dueSlotCount: Scalars['Int']['output'];
   dueSlotDates: Array<Scalars['String']['output']>;
   employeeId: Scalars['String']['output'];
   id: Scalars['String']['output'];
+  isProvisional: Scalars['Boolean']['output'];
+  isWinner: Scalars['Boolean']['output'];
   missingDueSlotDates: Array<Scalars['String']['output']>;
   monthKey: Scalars['String']['output'];
   monthlyAvgDailyMinutes?: Maybe<Scalars['Int']['output']>;
+  rankPosition?: Maybe<Scalars['Int']['output']>;
+  rankedParticipantCount: Scalars['Int']['output'];
+  rejectedDueSlotDates: Array<Scalars['String']['output']>;
   requiredSlotCount: Scalars['Int']['output'];
   requiredSlotDates: Array<Scalars['String']['output']>;
+  rewardAmountMnt: Scalars['Int']['output'];
   status: Scalars['String']['output'];
   submissions: Array<ScreenTimeSubmission>;
   submittedSlotCount: Scalars['Int']['output'];
+  winnerCutoffRank: Scalars['Int']['output'];
 };
 
 export type ScreenTimeProgram = {
   __typename?: 'ScreenTimeProgram';
   benefitId: Scalars['String']['output'];
   isActive: Scalars['Boolean']['output'];
+  rewardAmountMnt: Scalars['Int']['output'];
   screenshotRetentionDays: Scalars['Int']['output'];
-  tiers: Array<ScreenTimeTier>;
+  winnerPercent: Scalars['Int']['output'];
 };
 
 export type ScreenTimeSubmission = {
@@ -774,23 +790,6 @@ export type ScreenTimeSubmission = {
   slotDate: Scalars['String']['output'];
   submittedAt: Scalars['String']['output'];
   viewUrl?: Maybe<Scalars['String']['output']>;
-};
-
-export type ScreenTimeTier = {
-  __typename?: 'ScreenTimeTier';
-  benefitId: Scalars['String']['output'];
-  displayOrder: Scalars['Int']['output'];
-  id: Scalars['String']['output'];
-  label: Scalars['String']['output'];
-  maxDailyMinutes: Scalars['Int']['output'];
-  salaryUpliftPercent: Scalars['Int']['output'];
-};
-
-export type ScreenTimeTierInput = {
-  displayOrder?: InputMaybe<Scalars['Int']['input']>;
-  label: Scalars['String']['input'];
-  maxDailyMinutes: Scalars['Int']['input'];
-  salaryUpliftPercent: Scalars['Int']['input'];
 };
 
 export type UpdateBenefitInput = {
@@ -840,8 +839,9 @@ export type UpdateMySettingsInput = {
 
 export type UpsertScreenTimeProgramInput = {
   benefitId: Scalars['String']['input'];
+  rewardAmountMnt: Scalars['Int']['input'];
   screenshotRetentionDays?: InputMaybe<Scalars['Int']['input']>;
-  tiers: Array<ScreenTimeTierInput>;
+  winnerPercent: Scalars['Int']['input'];
 };
 
 export type MarkNotificationsReadMutationVariables = Exact<{
@@ -915,7 +915,7 @@ export type UpsertScreenTimeProgramMutationVariables = Exact<{
 }>;
 
 
-export type UpsertScreenTimeProgramMutation = { __typename?: 'Mutation', upsertScreenTimeProgram: { __typename?: 'ScreenTimeProgram', benefitId: string, screenshotRetentionDays: number, isActive: boolean, tiers: Array<{ __typename?: 'ScreenTimeTier', id: string, benefitId: string, label: string, maxDailyMinutes: number, salaryUpliftPercent: number, displayOrder: number }> } };
+export type UpsertScreenTimeProgramMutation = { __typename?: 'Mutation', upsertScreenTimeProgram: { __typename?: 'ScreenTimeProgram', benefitId: string, screenshotRetentionDays: number, winnerPercent: number, rewardAmountMnt: number, isActive: boolean } };
 
 export type CreateEligibilityRuleMutationVariables = Exact<{
   input: CreateEligibilityRuleInput;
@@ -1120,7 +1120,7 @@ export type GetMyScreenTimeMonthQueryVariables = Exact<{
 }>;
 
 
-export type GetMyScreenTimeMonthQuery = { __typename?: 'Query', myScreenTimeMonth: { __typename?: 'MyScreenTimeMonth', benefitId: string, benefitStatus: BenefitEligibilityStatus, failedRuleMessage?: string | null, todayLocalDate: string, activeSlotDate?: string | null, isUploadOpenToday: boolean, program?: { __typename?: 'ScreenTimeProgram', benefitId: string, screenshotRetentionDays: number, isActive: boolean, tiers: Array<{ __typename?: 'ScreenTimeTier', id: string, benefitId: string, label: string, maxDailyMinutes: number, salaryUpliftPercent: number, displayOrder: number }> } | null, month: { __typename?: 'ScreenTimeMonthlyResult', id: string, benefitId: string, employeeId: string, monthKey: string, requiredSlotDates: Array<string>, dueSlotDates: Array<string>, missingDueSlotDates: Array<string>, requiredSlotCount: number, submittedSlotCount: number, approvedSlotCount: number, monthlyAvgDailyMinutes?: number | null, awardedSalaryUpliftPercent: number, status: string, approvedByEmployeeId?: string | null, approvedAt?: string | null, decisionNote?: string | null, submissions: Array<{ __typename?: 'ScreenTimeSubmission', id: string, benefitId: string, employeeId: string, monthKey: string, slotDate: string, avgDailyMinutes?: number | null, confidenceScore?: number | null, platform?: string | null, periodType?: string | null, extractionStatus: string, reviewStatus: string, reviewNote?: string | null, submittedAt: string, reviewedAt?: string | null, fileName?: string | null, viewUrl?: string | null }> } } };
+export type GetMyScreenTimeMonthQuery = { __typename?: 'Query', myScreenTimeMonth: { __typename?: 'MyScreenTimeMonth', benefitId: string, benefitStatus: BenefitEligibilityStatus, failedRuleMessage?: string | null, todayLocalDate: string, activeSlotDate?: string | null, isUploadOpenToday: boolean, program?: { __typename?: 'ScreenTimeProgram', benefitId: string, screenshotRetentionDays: number, winnerPercent: number, rewardAmountMnt: number, isActive: boolean } | null, month: { __typename?: 'ScreenTimeMonthlyResult', id: string, benefitId: string, employeeId: string, monthKey: string, requiredSlotDates: Array<string>, dueSlotDates: Array<string>, missingDueSlotDates: Array<string>, rejectedDueSlotDates: Array<string>, requiredSlotCount: number, dueSlotCount: number, submittedSlotCount: number, approvedSlotCount: number, monthlyAvgDailyMinutes?: number | null, competitionParticipantCount: number, rankedParticipantCount: number, rankPosition?: number | null, winnerCutoffRank: number, isWinner: boolean, rewardAmountMnt: number, isProvisional: boolean, status: string, approvedByEmployeeId?: string | null, approvedAt?: string | null, decisionNote?: string | null, disqualificationReason?: string | null, submissions: Array<{ __typename?: 'ScreenTimeSubmission', id: string, benefitId: string, employeeId: string, monthKey: string, slotDate: string, avgDailyMinutes?: number | null, confidenceScore?: number | null, platform?: string | null, periodType?: string | null, extractionStatus: string, reviewStatus: string, reviewNote?: string | null, submittedAt: string, reviewedAt?: string | null, fileName?: string | null, viewUrl?: string | null }> } } };
 
 export type GetAdminScreenTimeMonthQueryVariables = Exact<{
   benefitId: Scalars['String']['input'];
@@ -1128,7 +1128,7 @@ export type GetAdminScreenTimeMonthQueryVariables = Exact<{
 }>;
 
 
-export type GetAdminScreenTimeMonthQuery = { __typename?: 'Query', adminScreenTimeMonth: { __typename?: 'AdminScreenTimeMonthBoard', benefitId: string, monthKey: string, slotDates: Array<string>, program?: { __typename?: 'ScreenTimeProgram', benefitId: string, screenshotRetentionDays: number, isActive: boolean, tiers: Array<{ __typename?: 'ScreenTimeTier', id: string, benefitId: string, label: string, maxDailyMinutes: number, salaryUpliftPercent: number, displayOrder: number }> } | null, rows: Array<{ __typename?: 'AdminScreenTimeMonthRow', employeeId: string, employeeName: string, employeeEmail: string, result: { __typename?: 'ScreenTimeMonthlyResult', id: string, benefitId: string, employeeId: string, monthKey: string, requiredSlotDates: Array<string>, dueSlotDates: Array<string>, missingDueSlotDates: Array<string>, requiredSlotCount: number, submittedSlotCount: number, approvedSlotCount: number, monthlyAvgDailyMinutes?: number | null, awardedSalaryUpliftPercent: number, status: string, approvedByEmployeeId?: string | null, approvedAt?: string | null, decisionNote?: string | null, submissions: Array<{ __typename?: 'ScreenTimeSubmission', id: string, benefitId: string, employeeId: string, monthKey: string, slotDate: string, avgDailyMinutes?: number | null, confidenceScore?: number | null, platform?: string | null, periodType?: string | null, extractionStatus: string, reviewStatus: string, reviewNote?: string | null, submittedAt: string, reviewedAt?: string | null, fileName?: string | null, viewUrl?: string | null }> } }> } };
+export type GetAdminScreenTimeMonthQuery = { __typename?: 'Query', adminScreenTimeMonth: { __typename?: 'AdminScreenTimeMonthBoard', benefitId: string, monthKey: string, slotDates: Array<string>, competitionParticipantCount: number, winnerCount: number, totalEmployeeCount: number, program?: { __typename?: 'ScreenTimeProgram', benefitId: string, screenshotRetentionDays: number, winnerPercent: number, rewardAmountMnt: number, isActive: boolean } | null, rows: Array<{ __typename?: 'AdminScreenTimeMonthRow', employeeId: string, employeeName: string, employeeEmail: string, benefitStatus: BenefitEligibilityStatus, result: { __typename?: 'ScreenTimeMonthlyResult', id: string, benefitId: string, employeeId: string, monthKey: string, requiredSlotDates: Array<string>, dueSlotDates: Array<string>, missingDueSlotDates: Array<string>, rejectedDueSlotDates: Array<string>, requiredSlotCount: number, dueSlotCount: number, submittedSlotCount: number, approvedSlotCount: number, monthlyAvgDailyMinutes?: number | null, competitionParticipantCount: number, rankedParticipantCount: number, rankPosition?: number | null, winnerCutoffRank: number, isWinner: boolean, rewardAmountMnt: number, isProvisional: boolean, status: string, approvedByEmployeeId?: string | null, approvedAt?: string | null, decisionNote?: string | null, disqualificationReason?: string | null, submissions: Array<{ __typename?: 'ScreenTimeSubmission', id: string, benefitId: string, employeeId: string, monthKey: string, slotDate: string, avgDailyMinutes?: number | null, confidenceScore?: number | null, platform?: string | null, periodType?: string | null, extractionStatus: string, reviewStatus: string, reviewNote?: string | null, submittedAt: string, reviewedAt?: string | null, fileName?: string | null, viewUrl?: string | null }> } }> } };
 
 export type GetScreenTimeLeaderboardQueryVariables = Exact<{
   benefitId: Scalars['String']['input'];
@@ -1136,7 +1136,7 @@ export type GetScreenTimeLeaderboardQueryVariables = Exact<{
 }>;
 
 
-export type GetScreenTimeLeaderboardQuery = { __typename?: 'Query', screenTimeLeaderboard: Array<{ __typename?: 'ScreenTimeLeaderboardRow', rank?: number | null, employeeId: string, employeeName: string, employeeEmail: string, monthKey: string, status: string, avgDailyMinutes?: number | null, awardedSalaryUpliftPercent: number, approvedSlotCount: number, dueSlotCount: number, requiredSlotCount: number, isProvisional: boolean }> };
+export type GetScreenTimeLeaderboardQuery = { __typename?: 'Query', screenTimeLeaderboard: Array<{ __typename?: 'ScreenTimeLeaderboardRow', rank?: number | null, employeeId: string, employeeName: string, employeeEmail: string, monthKey: string, status: string, avgDailyMinutes?: number | null, rewardAmountMnt: number, approvedSlotCount: number, dueSlotCount: number, requiredSlotCount: number, isProvisional: boolean, winnerCutoffRank: number, competitionParticipantCount: number }> };
 
 export type GetDepartmentsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1542,15 +1542,9 @@ export const UpsertScreenTimeProgramDocument = gql`
   upsertScreenTimeProgram(input: $input) {
     benefitId
     screenshotRetentionDays
+    winnerPercent
+    rewardAmountMnt
     isActive
-    tiers {
-      id
-      benefitId
-      label
-      maxDailyMinutes
-      salaryUpliftPercent
-      displayOrder
-    }
   }
 }
     `;
@@ -3021,15 +3015,9 @@ export const GetMyScreenTimeMonthDocument = gql`
     program {
       benefitId
       screenshotRetentionDays
+      winnerPercent
+      rewardAmountMnt
       isActive
-      tiers {
-        id
-        benefitId
-        label
-        maxDailyMinutes
-        salaryUpliftPercent
-        displayOrder
-      }
     }
     month {
       id
@@ -3039,15 +3027,24 @@ export const GetMyScreenTimeMonthDocument = gql`
       requiredSlotDates
       dueSlotDates
       missingDueSlotDates
+      rejectedDueSlotDates
       requiredSlotCount
+      dueSlotCount
       submittedSlotCount
       approvedSlotCount
       monthlyAvgDailyMinutes
-      awardedSalaryUpliftPercent
+      competitionParticipantCount
+      rankedParticipantCount
+      rankPosition
+      winnerCutoffRank
+      isWinner
+      rewardAmountMnt
+      isProvisional
       status
       approvedByEmployeeId
       approvedAt
       decisionNote
+      disqualificationReason
       submissions {
         id
         benefitId
@@ -3113,23 +3110,21 @@ export const GetAdminScreenTimeMonthDocument = gql`
     benefitId
     monthKey
     slotDates
+    competitionParticipantCount
+    winnerCount
+    totalEmployeeCount
     program {
       benefitId
       screenshotRetentionDays
+      winnerPercent
+      rewardAmountMnt
       isActive
-      tiers {
-        id
-        benefitId
-        label
-        maxDailyMinutes
-        salaryUpliftPercent
-        displayOrder
-      }
     }
     rows {
       employeeId
       employeeName
       employeeEmail
+      benefitStatus
       result {
         id
         benefitId
@@ -3138,15 +3133,24 @@ export const GetAdminScreenTimeMonthDocument = gql`
         requiredSlotDates
         dueSlotDates
         missingDueSlotDates
+        rejectedDueSlotDates
         requiredSlotCount
+        dueSlotCount
         submittedSlotCount
         approvedSlotCount
         monthlyAvgDailyMinutes
-        awardedSalaryUpliftPercent
+        competitionParticipantCount
+        rankedParticipantCount
+        rankPosition
+        winnerCutoffRank
+        isWinner
+        rewardAmountMnt
+        isProvisional
         status
         approvedByEmployeeId
         approvedAt
         decisionNote
+        disqualificationReason
         submissions {
           id
           benefitId
@@ -3217,11 +3221,13 @@ export const GetScreenTimeLeaderboardDocument = gql`
     monthKey
     status
     avgDailyMinutes
-    awardedSalaryUpliftPercent
+    rewardAmountMnt
     approvedSlotCount
     dueSlotCount
     requiredSlotCount
     isProvisional
+    winnerCutoffRank
+    competitionParticipantCount
   }
 }
     `;

@@ -27,20 +27,12 @@ export const benefitTypeDefs = gql`
     screen_time
   }
 
-  type ScreenTimeTier {
-    id: String!
-    benefitId: String!
-    label: String!
-    maxDailyMinutes: Int!
-    salaryUpliftPercent: Int!
-    displayOrder: Int!
-  }
-
   type ScreenTimeProgram {
     benefitId: String!
     screenshotRetentionDays: Int!
+    winnerPercent: Int!
+    rewardAmountMnt: Int!
     isActive: Boolean!
-    tiers: [ScreenTimeTier!]!
   }
 
   type ScreenTimeSubmission {
@@ -70,15 +62,24 @@ export const benefitTypeDefs = gql`
     requiredSlotDates: [String!]!
     dueSlotDates: [String!]!
     missingDueSlotDates: [String!]!
+    rejectedDueSlotDates: [String!]!
     requiredSlotCount: Int!
+    dueSlotCount: Int!
     submittedSlotCount: Int!
     approvedSlotCount: Int!
     monthlyAvgDailyMinutes: Int
-    awardedSalaryUpliftPercent: Int!
+    competitionParticipantCount: Int!
+    rankedParticipantCount: Int!
+    rankPosition: Int
+    winnerCutoffRank: Int!
+    isWinner: Boolean!
+    rewardAmountMnt: Int!
+    isProvisional: Boolean!
     status: String!
     approvedByEmployeeId: String
     approvedAt: String
     decisionNote: String
+    disqualificationReason: String
     submissions: [ScreenTimeSubmission!]!
   }
 
@@ -97,6 +98,7 @@ export const benefitTypeDefs = gql`
     employeeId: String!
     employeeName: String!
     employeeEmail: String!
+    benefitStatus: BenefitEligibilityStatus!
     result: ScreenTimeMonthlyResult!
   }
 
@@ -105,6 +107,9 @@ export const benefitTypeDefs = gql`
     monthKey: String!
     slotDates: [String!]!
     program: ScreenTimeProgram
+    competitionParticipantCount: Int!
+    winnerCount: Int!
+    totalEmployeeCount: Int!
     rows: [AdminScreenTimeMonthRow!]!
   }
 
@@ -116,11 +121,13 @@ export const benefitTypeDefs = gql`
     monthKey: String!
     status: String!
     avgDailyMinutes: Int
-    awardedSalaryUpliftPercent: Int!
+    rewardAmountMnt: Int!
     approvedSlotCount: Int!
     dueSlotCount: Int!
     requiredSlotCount: Int!
     isProvisional: Boolean!
+    winnerCutoffRank: Int!
+    competitionParticipantCount: Int!
   }
 
   type Benefit {
@@ -292,17 +299,11 @@ export const benefitTypeDefs = gql`
     imageUrl: String
   }
 
-  input ScreenTimeTierInput {
-    label: String!
-    maxDailyMinutes: Int!
-    salaryUpliftPercent: Int!
-    displayOrder: Int
-  }
-
   input UpsertScreenTimeProgramInput {
     benefitId: String!
     screenshotRetentionDays: Int
-    tiers: [ScreenTimeTierInput!]!
+    winnerPercent: Int!
+    rewardAmountMnt: Int!
   }
 
   input RequestBenefitInput {
