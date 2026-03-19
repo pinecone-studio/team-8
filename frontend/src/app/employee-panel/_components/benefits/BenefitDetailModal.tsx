@@ -2,7 +2,7 @@
 
 import { X, CheckCircle2, Clock, XCircle, MapPin, DollarSign } from "lucide-react";
 import type { BenefitEligibility } from "@/graphql/generated/graphql";
-import { BenefitEligibilityStatus } from "@/graphql/generated/graphql";
+import { BenefitEligibilityStatus, BenefitFlowType } from "@/graphql/generated/graphql";
 
 type Props = {
   benefit: BenefitEligibility;
@@ -39,6 +39,7 @@ export default function BenefitDetailModal({ benefit, onClose, onRequestBenefit 
     b.optionsDescription ??
     `Company covers ${b.subsidyPercent}%. Employee share ${b.employeePercent}%.`;
   const category = formatCategory(b.category ?? "Other");
+  const isScreenTime = b.flowType === BenefitFlowType.ScreenTime;
 
   const isEligible =
     benefit.status === BenefitEligibilityStatus.Eligible ||
@@ -176,7 +177,14 @@ export default function BenefitDetailModal({ benefit, onClose, onRequestBenefit 
         <div className="flex items-center gap-3 border-t border-gray-100 bg-gray-50/50 px-6 py-4">
           {benefit.status === BenefitEligibilityStatus.Eligible && !isSelfService && (
             <>
-              {onRequestBenefit ? (
+              {isScreenTime ? (
+                <a
+                  href={`/employee-panel/screen-time/${benefit.benefitId}`}
+                  className="inline-flex rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-gray-800 hover:shadow-lg active:scale-[0.99]"
+                >
+                  Open Tracker
+                </a>
+              ) : onRequestBenefit ? (
                 <button
                   type="button"
                   onClick={() => onRequestBenefit(benefit.benefitId)}

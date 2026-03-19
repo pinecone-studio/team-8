@@ -16,6 +16,7 @@ export const createBenefit = async (
       subsidyPercent: number;
       vendorName?: string | null;
       requiresContract?: boolean | null;
+      flowType?: string | null;
       approvalPolicy?: string | null;
       flowType?: "contract" | "normal" | "down_payment" | "self_service" | null;
       amount?: number | null;
@@ -26,6 +27,10 @@ export const createBenefit = async (
   { db, env, currentEmployee }: GraphQLContext,
 ) => {
   requireHrAdmin(currentEmployee);
+  const flowType = input.flowType ?? (input.requiresContract ? "contract" : "normal");
+  if (flowType === "screen_time" && input.requiresContract) {
+    throw new Error("Screen time benefits cannot require a contract.");
+  }
   const [row] = await db
     .insert(schema.benefits)
     .values({
@@ -34,7 +39,8 @@ export const createBenefit = async (
       category: input.category,
       subsidyPercent: input.subsidyPercent,
       vendorName: input.vendorName ?? null,
-      requiresContract: input.requiresContract ?? false,
+      requiresContract: flowType === "screen_time" ? false : input.requiresContract ?? false,
+      flowType,
       approvalPolicy: input.approvalPolicy ?? "hr",
       flowType:
         input.flowType ??

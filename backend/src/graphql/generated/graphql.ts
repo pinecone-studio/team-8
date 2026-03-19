@@ -42,6 +42,23 @@ export type AdminDashboardSummary = {
   usageByCategory: Array<AdminDashboardBucket>;
 };
 
+export type AdminScreenTimeMonthBoard = {
+  __typename?: 'AdminScreenTimeMonthBoard';
+  benefitId: Scalars['String']['output'];
+  monthKey: Scalars['String']['output'];
+  program?: Maybe<ScreenTimeProgram>;
+  rows: Array<AdminScreenTimeMonthRow>;
+  slotDates: Array<Scalars['String']['output']>;
+};
+
+export type AdminScreenTimeMonthRow = {
+  __typename?: 'AdminScreenTimeMonthRow';
+  employeeEmail: Scalars['String']['output'];
+  employeeId: Scalars['String']['output'];
+  employeeName: Scalars['String']['output'];
+  result: ScreenTimeMonthlyResult;
+};
+
 export type AttendanceImportError = {
   __typename?: 'AttendanceImportError';
   identifier: Scalars['String']['output'];
@@ -128,6 +145,7 @@ export type BenefitFlowType =
   | 'contract'
   | 'down_payment'
   | 'normal'
+  | 'screen_time'
   | 'self_service';
 
 export type BenefitRequest = {
@@ -325,6 +343,7 @@ export type Mutation = {
   updateEligibilityRule: EligibilityRule;
   updateEmployee?: Maybe<Employee>;
   updateMySettings: EmployeeSettings;
+  upsertScreenTimeProgram: ScreenTimeProgram;
 };
 
 
@@ -444,6 +463,23 @@ export type MutationUpdateMySettingsArgs = {
   input: UpdateMySettingsInput;
 };
 
+
+export type MutationUpsertScreenTimeProgramArgs = {
+  input: UpsertScreenTimeProgramInput;
+};
+
+export type MyScreenTimeMonth = {
+  __typename?: 'MyScreenTimeMonth';
+  activeSlotDate?: Maybe<Scalars['String']['output']>;
+  benefitId: Scalars['String']['output'];
+  benefitStatus: BenefitEligibilityStatus;
+  failedRuleMessage?: Maybe<Scalars['String']['output']>;
+  isUploadOpenToday: Scalars['Boolean']['output'];
+  month: ScreenTimeMonthlyResult;
+  program?: Maybe<ScreenTimeProgram>;
+  todayLocalDate: Scalars['String']['output'];
+};
+
 export type Notification = {
   __typename?: 'Notification';
   body: Scalars['String']['output'];
@@ -497,6 +533,7 @@ export type Query = {
   __typename?: 'Query';
   adminBenefits: Array<Benefit>;
   adminDashboardSummary: AdminDashboardSummary;
+  adminScreenTimeMonth: AdminScreenTimeMonthBoard;
   allBenefitRequests: Array<BenefitRequest>;
   auditLogActionTypes: Array<Scalars['String']['output']>;
   auditLogs: Array<AuditLog>;
@@ -512,10 +549,18 @@ export type Query = {
   getEmployeeByEmail?: Maybe<Employee>;
   getEmployees: Array<Employee>;
   myBenefits: Array<BenefitEligibility>;
+  myScreenTimeMonth: MyScreenTimeMonth;
   mySettings: EmployeeSettings;
   notifications: Array<Notification>;
   ruleProposals: Array<RuleProposal>;
+  screenTimeLeaderboard: Array<ScreenTimeLeaderboardRow>;
   session?: Maybe<Employee>;
+};
+
+
+export type QueryAdminScreenTimeMonthArgs = {
+  benefitId: Scalars['String']['input'];
+  monthKey?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -585,9 +630,21 @@ export type QueryGetEmployeesArgs = {
 };
 
 
+export type QueryMyScreenTimeMonthArgs = {
+  benefitId: Scalars['String']['input'];
+  monthKey?: InputMaybe<Scalars['String']['input']>;
+};
+
+
 export type QueryRuleProposalsArgs = {
   benefitId?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryScreenTimeLeaderboardArgs = {
+  benefitId: Scalars['String']['input'];
+  monthKey?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type RequestBenefitInput = {
@@ -619,6 +676,88 @@ export type RuleProposal = {
   ruleId?: Maybe<Scalars['String']['output']>;
   status: Scalars['String']['output'];
   summary: Scalars['String']['output'];
+};
+
+export type ScreenTimeLeaderboardRow = {
+  __typename?: 'ScreenTimeLeaderboardRow';
+  approvedSlotCount: Scalars['Int']['output'];
+  avgDailyMinutes?: Maybe<Scalars['Int']['output']>;
+  awardedSalaryUpliftPercent: Scalars['Int']['output'];
+  dueSlotCount: Scalars['Int']['output'];
+  employeeEmail: Scalars['String']['output'];
+  employeeId: Scalars['String']['output'];
+  employeeName: Scalars['String']['output'];
+  isProvisional: Scalars['Boolean']['output'];
+  monthKey: Scalars['String']['output'];
+  rank?: Maybe<Scalars['Int']['output']>;
+  requiredSlotCount: Scalars['Int']['output'];
+  status: Scalars['String']['output'];
+};
+
+export type ScreenTimeMonthlyResult = {
+  __typename?: 'ScreenTimeMonthlyResult';
+  approvedAt?: Maybe<Scalars['String']['output']>;
+  approvedByEmployeeId?: Maybe<Scalars['String']['output']>;
+  approvedSlotCount: Scalars['Int']['output'];
+  awardedSalaryUpliftPercent: Scalars['Int']['output'];
+  benefitId: Scalars['String']['output'];
+  decisionNote?: Maybe<Scalars['String']['output']>;
+  dueSlotDates: Array<Scalars['String']['output']>;
+  employeeId: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  missingDueSlotDates: Array<Scalars['String']['output']>;
+  monthKey: Scalars['String']['output'];
+  monthlyAvgDailyMinutes?: Maybe<Scalars['Int']['output']>;
+  requiredSlotCount: Scalars['Int']['output'];
+  requiredSlotDates: Array<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  submissions: Array<ScreenTimeSubmission>;
+  submittedSlotCount: Scalars['Int']['output'];
+};
+
+export type ScreenTimeProgram = {
+  __typename?: 'ScreenTimeProgram';
+  benefitId: Scalars['String']['output'];
+  isActive: Scalars['Boolean']['output'];
+  screenshotRetentionDays: Scalars['Int']['output'];
+  tiers: Array<ScreenTimeTier>;
+};
+
+export type ScreenTimeSubmission = {
+  __typename?: 'ScreenTimeSubmission';
+  avgDailyMinutes?: Maybe<Scalars['Int']['output']>;
+  benefitId: Scalars['String']['output'];
+  confidenceScore?: Maybe<Scalars['Int']['output']>;
+  employeeId: Scalars['String']['output'];
+  extractionStatus: Scalars['String']['output'];
+  fileName?: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  monthKey: Scalars['String']['output'];
+  periodType?: Maybe<Scalars['String']['output']>;
+  platform?: Maybe<Scalars['String']['output']>;
+  reviewNote?: Maybe<Scalars['String']['output']>;
+  reviewStatus: Scalars['String']['output'];
+  reviewedAt?: Maybe<Scalars['String']['output']>;
+  slotDate: Scalars['String']['output'];
+  submittedAt: Scalars['String']['output'];
+  viewUrl?: Maybe<Scalars['String']['output']>;
+};
+
+export type ScreenTimeTier = {
+  __typename?: 'ScreenTimeTier';
+  benefitId: Scalars['String']['output'];
+  displayOrder: Scalars['Int']['output'];
+  id: Scalars['String']['output'];
+  label: Scalars['String']['output'];
+  maxDailyMinutes: Scalars['Int']['output'];
+  salaryUpliftPercent: Scalars['Int']['output'];
+};
+
+export type ScreenTimeTierInput = {
+  displayOrder?: InputMaybe<Scalars['Int']['input']>;
+  label: Scalars['String']['input'];
+  maxDailyMinutes: Scalars['Int']['input'];
+  salaryUpliftPercent: Scalars['Int']['input'];
 };
 
 export type UpdateBenefitInput = {
@@ -664,6 +803,12 @@ export type UpdateMySettingsInput = {
   notificationEmail?: InputMaybe<Scalars['Boolean']['input']>;
   notificationRenewals?: InputMaybe<Scalars['Boolean']['input']>;
   timezone?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpsertScreenTimeProgramInput = {
+  benefitId: Scalars['String']['input'];
+  screenshotRetentionDays?: InputMaybe<Scalars['Int']['input']>;
+  tiers: Array<ScreenTimeTierInput>;
 };
 
 export type WithIndex<TObject> = TObject & Record<string, any>;
@@ -740,6 +885,8 @@ export type DirectiveResolverFn<TResult = {}, TParent = {}, TContext = {}, TArgs
 export type ResolversTypes = ResolversObject<{
   AdminDashboardBucket: ResolverTypeWrapper<AdminDashboardBucket>;
   AdminDashboardSummary: ResolverTypeWrapper<AdminDashboardSummary>;
+  AdminScreenTimeMonthBoard: ResolverTypeWrapper<AdminScreenTimeMonthBoard>;
+  AdminScreenTimeMonthRow: ResolverTypeWrapper<AdminScreenTimeMonthRow>;
   AttendanceImportError: ResolverTypeWrapper<AttendanceImportError>;
   AttendanceImportResult: ResolverTypeWrapper<AttendanceImportResult>;
   AttendanceRowInput: AttendanceRowInput;
@@ -766,6 +913,7 @@ export type ResolversTypes = ResolversObject<{
   FailedRule: ResolverTypeWrapper<FailedRule>;
   Int: ResolverTypeWrapper<Scalars['Int']['output']>;
   Mutation: ResolverTypeWrapper<{}>;
+  MyScreenTimeMonth: ResolverTypeWrapper<MyScreenTimeMonth>;
   Notification: ResolverTypeWrapper<Notification>;
   OkrSyncError: ResolverTypeWrapper<OkrSyncError>;
   OkrSyncResult: ResolverTypeWrapper<OkrSyncResult>;
@@ -776,17 +924,26 @@ export type ResolversTypes = ResolversObject<{
   RequestBenefitInput: RequestBenefitInput;
   RuleEvaluation: ResolverTypeWrapper<RuleEvaluation>;
   RuleProposal: ResolverTypeWrapper<RuleProposal>;
+  ScreenTimeLeaderboardRow: ResolverTypeWrapper<ScreenTimeLeaderboardRow>;
+  ScreenTimeMonthlyResult: ResolverTypeWrapper<ScreenTimeMonthlyResult>;
+  ScreenTimeProgram: ResolverTypeWrapper<ScreenTimeProgram>;
+  ScreenTimeSubmission: ResolverTypeWrapper<ScreenTimeSubmission>;
+  ScreenTimeTier: ResolverTypeWrapper<ScreenTimeTier>;
+  ScreenTimeTierInput: ScreenTimeTierInput;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
   UpdateBenefitInput: UpdateBenefitInput;
   UpdateEligibilityRuleInput: UpdateEligibilityRuleInput;
   UpdateEmployeeInput: UpdateEmployeeInput;
   UpdateMySettingsInput: UpdateMySettingsInput;
+  UpsertScreenTimeProgramInput: UpsertScreenTimeProgramInput;
 }>;
 
 /** Mapping between all available schema types and the resolvers parents */
 export type ResolversParentTypes = ResolversObject<{
   AdminDashboardBucket: AdminDashboardBucket;
   AdminDashboardSummary: AdminDashboardSummary;
+  AdminScreenTimeMonthBoard: AdminScreenTimeMonthBoard;
+  AdminScreenTimeMonthRow: AdminScreenTimeMonthRow;
   AttendanceImportError: AttendanceImportError;
   AttendanceImportResult: AttendanceImportResult;
   AttendanceRowInput: AttendanceRowInput;
@@ -809,6 +966,7 @@ export type ResolversParentTypes = ResolversObject<{
   FailedRule: FailedRule;
   Int: Scalars['Int']['output'];
   Mutation: {};
+  MyScreenTimeMonth: MyScreenTimeMonth;
   Notification: Notification;
   OkrSyncError: OkrSyncError;
   OkrSyncResult: OkrSyncResult;
@@ -819,11 +977,18 @@ export type ResolversParentTypes = ResolversObject<{
   RequestBenefitInput: RequestBenefitInput;
   RuleEvaluation: RuleEvaluation;
   RuleProposal: RuleProposal;
+  ScreenTimeLeaderboardRow: ScreenTimeLeaderboardRow;
+  ScreenTimeMonthlyResult: ScreenTimeMonthlyResult;
+  ScreenTimeProgram: ScreenTimeProgram;
+  ScreenTimeSubmission: ScreenTimeSubmission;
+  ScreenTimeTier: ScreenTimeTier;
+  ScreenTimeTierInput: ScreenTimeTierInput;
   String: Scalars['String']['output'];
   UpdateBenefitInput: UpdateBenefitInput;
   UpdateEligibilityRuleInput: UpdateEligibilityRuleInput;
   UpdateEmployeeInput: UpdateEmployeeInput;
   UpdateMySettingsInput: UpdateMySettingsInput;
+  UpsertScreenTimeProgramInput: UpsertScreenTimeProgramInput;
 }>;
 
 export type AdminDashboardBucketResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AdminDashboardBucket'] = ResolversParentTypes['AdminDashboardBucket']> = ResolversObject<{
@@ -846,6 +1011,23 @@ export type AdminDashboardSummaryResolvers<ContextType = GraphQLContext, ParentT
   suspendedEnrollments?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   totalEmployees?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   usageByCategory?: Resolver<Array<ResolversTypes['AdminDashboardBucket']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type AdminScreenTimeMonthBoardResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AdminScreenTimeMonthBoard'] = ResolversParentTypes['AdminScreenTimeMonthBoard']> = ResolversObject<{
+  benefitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  monthKey?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  program?: Resolver<Maybe<ResolversTypes['ScreenTimeProgram']>, ParentType, ContextType>;
+  rows?: Resolver<Array<ResolversTypes['AdminScreenTimeMonthRow']>, ParentType, ContextType>;
+  slotDates?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type AdminScreenTimeMonthRowResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AdminScreenTimeMonthRow'] = ResolversParentTypes['AdminScreenTimeMonthRow']> = ResolversObject<{
+  employeeEmail?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  employeeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  employeeName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  result?: Resolver<ResolversTypes['ScreenTimeMonthlyResult'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -1070,6 +1252,19 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   updateEligibilityRule?: Resolver<ResolversTypes['EligibilityRule'], ParentType, ContextType, RequireFields<MutationUpdateEligibilityRuleArgs, 'id' | 'input'>>;
   updateEmployee?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<MutationUpdateEmployeeArgs, 'id' | 'input'>>;
   updateMySettings?: Resolver<ResolversTypes['EmployeeSettings'], ParentType, ContextType, RequireFields<MutationUpdateMySettingsArgs, 'input'>>;
+  upsertScreenTimeProgram?: Resolver<ResolversTypes['ScreenTimeProgram'], ParentType, ContextType, RequireFields<MutationUpsertScreenTimeProgramArgs, 'input'>>;
+}>;
+
+export type MyScreenTimeMonthResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['MyScreenTimeMonth'] = ResolversParentTypes['MyScreenTimeMonth']> = ResolversObject<{
+  activeSlotDate?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  benefitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  benefitStatus?: Resolver<ResolversTypes['BenefitEligibilityStatus'], ParentType, ContextType>;
+  failedRuleMessage?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  isUploadOpenToday?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  month?: Resolver<ResolversTypes['ScreenTimeMonthlyResult'], ParentType, ContextType>;
+  program?: Resolver<Maybe<ResolversTypes['ScreenTimeProgram']>, ParentType, ContextType>;
+  todayLocalDate?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type NotificationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Notification'] = ResolversParentTypes['Notification']> = ResolversObject<{
@@ -1101,6 +1296,7 @@ export type OkrSyncResultResolvers<ContextType = GraphQLContext, ParentType exte
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = ResolversObject<{
   adminBenefits?: Resolver<Array<ResolversTypes['Benefit']>, ParentType, ContextType>;
   adminDashboardSummary?: Resolver<ResolversTypes['AdminDashboardSummary'], ParentType, ContextType>;
+  adminScreenTimeMonth?: Resolver<ResolversTypes['AdminScreenTimeMonthBoard'], ParentType, ContextType, RequireFields<QueryAdminScreenTimeMonthArgs, 'benefitId'>>;
   allBenefitRequests?: Resolver<Array<ResolversTypes['BenefitRequest']>, ParentType, ContextType, Partial<QueryAllBenefitRequestsArgs>>;
   auditLogActionTypes?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
   auditLogs?: Resolver<Array<ResolversTypes['AuditLog']>, ParentType, ContextType, Partial<QueryAuditLogsArgs>>;
@@ -1116,9 +1312,11 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   getEmployeeByEmail?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<QueryGetEmployeeByEmailArgs, 'email'>>;
   getEmployees?: Resolver<Array<ResolversTypes['Employee']>, ParentType, ContextType, Partial<QueryGetEmployeesArgs>>;
   myBenefits?: Resolver<Array<ResolversTypes['BenefitEligibility']>, ParentType, ContextType>;
+  myScreenTimeMonth?: Resolver<ResolversTypes['MyScreenTimeMonth'], ParentType, ContextType, RequireFields<QueryMyScreenTimeMonthArgs, 'benefitId'>>;
   mySettings?: Resolver<ResolversTypes['EmployeeSettings'], ParentType, ContextType>;
   notifications?: Resolver<Array<ResolversTypes['Notification']>, ParentType, ContextType>;
   ruleProposals?: Resolver<Array<ResolversTypes['RuleProposal']>, ParentType, ContextType, Partial<QueryRuleProposalsArgs>>;
+  screenTimeLeaderboard?: Resolver<Array<ResolversTypes['ScreenTimeLeaderboardRow']>, ParentType, ContextType, RequireFields<QueryScreenTimeLeaderboardArgs, 'benefitId'>>;
   session?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType>;
 }>;
 
@@ -1145,9 +1343,86 @@ export type RuleProposalResolvers<ContextType = GraphQLContext, ParentType exten
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
+export type ScreenTimeLeaderboardRowResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ScreenTimeLeaderboardRow'] = ResolversParentTypes['ScreenTimeLeaderboardRow']> = ResolversObject<{
+  approvedSlotCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  avgDailyMinutes?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  awardedSalaryUpliftPercent?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  dueSlotCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  employeeEmail?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  employeeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  employeeName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  isProvisional?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  monthKey?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  rank?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  requiredSlotCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type ScreenTimeMonthlyResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ScreenTimeMonthlyResult'] = ResolversParentTypes['ScreenTimeMonthlyResult']> = ResolversObject<{
+  approvedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  approvedByEmployeeId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  approvedSlotCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  awardedSalaryUpliftPercent?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  benefitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  decisionNote?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  dueSlotDates?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  employeeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  missingDueSlotDates?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  monthKey?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  monthlyAvgDailyMinutes?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  requiredSlotCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  requiredSlotDates?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  submissions?: Resolver<Array<ResolversTypes['ScreenTimeSubmission']>, ParentType, ContextType>;
+  submittedSlotCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type ScreenTimeProgramResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ScreenTimeProgram'] = ResolversParentTypes['ScreenTimeProgram']> = ResolversObject<{
+  benefitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  isActive?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  screenshotRetentionDays?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  tiers?: Resolver<Array<ResolversTypes['ScreenTimeTier']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type ScreenTimeSubmissionResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ScreenTimeSubmission'] = ResolversParentTypes['ScreenTimeSubmission']> = ResolversObject<{
+  avgDailyMinutes?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  benefitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  confidenceScore?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  employeeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  extractionStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  fileName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  monthKey?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  periodType?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  platform?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  reviewNote?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  reviewStatus?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  reviewedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  slotDate?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  submittedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  viewUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type ScreenTimeTierResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ScreenTimeTier'] = ResolversParentTypes['ScreenTimeTier']> = ResolversObject<{
+  benefitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  displayOrder?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  label?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  maxDailyMinutes?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  salaryUpliftPercent?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   AdminDashboardBucket?: AdminDashboardBucketResolvers<ContextType>;
   AdminDashboardSummary?: AdminDashboardSummaryResolvers<ContextType>;
+  AdminScreenTimeMonthBoard?: AdminScreenTimeMonthBoardResolvers<ContextType>;
+  AdminScreenTimeMonthRow?: AdminScreenTimeMonthRowResolvers<ContextType>;
   AttendanceImportError?: AttendanceImportErrorResolvers<ContextType>;
   AttendanceImportResult?: AttendanceImportResultResolvers<ContextType>;
   AuditLog?: AuditLogResolvers<ContextType>;
@@ -1164,10 +1439,16 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   EmployeeSignedContract?: EmployeeSignedContractResolvers<ContextType>;
   FailedRule?: FailedRuleResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
+  MyScreenTimeMonth?: MyScreenTimeMonthResolvers<ContextType>;
   Notification?: NotificationResolvers<ContextType>;
   OkrSyncError?: OkrSyncErrorResolvers<ContextType>;
   OkrSyncResult?: OkrSyncResultResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   RuleEvaluation?: RuleEvaluationResolvers<ContextType>;
   RuleProposal?: RuleProposalResolvers<ContextType>;
+  ScreenTimeLeaderboardRow?: ScreenTimeLeaderboardRowResolvers<ContextType>;
+  ScreenTimeMonthlyResult?: ScreenTimeMonthlyResultResolvers<ContextType>;
+  ScreenTimeProgram?: ScreenTimeProgramResolvers<ContextType>;
+  ScreenTimeSubmission?: ScreenTimeSubmissionResolvers<ContextType>;
+  ScreenTimeTier?: ScreenTimeTierResolvers<ContextType>;
 }>;

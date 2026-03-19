@@ -19,6 +19,9 @@ import { getDepartments } from "./getDepartments";
 import { getNotifications } from "./getNotifications";
 import { getRuleProposals } from "./getRuleProposals";
 import { getMySettings } from "./getMySettings";
+import { getMyScreenTimeMonth } from "./getMyScreenTimeMonth";
+import { getAdminScreenTimeMonth } from "./getAdminScreenTimeMonth";
+import { getScreenTimeLeaderboard } from "./getScreenTimeLeaderboard";
 
 export const queries = {
   adminDashboardSummary: getAdminDashboardSummary,
@@ -42,4 +45,7 @@ export const queries = {
   notifications: getNotifications,
   ruleProposals: getRuleProposals,
   mySettings: getMySettings,
+  myScreenTimeMonth: getMyScreenTimeMonth,
+  adminScreenTimeMonth: getAdminScreenTimeMonth,
+  screenTimeLeaderboard: getScreenTimeLeaderboard,
 };

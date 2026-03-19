@@ -39,6 +39,7 @@ export default function Mybenefits({ params }: PageProps) {
   const myBenefits = useMemo(
     () =>
       myBenefitsRaw.filter((b) => {
+        if (b.benefit.flowType === "screen_time") return false;
         const s = String(b.status).toUpperCase();
         return s === "ACTIVE" || s === "PENDING";
       }),

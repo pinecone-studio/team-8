@@ -11,7 +11,7 @@ import {
   CreditCard,
   Eye,
   FileText,
-  Image,
+  ImageIcon,
   Info,
   LayoutGrid,
   MapPin,
@@ -31,6 +31,7 @@ import {
   BenefitFlowType,
   useCreateBenefitMutation,
   useProposeRuleChangeMutation,
+  useUpsertScreenTimeProgramMutation,
   GetAdminBenefitsDocument,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
@@ -38,7 +39,7 @@ import { isHrAdmin } from "../../_lib/access";
 
 // ── Benefit type config ───────────────────────────────────────────────────────
 
-type BenefitTypeKey = "contract" | "normal" | "finance" | "viewonly";
+type BenefitTypeKey = "contract" | "normal" | "finance" | "viewonly" | "screen_time";
 
 const BENEFIT_TYPES: {
   key: BenefitTypeKey;
@@ -51,6 +52,7 @@ const BENEFIT_TYPES: {
   examples: string[];
   requiresContract: boolean;
   approvalPolicy: string;
+  flowType: BenefitFlowType;
 }[] = [
   {
     key: "contract",
@@ -63,6 +65,7 @@ const BENEFIT_TYPES: {
     examples: ["Gym", "MacBook", "Travel", "EMD"],
     requiresContract: true,
     approvalPolicy: "hr",
+    flowType: BenefitFlowType.Contract,
   },
   {
     key: "normal",
@@ -75,6 +78,7 @@ const BENEFIT_TYPES: {
     examples: ["Extra Responsibility", "UX Engineer Tools"],
     requiresContract: false,
     approvalPolicy: "hr",
+    flowType: BenefitFlowType.Normal,
   },
   {
     key: "finance",
@@ -87,6 +91,7 @@ const BENEFIT_TYPES: {
     examples: ["Down Payment Assistance"],
     requiresContract: true,
     approvalPolicy: "dual",
+    flowType: BenefitFlowType.DownPayment,
   },
   {
     key: "viewonly",
@@ -99,6 +104,7 @@ const BENEFIT_TYPES: {
     examples: ["Remote Work", "Shit Happened Days", "OKR Bonus"],
     requiresContract: false,
     approvalPolicy: "hr",
+    flowType: BenefitFlowType.SelfService,
   },
 ];
 
@@ -131,6 +137,12 @@ const WORKFLOWS: Record<BenefitTypeKey, WorkflowStep[]> = {
     { icon: <Zap className="h-4 w-4" />, label: "System Eligibility Check", desc: "Eligibility is evaluated automatically", color: "bg-orange-100 text-orange-600" },
     { icon: <Monitor className="h-4 w-4" />, label: "Visible on Dashboard", desc: "Employee sees their benefit status", color: "bg-blue-100 text-blue-600" },
     { icon: <RefreshCw className="h-4 w-4" />, label: "Auto-update", desc: "Status updates in real-time", color: "bg-slate-100 text-slate-600" },
+  ],
+  screen_time: [
+    { icon: <Monitor className="h-4 w-4" />, label: "Monday Screenshot", desc: "Employee uploads a 7-day average screenshot every Monday slot", color: "bg-fuchsia-100 text-fuchsia-600" },
+    { icon: <Zap className="h-4 w-4" />, label: "Gemini Extraction", desc: "System extracts average daily screen time automatically", color: "bg-blue-100 text-blue-600" },
+    { icon: <CheckCircle2 className="h-4 w-4" />, label: "Monthly Evaluation", desc: "All required Mondays must be present to qualify", color: "bg-amber-100 text-amber-600" },
+    { icon: <Wallet className="h-4 w-4" />, label: "Salary Uplift", desc: "System calculates the uplift percentage for payroll", color: "bg-emerald-100 text-emerald-600" },
   ],
 };
 
@@ -292,6 +304,13 @@ type RuleRow = {
   errorMessage: string;
 };
 
+type ScreenTimeTierRow = {
+  id: string;
+  label: string;
+  maxDailyMinutes: string;
+  salaryUpliftPercent: string;
+};
+
 const CATEGORIES = ["wellness", "equipment", "financial", "career", "flexibility", "other"];
 
 function getFlowTypeForBenefitType(
@@ -339,6 +358,11 @@ export default function CreateBenefitPage() {
     expiryDate: "",
   });
   const [rules, setRules] = useState<RuleRow[]>([]);
+  const [screenTimeTiers, setScreenTimeTiers] = useState<ScreenTimeTierRow[]>([
+    { id: "tier-1", label: "Ultra Focus", maxDailyMinutes: "60", salaryUpliftPercent: "15" },
+    { id: "tier-2", label: "Strong Balance", maxDailyMinutes: "120", salaryUpliftPercent: "10" },
+    { id: "tier-3", label: "Healthy Range", maxDailyMinutes: "180", salaryUpliftPercent: "5" },
+  ]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -346,6 +370,7 @@ export default function CreateBenefitPage() {
     refetchQueries: [{ query: GetAdminBenefitsDocument }],
   });
   const [proposeRule] = useProposeRuleChangeMutation();
+  const [upsertScreenTimeProgram] = useUpsertScreenTimeProgramMutation();
 
   const selectedTypeConfig = BENEFIT_TYPES.find((t) => t.key === selectedType);
 
@@ -383,6 +408,31 @@ export default function CreateBenefitPage() {
 
   function removeRule(id: string) {
     setRules((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  function addScreenTimeTier() {
+    setScreenTimeTiers((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(36).slice(2),
+        label: `Tier ${prev.length + 1}`,
+        maxDailyMinutes: "",
+        salaryUpliftPercent: "",
+      },
+    ]);
+  }
+
+  function updateScreenTimeTier(
+    id: string,
+    patch: Partial<ScreenTimeTierRow>,
+  ) {
+    setScreenTimeTiers((prev) =>
+      prev.map((tier) => (tier.id === id ? { ...tier, ...patch } : tier)),
+    );
+  }
+
+  function removeScreenTimeTier(id: string) {
+    setScreenTimeTiers((prev) => prev.filter((tier) => tier.id !== id));
   }
 
   function getRulePreview(rule: RuleRow): string {
@@ -479,6 +529,22 @@ export default function CreateBenefitPage() {
         }
       }
 
+      if (benefitId && selectedType === "screen_time") {
+        await upsertScreenTimeProgram({
+          variables: {
+            input: {
+              benefitId,
+              tiers: screenTimeTiers.map((tier, index) => ({
+                label: tier.label.trim(),
+                maxDailyMinutes: Number(tier.maxDailyMinutes),
+                salaryUpliftPercent: Number(tier.salaryUpliftPercent),
+                displayOrder: index,
+              })),
+            },
+          },
+        });
+      }
+
       if (benefitId && rules.length > 0) {
         for (const rule of rules) {
           const fieldCfg = RULE_FIELDS.find((f) => f.key === rule.fieldKey)!;
@@ -556,13 +622,20 @@ export default function CreateBenefitPage() {
 
               {/* Step 1: Benefit type */}
               <div className="rounded-2xl border border-gray-100 bg-white p-6">
-                <div className="mb-1 flex items-center gap-2">
+              <div className="mb-1 flex items-center gap-2">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">1</span>
                   <h2 className="text-base font-semibold text-gray-900">Select Benefit Type</h2>
                 </div>
                 <p className="mb-5 ml-8 text-sm text-gray-400">
                   The workflow preview updates automatically when you select a type
                 </p>
+                <div className="mb-5 ml-8 rounded-xl border border-fuchsia-100 bg-fuchsia-50 px-4 py-3 text-sm text-fuchsia-800">
+                  Screen Time is managed as a standalone feature now.
+                  {" "}
+                  <Link href="/admin-panel/screen-time" className="font-medium underline underline-offset-2">
+                    Open Screen Time
+                  </Link>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   {BENEFIT_TYPES.map((type) => (
                     <button
@@ -745,6 +818,7 @@ export default function CreateBenefitPage() {
                       {selectedType === "normal" && "Employee submits a request and HR admin reviews and makes the final decision."}
                       {selectedType === "finance" && "Both Finance and HR approval are required. A repayment plan will be proposed."}
                       {selectedType === "viewonly" && "Employees can only view this benefit on their dashboard. No request needed."}
+                      {selectedType === "screen_time" && "Employees upload a 7-day average screen-time screenshot on each Monday of the month. Missing any required Monday means 0% uplift for that month."}
                     </p>
                   </div>
                 )}
@@ -854,11 +928,12 @@ export default function CreateBenefitPage() {
                       </div>
                       <div className="sm:col-span-2">
                         <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600">
-                          <Image className="h-3.5 w-3.5" />
+                          <ImageIcon className="h-3.5 w-3.5" />
                           Benefit Image <span className="text-gray-300">(optional)</span>
                         </label>
                         <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 transition hover:border-violet-300 hover:bg-violet-50">
                           {imagePreview ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img src={imagePreview} alt="Preview" className="h-24 w-auto rounded-lg object-cover" />
                           ) : (
                             <>
@@ -882,6 +957,103 @@ export default function CreateBenefitPage() {
                           <p className="mt-1 text-xs text-gray-500">{imageFile.name}</p>
                         )}
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedType === "screen_time" && (
+                  <div className="mt-5 border-t border-gray-100 pt-5">
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-fuchsia-600">
+                          Screen Time Salary Uplift Rules
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Employees upload a weekly 7-day average screenshot on each Monday slot. Gemini extracts the average daily minutes automatically, and the month is eligible only if every Monday slot is submitted.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {screenTimeTiers
+                        .slice()
+                        .sort((left, right) => Number(left.maxDailyMinutes || 0) - Number(right.maxDailyMinutes || 0))
+                        .map((tier) => (
+                          <div
+                            key={tier.id}
+                            className="grid gap-3 rounded-xl border border-fuchsia-100 bg-fuchsia-50/40 p-4 sm:grid-cols-[1.3fr_1fr_1fr_auto]"
+                          >
+                            <div>
+                              <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                Tier Label
+                              </label>
+                              <input
+                                type="text"
+                                value={tier.label}
+                                onChange={(e) =>
+                                  updateScreenTimeTier(tier.id, { label: e.target.value })
+                                }
+                                className="w-full rounded-xl border border-fuchsia-100 bg-white px-3 py-2 text-sm text-gray-700 focus:border-fuchsia-400 focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                Max Daily Minutes
+                              </label>
+                              <input
+                                type="number"
+                                min={1}
+                                value={tier.maxDailyMinutes}
+                                onChange={(e) =>
+                                  updateScreenTimeTier(tier.id, {
+                                    maxDailyMinutes: e.target.value,
+                                  })
+                                }
+                                className="w-full rounded-xl border border-fuchsia-100 bg-white px-3 py-2 text-sm text-gray-700 focus:border-fuchsia-400 focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                Salary Uplift %
+                              </label>
+                              <input
+                                type="number"
+                                min={1}
+                                max={100}
+                                value={tier.salaryUpliftPercent}
+                                onChange={(e) =>
+                                  updateScreenTimeTier(tier.id, {
+                                    salaryUpliftPercent: e.target.value,
+                                  })
+                                }
+                                className="w-full rounded-xl border border-fuchsia-100 bg-white px-3 py-2 text-sm text-gray-700 focus:border-fuchsia-400 focus:outline-none"
+                              />
+                            </div>
+                            <div className="flex items-end">
+                              <button
+                                type="button"
+                                onClick={() => removeScreenTimeTier(tier.id)}
+                                className="inline-flex h-10 items-center justify-center rounded-xl border border-fuchsia-100 bg-white px-3 text-sm text-gray-500 transition hover:bg-red-50 hover:text-red-600"
+                                disabled={screenTimeTiers.length <= 1}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={addScreenTimeTier}
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-fuchsia-100 bg-white px-3 py-1.5 text-xs font-medium text-fuchsia-700 transition hover:bg-fuchsia-50"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add Salary Band
+                    </button>
+
+                    <div className="mt-4 rounded-xl border border-fuchsia-100 bg-fuchsia-50 p-3 text-xs text-fuchsia-700">
+                      Example: set 60 minutes → 15%, 120 minutes → 10%, 180 minutes → 5%. Gemini extracts each weekly screenshot automatically, and the system awards the first matching band where the monthly average daily screen time is less than or equal to the band limit.
                     </div>
                   </div>
                 )}

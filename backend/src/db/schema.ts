@@ -12,6 +12,7 @@ import * as ruleProposalsSchema from "./rule-proposals";
 import * as notificationReadsSchema from "./notification-reads";
 import * as attendanceRecordsSchema from "./attendance-records";
 import * as employeeSettingsSchema from "./employee-settings";
+import * as screenTimeSchema from "./screen-time";
 
 // Combine schema pieces — benefits, contracts, eligibility_rules, benefit_eligibility, benefit_requests (TDD §10)
 export const schema = {
@@ -29,6 +30,7 @@ export const schema = {
   ...notificationReadsSchema,
   ...attendanceRecordsSchema,
   ...employeeSettingsSchema,
+  ...screenTimeSchema,
 };
 
 // Re-export tables and types for consumers and GraphQL codegen
@@ -46,3 +48,4 @@ export * from "./rule-proposals";
 export * from "./notification-reads";
 export * from "./attendance-records";
 export * from "./employee-settings";
+export * from "./screen-time";

@@ -10,6 +10,10 @@ export const deleteBenefit = async (
   { db, env, currentEmployee }: GraphQLContext,
 ) => {
   requireHrAdmin(currentEmployee);
+  await db.delete(schema.screenTimeSubmissions).where(eq(schema.screenTimeSubmissions.benefitId, id));
+  await db.delete(schema.screenTimeMonthlyResults).where(eq(schema.screenTimeMonthlyResults.benefitId, id));
+  await db.delete(schema.screenTimeProgramTiers).where(eq(schema.screenTimeProgramTiers.benefitId, id));
+  await db.delete(schema.screenTimePrograms).where(eq(schema.screenTimePrograms.benefitId, id));
   await db.delete(schema.eligibilityRules).where(eq(schema.eligibilityRules.benefitId, id));
   await db.delete(schema.benefitRequests).where(eq(schema.benefitRequests.benefitId, id));
   await db.delete(schema.benefitEligibility).where(eq(schema.benefitEligibility.benefitId, id));

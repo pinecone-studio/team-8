@@ -26,12 +26,35 @@ import {
 } from "./graphql/resolvers/helpers/attendanceCore";
 import { archiveOldAuditLogs } from "./graphql/resolvers/helpers/auditArchive";
 import { invalidateAllEmployeeEligibilityCaches } from "./graphql/resolvers/helpers/benefitCatalogRefresh";
+import { extractScreenTimeWithGemini } from "./screen-time/gemini";
+import {
+  buildMyScreenTimeMonth,
+  ensureScreenTimeBenefit,
+  getScreenTimeSubmissionById,
+  recomputeScreenTimeMonthlyResult,
+} from "./screen-time/service";
 
 const MAX_EMPLOYEE_CONTRACT_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EMPLOYEE_CONTRACT_MIME_TYPES = new Set([
   "application/pdf",
   "image/png",
   "image/jpeg",
+]);
+const MAX_SCREEN_TIME_SCREENSHOT_BYTES = 10 * 1024 * 1024;
+const ALLOWED_SCREEN_TIME_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+]);
+const MAX_BENEFIT_IMAGE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_BENEFIT_IMAGE_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
 ]);
 
 function sanitizeUploadedFileName(fileName: string): string {
@@ -41,6 +64,10 @@ function sanitizeUploadedFileName(fileName: string): string {
 
 function isAllowedEmployeeContractFile(file: File): boolean {
   return ALLOWED_EMPLOYEE_CONTRACT_MIME_TYPES.has(file.type);
+}
+
+function isAllowedScreenTimeScreenshot(file: File): boolean {
+  return ALLOWED_SCREEN_TIME_MIME_TYPES.has(file.type);
 }
 
 export interface Env {
@@ -60,6 +87,9 @@ export interface Env {
   GMAIL_SENDER_EMAIL?: string;
   OKR_WEBHOOK_SECRET?: string;
   OKR_API_URL?: string;
+  GEMINI_API_KEY?: string;
+  GEMINI_MODEL?: string;
+  SCREEN_TIME_DEBUG_TODAY_LOCAL_DATE?: string;
 }
 
 function getCorsHeaders(request: Request): HeadersInit {
@@ -790,6 +820,388 @@ async function handleEmployeeSignedContractView(
 }
 
 /**
+ * Employee weekly screen-time screenshot upload.
+ *
+ * Rules:
+ *  - benefit must be configured with flow_type=screen_time
+ *  - upload is accepted only on the current month's active Monday slot
+ *  - Gemini extracts the 7-day average daily usage before persistence
+ *  - invalid screenshots are rejected and never stored
+ */
+async function handleScreenTimeUpload(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/api/screen-time/upload" || request.method !== "POST") {
+    return null;
+  }
+
+  const db = createDb(env.DB);
+  const currentUser = await getCurrentUserFromRequest(request, env, db);
+
+  if (!currentUser.employee) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Authentication required." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return withCors(request, new Response("Invalid form", { status: 400 }));
+  }
+
+  const benefitId = formData.get("benefitId")?.toString();
+  const file = formData.get("file") as File | null;
+
+  if (!benefitId || !file?.size) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({ error: "Missing required fields: benefitId, file" }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+  }
+
+  if (!env.CONTRACTS_BUCKET) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "R2 not configured." }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (file.size > MAX_SCREEN_TIME_SCREENSHOT_BYTES) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({ error: "Screenshot is too large. Maximum size is 10 MB." }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+  }
+
+  if (!isAllowedScreenTimeScreenshot(file)) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({
+          error: "Unsupported screenshot type. Please upload PNG, JPG, JPEG, WEBP, HEIC, or HEIF.",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+  }
+
+  await ensureScreenTimeBenefit(db, benefitId);
+  const todayOverride =
+    env.ENVIRONMENT === "development"
+      ? env.SCREEN_TIME_DEBUG_TODAY_LOCAL_DATE ?? null
+      : null;
+  const monthState = await buildMyScreenTimeMonth(
+    db,
+    currentUser.employee,
+    benefitId,
+    undefined,
+    todayOverride,
+  );
+  if (!monthState.program?.isActive) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({ error: "This screen time program is not active yet." }),
+        { status: 409, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+  }
+
+  if (!["ELIGIBLE", "ACTIVE"].includes(monthState.benefitStatus)) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({
+          error:
+            monthState.failedRuleMessage ??
+            "You are not currently eligible to upload screen time evidence for this program.",
+        }),
+        { status: 403, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+  }
+
+  if (!monthState.activeSlotDate || !monthState.isUploadOpenToday) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({
+          error:
+            "Screen time screenshots can only be uploaded on the required Monday slots of the current month.",
+        }),
+        { status: 409, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+  }
+
+  const existingSubmission = await db
+    .select()
+    .from(schema.screenTimeSubmissions)
+    .where(
+      and(
+        eq(schema.screenTimeSubmissions.benefitId, benefitId),
+        eq(schema.screenTimeSubmissions.employeeId, currentUser.employee.id),
+        eq(schema.screenTimeSubmissions.slotDate, monthState.activeSlotDate),
+      ),
+    )
+    .limit(1);
+
+  if (existingSubmission[0]) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({
+          error: "You have already uploaded this week's screenshot.",
+        }),
+        { status: 409, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+  }
+
+  const buffer = await file.arrayBuffer();
+  const extraction = await extractScreenTimeWithGemini({
+    env,
+    fileName: file.name,
+    mimeType: file.type,
+    bytes: buffer,
+  });
+
+  if (
+    !extraction.isValidScreenTimeScreenshot ||
+    extraction.periodType !== "last_7_days" ||
+    extraction.avgDailyMinutes <= 0
+  ) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({
+          error:
+            extraction.reason ||
+            "We could not verify a valid 7-day average screen-time screenshot from this upload.",
+        }),
+        { status: 422, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+  }
+
+  const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+  const screenshotSha256 = Array.from(new Uint8Array(hashBuffer))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+  const safeName = sanitizeUploadedFileName(file.name || "screen-time.png");
+  const screenshotKey =
+    `screen-time/${benefitId}/${currentUser.employee.id}/${monthState.month.monthKey}/${monthState.activeSlotDate}-${Date.now()}-${safeName}`;
+  await env.CONTRACTS_BUCKET.put(screenshotKey, buffer, {
+    httpMetadata: {
+      contentType: file.type || "application/octet-stream",
+    },
+  });
+
+  const reviewStatus = "auto_approved";
+  const extractionStatus = "accepted";
+
+  const [inserted] = await db
+    .insert(schema.screenTimeSubmissions)
+    .values({
+      benefitId,
+      employeeId: currentUser.employee.id,
+      monthKey: monthState.month.monthKey,
+      slotDate: monthState.activeSlotDate,
+      screenshotR2Key: screenshotKey,
+      fileName: file.name,
+      mimeType: file.type,
+      screenshotSha256,
+      avgDailyMinutes: extraction.avgDailyMinutes,
+      confidenceScore: extraction.confidenceScore,
+      platform: extraction.platform,
+      periodType: extraction.periodType,
+      extractionStatus,
+      reviewStatus,
+      reviewNote: "Accepted automatically from Gemini extraction.",
+      reviewedAt: new Date().toISOString(),
+      rawExtractionJson: JSON.stringify(extraction),
+    })
+    .returning()
+    .catch(async (error) => {
+      await env.CONTRACTS_BUCKET?.delete(screenshotKey).catch((cleanupError) =>
+        console.error(
+          "[screenTimeUpload] Failed to clean up screenshot after D1 error:",
+          cleanupError,
+        ),
+      );
+      throw error;
+    });
+
+  if (!inserted) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({ error: "Failed to store the screen time submission." }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+  }
+
+  const month = await recomputeScreenTimeMonthlyResult(db, {
+    benefitId,
+    employeeId: currentUser.employee.id,
+    monthKey: monthState.month.monthKey,
+    todayLocalDate: monthState.todayLocalDate,
+  });
+
+  await writeAuditLog({
+    db,
+    actor: currentUser.employee,
+    actionType: "SCREEN_TIME_SUBMITTED",
+    entityType: "screen_time_submission",
+    entityId: inserted.id,
+    targetEmployeeId: currentUser.employee.id,
+    benefitId,
+    metadata: {
+      monthKey: inserted.monthKey,
+      slotDate: inserted.slotDate,
+      avgDailyMinutes: inserted.avgDailyMinutes,
+      confidenceScore: inserted.confidenceScore,
+      extractionStatus: inserted.extractionStatus,
+      reviewStatus: inserted.reviewStatus,
+    },
+  });
+
+  return withCors(
+    request,
+    new Response(
+      JSON.stringify({
+        submission: {
+          id: inserted.id,
+          slotDate: inserted.slotDate,
+          monthKey: inserted.monthKey,
+          avgDailyMinutes: inserted.avgDailyMinutes,
+          confidenceScore: inserted.confidenceScore,
+          reviewStatus: inserted.reviewStatus,
+          viewUrl: `${new URL(request.url).origin}/screen-time/submission-view?id=${encodeURIComponent(inserted.id)}`,
+        },
+        month,
+      }),
+      {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      },
+    ),
+  );
+}
+
+/**
+ * Serve an uploaded screen-time screenshot to its owner employee or any admin.
+ */
+async function handleScreenTimeSubmissionView(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/screen-time/submission-view" || request.method !== "GET") {
+    return null;
+  }
+
+  const submissionId = url.searchParams.get("id");
+  if (!submissionId) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Missing id." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const db = createDb(env.DB);
+  const currentUser = await getCurrentUserFromRequest(request, env, db);
+  if (!currentUser.employee) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Authentication required." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const submission = await getScreenTimeSubmissionById(db, submissionId);
+  if (!submission) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Screen time submission not found." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (!currentUser.isAdmin && currentUser.employee.id !== submission.employeeId) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Not authorized to view this screenshot." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (!env.CONTRACTS_BUCKET) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "R2 not configured." }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const object = submission.screenshotR2Key
+    ? await env.CONTRACTS_BUCKET.get(submission.screenshotR2Key)
+    : null;
+  if (!object) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Screenshot file not found." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const headers = new Headers();
+  headers.set(
+    "Content-Type",
+    submission.mimeType || object.httpMetadata?.contentType || "application/octet-stream",
+  );
+  if (submission.fileName) {
+    headers.set(
+      "Content-Disposition",
+      `inline; filename="${submission.fileName.replace(/"/g, "")}"`,
+    );
+  }
+
+  return withCors(request, new Response(object.body, { headers }));
+}
+
+/**
  * HR benefit image upload: POST /api/benefits/upload-image
  *
  * Accepts multipart/form-data with `benefitId` and `file` fields.
@@ -832,6 +1244,20 @@ async function handleBenefitImageUpload(
   if (!benefitId || !file?.size) {
     return withCors(request, new Response(
       JSON.stringify({ error: "Missing required fields: benefitId, file" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    ));
+  }
+
+  if (!ALLOWED_BENEFIT_IMAGE_MIME_TYPES.has(file.type)) {
+    return withCors(request, new Response(
+      JSON.stringify({ error: "Unsupported image type. Allowed: PNG, JPEG, WebP, GIF, SVG." }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    ));
+  }
+
+  if (file.size > MAX_BENEFIT_IMAGE_BYTES) {
+    return withCors(request, new Response(
+      JSON.stringify({ error: `Image too large. Maximum size: ${MAX_BENEFIT_IMAGE_BYTES / 1024 / 1024} MB.` }),
       { status: 400, headers: { "Content-Type": "application/json" } },
     ));
   }
@@ -1024,10 +1450,14 @@ export default {
     if (contractView !== null) return contractView;
     const employeeSignedContractView = await handleEmployeeSignedContractView(request, env);
     if (employeeSignedContractView !== null) return employeeSignedContractView;
+    const screenTimeSubmissionView = await handleScreenTimeSubmissionView(request, env);
+    if (screenTimeSubmissionView !== null) return screenTimeSubmissionView;
     const upload = await handleContractUpload(request, env);
     if (upload !== null) return upload;
     const employeeUpload = await handleEmployeeContractUpload(request, env);
     if (employeeUpload !== null) return employeeUpload;
+    const screenTimeUpload = await handleScreenTimeUpload(request, env);
+    if (screenTimeUpload !== null) return screenTimeUpload;
     const imageUpload = await handleBenefitImageUpload(request, env);
     if (imageUpload !== null) return imageUpload;
     const imageView = await handleBenefitImageView(request, env);

@@ -140,6 +140,7 @@ function NextStepsBox({
 }) {
   const p = (approvalPolicy ?? "hr").toLowerCase();
   const isSelfService = flowType === BenefitFlowType.SelfService;
+  const isScreenTime = flowType === BenefitFlowType.ScreenTime;
 
   // Pending sub-state: employee must accept a contract before review can proceed
   if (status === "PENDING" && awaitingContract) {
@@ -169,11 +170,20 @@ function NextStepsBox({
       <div className="space-y-3">
         <p className="text-sm text-gray-500">
           You meet all eligibility requirements.{" "}
-          {requiresContract
+          {isScreenTime
+            ? "Open the monthly tracker and upload your 7-day average screenshot on each Monday slot."
+            : requiresContract
             ? "You will be asked to accept a vendor contract as part of the request."
             : "Your request will go through an approval process."}
         </p>
-        {onRequestBenefit ? (
+        {isScreenTime ? (
+          <Link
+            href={`/employee-panel/screen-time/${benefitId}`}
+            className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-fuchsia-600 text-sm font-semibold text-white transition hover:bg-fuchsia-700 active:scale-[0.98]"
+          >
+            Open Monthly Tracker
+          </Link>
+        ) : onRequestBenefit ? (
           <button
             type="button"
             onClick={onRequestBenefit}
@@ -323,6 +333,7 @@ export default function BenefitDetailPage() {
               </div>
 
               {benefit.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={`${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""}/api/benefits/image?key=${encodeURIComponent(benefit.imageUrl)}`}
                   alt={benefit.name}
@@ -399,6 +410,7 @@ export default function BenefitDetailPage() {
                   </div>
 
                   {benefit.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={`${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""}/api/benefits/image?key=${encodeURIComponent(benefit.imageUrl)}`}
                       alt={benefit.name}
@@ -453,15 +465,21 @@ export default function BenefitDetailPage() {
                     requestStatus={latestRequest?.status}
                   />
                 </div>
+              </div>
 
-                {/* Eligibility status */}
+              <div className="space-y-5 self-start">
                 <div className="rounded-2xl border border-gray-200 bg-white p-6">
                   <h2 className="text-base font-semibold text-gray-900">Eligibility Status</h2>
                   <div className="mt-4">
-                    {benefitEligibility.status === "ELIGIBLE" || benefitEligibility.status === "ACTIVE" ? (
+                    {benefitEligibility.status === "ELIGIBLE" ? (
                       <div className="flex items-center gap-2.5 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
                         <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
                         <p className="text-sm font-medium text-emerald-800">You are eligible for this benefit</p>
+                      </div>
+                    ) : benefitEligibility.status === "ACTIVE" ? (
+                      <div className="flex items-center gap-2.5 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                        <p className="text-sm font-medium text-emerald-800">This benefit is already active for you</p>
                       </div>
                     ) : benefitEligibility.status === "LOCKED" ? (
                       <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-4">
@@ -490,11 +508,15 @@ export default function BenefitDetailPage() {
                       </div>
                     ) : benefitEligibility.ruleEvaluation.length === 0 ? (
                       <p className="text-sm text-gray-400">No eligibility rules configured for this benefit.</p>
-                    ) : null}
+                    ) : (
+                      <div className="flex items-center gap-2.5 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+                        <Clock className="h-4 w-4 shrink-0 text-amber-600" />
+                        <p className="text-sm font-medium text-amber-800">Your request is currently being reviewed.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Contract link */}
                 {benefit.requiresContract && (
                   <div className="rounded-2xl border border-gray-200 bg-white p-6">
                     <h2 className="text-base font-semibold text-gray-900">Contract</h2>
@@ -535,8 +557,6 @@ export default function BenefitDetailPage() {
                     )}
                   </div>
                 )}
-              </div>
-
               {/* Right: action panel */}
               <div className="rounded-2xl border border-gray-200 bg-white p-6 self-start">
                 <h2 className="text-base font-semibold text-gray-900">Next Steps</h2>
@@ -555,21 +575,22 @@ export default function BenefitDetailPage() {
                 {benefit.requiresContract &&
                   benefitEligibility.status === "ELIGIBLE" &&
                   !isSelfService && (
-                  <div className="mt-5 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3">
-                    <div className="flex items-start gap-2">
-                      <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
-                      <p className="text-xs text-amber-700">
-                        A vendor contract must be reviewed and accepted before your request can proceed to HR review.
-                      </p>
+                    <div className="mt-5 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3">
+                      <div className="flex items-start gap-2">
+                        <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+                        <p className="text-xs text-amber-700">
+                          A vendor contract must be reviewed and accepted before your request can proceed to HR review.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           )}
         </main>
       </div>
-      {requestModalOpen && (
+      {requestModalOpen && benefit.flowType !== BenefitFlowType.ScreenTime && (
         <BenefitRequestModal
           benefitId={id}
           onClose={() => setRequestModalOpen(false)}

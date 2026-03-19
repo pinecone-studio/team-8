@@ -11,6 +11,7 @@ export const benefits = sqliteTable("benefits", {
   requiresContract: integer("requires_contract", { mode: "boolean" })
     .notNull()
     .default(false),
+  flowType: text("flow_type").notNull().default("normal"),
   activeContractId: text("active_contract_id"),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   approvalPolicy: text("approval_policy").notNull().default("hr"), // hr | finance | dual
