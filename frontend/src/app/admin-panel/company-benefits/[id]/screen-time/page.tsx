@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   Calendar,
   ExternalLink,
@@ -74,7 +74,7 @@ function getBenefitStatusBadgeClass(status: string): string {
   }
 }
 
-export default function AdminScreenTimeProgramPage() {
+export function AdminScreenTimeProgramPageContent() {
   const params = useParams();
   const benefitId = typeof params.id === "string" ? params.id : "";
   const [monthKey, setMonthKey] = useState(getInitialScreenTimeMonthKey);
@@ -540,6 +540,26 @@ export default function AdminScreenTimeProgramPage() {
             </div>
           </section>
         </main>
+      </div>
+    </div>
+  );
+}
+
+export default function LegacyAdminScreenTimeProgramRedirectPage() {
+  const params = useParams();
+  const router = useRouter();
+  const benefitId = typeof params.id === "string" ? params.id : "";
+
+  useEffect(() => {
+    if (!benefitId) return;
+    router.replace(`/admin-panel/screen-time/${benefitId}`);
+  }, [benefitId, router]);
+
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
+      <div className="flex flex-1 items-center justify-center">
+        <PageLoading message="Opening screen time competition…" />
       </div>
     </div>
   );
