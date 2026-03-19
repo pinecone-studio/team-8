@@ -198,6 +198,10 @@ export default function VendorContracts() {
       setUploadError(`Please provide: ${missing.join(", ")}.`);
       return;
     }
+    if (!file) {
+      setUploadError("Please provide: PDF file.");
+      return;
+    }
     setUploadError(null);
     setUploading(true);
     try {
