@@ -506,6 +506,11 @@ export const requestBenefit = async (
     employee,
     benefitFromDb,
     initialStatus,
+    {
+      appBaseUrl: baseUrl,
+      requestedAmount,
+      repaymentMonths,
+    },
   );
 
   // Notify active HR managers about the new request.
@@ -522,7 +527,7 @@ export const requestBenefit = async (
   const displayName = employee.nameEng?.trim() || employee.name.trim() || employee.email;
   const reviewerEmails = activeReviewers
     .filter((reviewer) => {
-      const role = getInternalRole(reviewer as any);
+      const role = getInternalRole(reviewer);
       if (isFinanceBenefitFlowType(benefitFromDb.flowType)) {
         return role === "finance_admin" || role === "finance_manager";
       }
@@ -531,9 +536,14 @@ export const requestBenefit = async (
     .map((reviewer) => reviewer.email);
   await Promise.all(
     reviewerEmails.map((email) =>
-      sendHrNewBenefitRequestEmail(env, email, displayName, benefitFromDb.name).catch(
-        (err) => console.error("[requestBenefit] HR alert email failed:", err),
-      ),
+      sendHrNewBenefitRequestEmail(env, email, displayName, benefitFromDb.name, {
+        appBaseUrl: baseUrl,
+        reviewTeamLabel: isFinanceBenefitFlowType(benefitFromDb.flowType)
+          ? "Finance"
+          : "HR",
+        requestedAmount,
+        repaymentMonths,
+      }).catch((err) => console.error("[requestBenefit] HR alert email failed:", err)),
     ),
   );
 

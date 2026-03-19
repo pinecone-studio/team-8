@@ -9,6 +9,7 @@ import { eligibilityCacheKey } from "./recomputeEligibility";
 type FinalizeBenefitApprovalParams = {
   db: Database;
   env: Env;
+  appBaseUrl?: string | null;
   actor: Employee | null;
   benefitRequest: BenefitRequest;
   benefit: Benefit;
@@ -21,6 +22,7 @@ type FinalizeBenefitApprovalParams = {
 export async function finalizeBenefitApproval({
   db,
   env,
+  appBaseUrl,
   actor,
   benefitRequest,
   benefit,
@@ -96,7 +98,9 @@ export async function finalizeBenefitApproval({
   const targetEmployee = employeeRows[0];
 
   if (targetEmployee) {
-    await sendBenefitRequestApprovedEmail(env, targetEmployee, benefit);
+    await sendBenefitRequestApprovedEmail(env, targetEmployee, benefit, {
+      appBaseUrl,
+    });
   }
 
   env.ELIGIBILITY_CACHE.delete(eligibilityCacheKey(benefitRequest.employeeId)).catch(

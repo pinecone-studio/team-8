@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Trash2 } from "lucide-react";
 import Sidebar from "../_components/SideBar";
-import PageLoading from "@/app/_components/PageLoading";
 import {
   BenefitFlowType,
   GetAdminBenefitsDocument,
@@ -14,6 +13,76 @@ import {
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "../_lib/access";
+
+function Bone({ className }: { className?: string }) {
+  return <div className={`animate-pulse rounded-lg bg-gray-200 ${className ?? ""}`} />;
+}
+
+function AdminScreenTimeSkeleton() {
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
+      <div className="flex flex-1 flex-col">
+        <main className="mx-auto w-full max-w-7xl px-8 py-8">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <Bone className="h-7 w-56" />
+            <Bone className="h-9 w-52 rounded-xl" />
+          </div>
+          <div className="mt-6 grid items-start gap-6 xl:grid-cols-[1fr_340px]">
+            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+              <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
+                <div className="space-y-1.5">
+                  <Bone className="h-4 w-24" />
+                  <Bone className="h-3 w-48" />
+                </div>
+                <Bone className="h-7 w-10 rounded-full" />
+              </div>
+              <div className="divide-y divide-gray-100">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="px-6 py-4">
+                    <div className="flex items-center gap-4">
+                      <Bone className="h-8 w-8 rounded-full shrink-0" />
+                      <div className="flex-1 space-y-1.5">
+                        <Bone className="h-4 w-36" />
+                        <Bone className="h-3 w-48" />
+                      </div>
+                      <Bone className="h-4 w-4 rounded" />
+                    </div>
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      <Bone className="h-14 rounded-lg" />
+                      <Bone className="h-14 rounded-lg" />
+                      <Bone className="h-14 rounded-lg" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+              <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
+                <div className="space-y-1.5">
+                  <Bone className="h-4 w-44" />
+                  <Bone className="h-3 w-36" />
+                </div>
+                <Bone className="h-8 w-16 rounded-lg" />
+              </div>
+              <div className="space-y-4 px-5 py-5">
+                <div className="space-y-1.5">
+                  <Bone className="h-3 w-28" />
+                  <Bone className="h-10 w-full rounded-xl" />
+                </div>
+                <div className="space-y-1.5">
+                  <Bone className="h-3 w-28" />
+                  <Bone className="h-10 w-full rounded-xl" />
+                </div>
+                <Bone className="h-32 w-full rounded-xl" />
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminScreenTimePage() {
   const router = useRouter();
@@ -66,14 +135,7 @@ export default function AdminScreenTimePage() {
   }
 
   if (employeeLoading || loading) {
-    return (
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar />
-        <div className="flex flex-1 items-center justify-center">
-          <PageLoading message="Loading screen time…" />
-        </div>
-      </div>
-    );
+    return <AdminScreenTimeSkeleton />;
   }
 
   if (!canManage) {
@@ -90,14 +152,7 @@ export default function AdminScreenTimePage() {
   }
 
   if (programs.length === 1) {
-    return (
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar />
-        <div className="flex flex-1 items-center justify-center">
-          <PageLoading message="Opening screen time competition…" />
-        </div>
-      </div>
-    );
+    return <AdminScreenTimeSkeleton />;
   }
 
   return (

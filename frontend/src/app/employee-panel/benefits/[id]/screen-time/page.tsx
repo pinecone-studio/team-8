@@ -13,7 +13,6 @@ import {
   UploadCloud,
 } from "lucide-react";
 import Sidebar from "../../../_components/SideBar";
-import PageLoading from "@/app/_components/PageLoading";
 import {
   BenefitFlowType,
   useGetMyBenefitsFullQuery,
@@ -104,46 +103,31 @@ type LeaderboardRowProps = {
   name: string;
   secondaryLabel: string;
   avgDailyTime: string;
-  isProvisional: boolean;
   isCurrentEmployee: boolean;
 };
 
-const RANK_STYLES: Record<number, { badge: string; row: string }> = {
-  1: {
-    badge: "bg-amber-100 text-amber-700 ring-amber-200",
-    row: "border-amber-100 bg-amber-50/40",
-  },
-  2: {
-    badge: "bg-gray-200 text-gray-600 ring-gray-300",
-    row: "border-gray-200 bg-gray-50/60",
-  },
-  3: {
-    badge: "bg-orange-100 text-orange-600 ring-orange-200",
-    row: "border-orange-100 bg-orange-50/30",
-  },
-};
+const RANK_STYLES: Record<number, { badge: string; row: string }> = {};
 
 function LeaderboardRow({
   rank,
   name,
   secondaryLabel,
   avgDailyTime,
-  isProvisional,
   isCurrentEmployee,
 }: LeaderboardRowProps) {
   const rankNum = rank ?? 0;
-  const podium = RANK_STYLES[rankNum];
+  void RANK_STYLES[rankNum];
 
-  const badgeClass = podium
-    ? `${podium.badge} ring-1`
-    : isCurrentEmployee
-      ? "bg-fuchsia-100 text-fuchsia-700 ring-1 ring-fuchsia-200"
-      : "bg-white text-gray-600 ring-1 ring-gray-200";
+  const isRanked = rankNum > 0;
 
-  const rowClass = podium
-    ? `${podium.row} border`
-    : isCurrentEmployee
-      ? "border border-fuchsia-200 bg-fuchsia-50/30"
+  const badgeClass = isCurrentEmployee
+    ? "bg-gray-200 text-gray-700 ring-1 ring-gray-300"
+    : "bg-white text-gray-600 ring-1 ring-gray-200";
+
+  const rowClass = isCurrentEmployee
+    ? "border border-gray-300 bg-gray-50/40"
+    : isRanked
+      ? "border border-amber-100 bg-amber-50/40"
       : "border border-gray-100 bg-white";
 
   return (
@@ -161,13 +145,8 @@ function LeaderboardRow({
         <div className="flex flex-wrap items-center gap-1.5">
           <p className="truncate text-sm font-semibold text-gray-900">{name}</p>
           {isCurrentEmployee ? (
-            <span className="rounded-full bg-fuchsia-100 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-700">
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
               You
-            </span>
-          ) : null}
-          {isProvisional ? (
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
-              Provisional
             </span>
           ) : null}
         </div>
@@ -210,7 +189,6 @@ function FridaySlotCard({
   viewUrl,
   fileName,
   isUploadEligible,
-  winnerPercent,
   rewardAmountMnt,
   onUploadClick,
 }: FridaySlotCardProps) {
@@ -218,26 +196,22 @@ function FridaySlotCard({
   const window = getScreenTimeWindowForSlotDate(slotDate);
 
   const cardClass =
-    status === "accepted"
-      ? "border-emerald-200 bg-emerald-50/30"
-      : status === "active"
-        ? "border-fuchsia-200 bg-fuchsia-50/30"
-        : status === "rejected" || status === "missing"
-          ? "border-rose-200 bg-rose-50/30"
-          : "border-neutral-100 bg-white";
+    status === "upcoming"
+      ? "border-gray-100 bg-white"
+      : "border-gray-300 bg-white";
 
   const helperText =
     status === "accepted"
-      ? `Counts toward the top ${winnerPercent}% winner zone`
+      ? null
       : status === "pending"
         ? "Waiting for Gemini extraction and automatic review"
         : status === "rejected"
           ? "This Friday slot no longer counts toward the monthly competition"
           : status === "missing"
-            ? "Missing this Friday slot disqualifies the month"
+            ? null
             : status === "active"
               ? `Submit today to stay in contention for ${formatMoney(rewardAmountMnt)}`
-              : `Upcoming Friday slot · reward ${formatMoney(rewardAmountMnt)}`;
+              : null;
 
   return (
     <div
@@ -256,21 +230,13 @@ function FridaySlotCard({
           7-day average: <span className="text-gray-900">{avgDailyTime}</span>
         </p>
         <p className="mt-1 text-xs text-gray-400">
-          Window: {window.startDate} → {window.endDate}
+          Window: {window.startDate.slice(5)} → {window.endDate.slice(5)}
         </p>
-        <span
-          className={`mt-2 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-            status === "accepted"
-              ? "bg-emerald-50 text-emerald-700"
-              : status === "active"
-                ? "bg-fuchsia-50 text-fuchsia-700"
-                : status === "rejected" || status === "missing"
-                  ? "bg-rose-50 text-rose-700"
-                  : "bg-gray-100 text-gray-500"
-          }`}
-        >
-          {helperText}
-        </span>
+        {helperText ? (
+          <span className="mt-2 inline-block rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold text-gray-500">
+            {helperText}
+          </span>
+        ) : null}
       </div>
 
       <div className="flex shrink-0 flex-col items-end gap-2">
@@ -296,7 +262,7 @@ function FridaySlotCard({
           <button
             type="button"
             onClick={onUploadClick}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-fuchsia-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-fuchsia-700"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-gray-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-gray-700"
           >
             <UploadCloud className="h-3.5 w-3.5" />
             Upload screenshot
@@ -318,6 +284,121 @@ function FridaySlotCard({
             Upcoming
           </span>
         )}
+      </div>
+    </div>
+  );
+}
+
+function Bone({ className }: { className?: string }) {
+  return <div className={`animate-pulse rounded-lg bg-gray-200 ${className ?? ""}`} />;
+}
+
+function ScreenTimeTrackerSkeleton() {
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
+      <div className="flex flex-1 flex-col items-center">
+        <main className="w-full max-w-7xl px-8 py-8">
+
+          {/* Header */}
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-2">
+              <Bone className="h-7 w-56" />
+              <Bone className="h-4 w-80" />
+            </div>
+            <Bone className="h-9 w-44 rounded-xl" />
+          </div>
+
+          {/* 2-column layout */}
+          <div className="mt-6 grid gap-8 xl:grid-cols-[2fr_1.1fr]">
+
+            {/* Left — Weekly Friday Slots */}
+            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+              <Bone className="mb-5 h-5 w-40" />
+              <div className="grid gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-5 rounded-2xl border border-gray-100 px-5 py-4"
+                  >
+                    {/* Date box */}
+                    <div className="flex w-14 shrink-0 flex-col items-center gap-1.5 rounded-xl border border-gray-100 bg-gray-50 py-2">
+                      <Bone className="h-2.5 w-6" />
+                      <Bone className="h-6 w-8" />
+                      <Bone className="h-2 w-5" />
+                    </div>
+                    {/* Text lines */}
+                    <div className="flex-1 space-y-2">
+                      <Bone className="h-3.5 w-36" />
+                      <Bone className="h-3 w-52" />
+                    </div>
+                    {/* Status pill */}
+                    <Bone className="h-7 w-20 shrink-0 rounded-xl" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right — Winner Zone */}
+            <div className="self-start rounded-2xl border border-gray-100 bg-white p-6">
+              {/* Title row */}
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <Bone className="h-9 w-9 rounded-xl" />
+                  <div className="space-y-2">
+                    <Bone className="h-4 w-28" />
+                  </div>
+                </div>
+                <Bone className="h-6 w-20 rounded-full" />
+              </div>
+
+              {/* Leaderboard rows */}
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3"
+                  >
+                    <Bone className="h-7 w-7 shrink-0 rounded-full" />
+                    <div className="flex-1 space-y-1.5">
+                      <Bone className="h-3.5 w-28" />
+                      <Bone className="h-2.5 w-36" />
+                    </div>
+                    <Bone className="h-3.5 w-10 shrink-0" />
+                  </div>
+                ))}
+              </div>
+
+              {/* "You" card */}
+              <div className="mt-4 rounded-xl border border-gray-200 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <Bone className="h-7 w-7 shrink-0 rounded-full" />
+                  <div className="flex-1 space-y-1.5">
+                    <Bone className="h-3.5 w-20" />
+                    <Bone className="h-2.5 w-32" />
+                  </div>
+                  <div className="space-y-1.5 text-right">
+                    <Bone className="h-3.5 w-12" />
+                    <Bone className="h-2.5 w-20" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary card */}
+              <div className="mt-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                <div className="space-y-2.5">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <Bone className="h-3 w-28" />
+                      <Bone className="h-3 w-16" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </main>
       </div>
     </div>
   );
@@ -356,6 +437,14 @@ export default function EmployeeScreenTimePage() {
   const program = data?.myScreenTimeMonth.program;
   const month = data?.myScreenTimeMonth.month;
   const leaderboard = leaderboardData?.screenTimeLeaderboard ?? [];
+
+  const winnerZoneAvg = useMemo(() => {
+    const values = leaderboard
+      .map((r) => r.avgDailyMinutes)
+      .filter((v): v is number => typeof v === "number" && v > 0);
+    if (values.length === 0) return null;
+    return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+  }, [leaderboard]);
   const submissionBySlot = useMemo(
     () =>
       new Map(
@@ -402,14 +491,7 @@ export default function EmployeeScreenTimePage() {
   }
 
   if (benefitsLoading || loading) {
-    return (
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar />
-        <div className="flex flex-1 items-center justify-center">
-          <PageLoading message="Loading screen time tracker…" />
-        </div>
-      </div>
-    );
+    return <ScreenTimeTrackerSkeleton />;
   }
 
   if (!benefit || benefit.flowType !== BenefitFlowType.ScreenTime || !month) {
@@ -447,7 +529,7 @@ export default function EmployeeScreenTimePage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl font-semibold text-gray-900">
-                {benefit.name}
+                Screen Time Competition
               </h1>
               <p className="mt-1 max-w-xl text-sm text-gray-500">
                 Upload the OS weekly average view every required Friday. Missing
@@ -490,23 +572,6 @@ export default function EmployeeScreenTimePage() {
             </div>
           ) : null}
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${getCompetitionStatusBadge(
-                month.status,
-              )}`}
-            >
-              {statusLabel}
-            </span>
-            <span className="rounded-full bg-fuchsia-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-fuchsia-700">
-              Top {program?.winnerPercent ?? 0}% · {formatMoney(program?.rewardAmountMnt)}
-            </span>
-            {month.rankPosition ? (
-              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-700">
-                Rank #{month.rankPosition}
-              </span>
-            ) : null}
-          </div>
 
           <div className="mt-6 grid gap-8 xl:grid-cols-[2fr_1.1fr]">
             <section className="rounded-2xl border border-gray-100 bg-white p-6">
@@ -565,17 +630,13 @@ export default function EmployeeScreenTimePage() {
             <section className="self-start rounded-2xl border border-gray-100 bg-white p-6">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
                     <Trophy className="h-4 w-4" />
                   </div>
                   <div>
                     <h2 className="text-base font-semibold text-gray-900">
-                      Top {program?.winnerPercent ?? 0}% Winner Zone
+                      Winner Zone
                     </h2>
-                    <p className="mt-0.5 text-xs text-gray-400">
-                      {formatMoney(program?.rewardAmountMnt)} per winner · lowest
-                      average wins
-                    </p>
                   </div>
                 </div>
                 <span
@@ -604,7 +665,6 @@ export default function EmployeeScreenTimePage() {
                       name={row.employeeName}
                       secondaryLabel={`${row.approvedSlotCount}/${row.requiredSlotCount} Friday slots approved`}
                       avgDailyTime={formatMinutes(row.avgDailyMinutes)}
-                      isProvisional={row.isProvisional}
                       isCurrentEmployee={row.employeeId === month.employeeId}
                     />
                   ))}
@@ -646,30 +706,33 @@ export default function EmployeeScreenTimePage() {
                   </div>
                 ) : (
                   <div className="flex items-start gap-2 text-sm text-gray-600">
-                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
                     <div>
-                      <p className="font-medium text-gray-900">You are not ranked yet</p>
+                      <p className="font-medium text-gray-900">You are not eligible to be ranked.</p>
                       <p className="mt-1 text-xs text-gray-500">
-                        {month.disqualificationReason ||
-                          month.decisionNote ||
-                          "Complete every required Friday slot to enter the competition."}
+                        Disqualified automatically because at least one required Friday slot is missing.
                       </p>
                     </div>
                   </div>
                 )}
               </div>
 
-              {month.decisionNote ? (
-                <div className="mt-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-                  {month.decisionNote}
+              <div className="mt-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500">Winner zone avg</span>
+                    <span className="font-semibold text-gray-900">{winnerZoneAvg ? formatMinutes(winnerZoneAvg) : "—"}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500">Rewarded group</span>
+                    <span className="font-semibold text-gray-900">Top {program?.winnerPercent ?? 0}%</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500">Reward amount</span>
+                    <span className="font-semibold text-emerald-700">{formatMoney(program?.rewardAmountMnt)}</span>
+                  </div>
                 </div>
-              ) : null}
-
-              {month.disqualificationReason ? (
-                <div className="mt-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {month.disqualificationReason}
-                </div>
-              ) : null}
+              </div>
             </section>
           </div>
         </main>

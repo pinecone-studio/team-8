@@ -27,6 +27,16 @@ const TYPE_COLORS: Record<string, string> = {
   request_status_change: "bg-slate-100 text-slate-700",
 };
 
+const TYPE_LABELS: Record<string, string> = {
+  queue_item: "Queue",
+  contract_expiring: "Contract",
+  contract_missing: "Contract",
+  suspended_enrollments: "Eligibility",
+  enrollment_suspended: "Eligibility",
+  rule_proposal_pending: "Rules",
+  request_status_change: "Request",
+};
+
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(diff / 60000);
@@ -138,7 +148,7 @@ export default function NotificationBell() {
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-xs font-semibold text-slate-800 leading-snug">{n.title}</p>
                         <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${TYPE_COLORS[n.type] ?? "bg-slate-100 text-slate-600"}`}>
-                          {n.type.replace(/_/g, " ")}
+                          {TYPE_LABELS[n.type] ?? n.type.replace(/_/g, " ")}
                         </span>
                       </div>
                       <p className="mt-0.5 text-[11px] text-slate-500 leading-snug">{n.body}</p>

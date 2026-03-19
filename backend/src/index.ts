@@ -800,6 +800,10 @@ async function handleFinanceBenefitOffer(
       benefit,
       Math.round(proposedAmount),
       Math.round(proposedRepaymentMonths),
+      {
+        appBaseUrl: request.url,
+        proposalNote,
+      },
     ).catch((error) =>
       console.error("[handleFinanceBenefitOffer] Finance offer email failed:", error),
     );
@@ -1128,7 +1132,7 @@ async function handleEmployeeContractUpload(
 
       if (financeRequest) {
         const financeManagerEmails = activeEmployees
-          .filter((e) => getInternalRole(e as any) === "finance_manager")
+          .filter((e) => getInternalRole(e) === "finance_manager")
           .map((e) => e.email);
         await Promise.all(
           financeManagerEmails.map((email) =>
@@ -1137,6 +1141,9 @@ async function handleEmployeeContractUpload(
               email,
               displayName,
               benefit.name,
+              {
+                appBaseUrl: request.url,
+              },
             ).catch((err) =>
               console.error(
                 "[employeeContractUpload] Final finance notify email failed:",
@@ -1149,6 +1156,7 @@ async function handleEmployeeContractUpload(
         await finalizeBenefitApproval({
           db,
           env,
+          appBaseUrl: request.url,
           actor: currentUser.employee,
           benefitRequest: updatedReq,
           benefit,
@@ -1160,7 +1168,7 @@ async function handleEmployeeContractUpload(
 
         const adminEmails = activeEmployees
           .filter((e) => {
-            const internal = getInternalRole(e as any);
+            const internal = getInternalRole(e);
             return (
               internal === "hr_admin" ||
               internal === "hr_manager" ||
@@ -1176,6 +1184,9 @@ async function handleEmployeeContractUpload(
               email,
               displayName,
               benefit.name,
+              {
+                appBaseUrl: request.url,
+              },
             ).catch((err) =>
               console.error(
                 "[employeeContractUpload] Admin notify email failed:",

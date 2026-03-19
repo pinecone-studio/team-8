@@ -92,15 +92,15 @@ export default function Sidebar() {
     }
   }, [profileOpen]);
 
-  const isActive = (href: string) =>
-    href === "/admin-panel" ? pathname === href : pathname.startsWith(href);
-
-  const navLinkClass = (href: string) =>
-    `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition active:scale-[0.98] ${
-      isActive(href)
-        ? "bg-gray-100 text-gray-900"
-        : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-    }`;
+  const isActive = (href: string) => {
+    if (href === "/admin-panel") return pathname === href;
+    // screen-time sub-routes live under /company-benefits/[id]/screen-time
+    // but must highlight the "Screen Time" sidebar item, not "Company Benefits"
+    if (pathname.includes("/screen-time")) {
+      return href === "/admin-panel/screen-time";
+    }
+    return pathname.startsWith(href);
+  };
 
   const sidebarW = collapsed ? "w-[64px]" : "w-[260px]";
 
