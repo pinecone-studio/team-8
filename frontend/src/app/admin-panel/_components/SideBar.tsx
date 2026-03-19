@@ -11,13 +11,16 @@ import {
   Gift,
   LayoutGrid,
   LogOut,
+  Moon,
   ShieldCheck,
   Smartphone,
+  Sun,
 } from "lucide-react";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { getAdminRoleLabel, isAdminEmployee, isHrAdmin } from "../_lib/access";
 import NotificationBell from "@/app/_components/NotificationBell";
 import PineconeLogo from "@/app/_components/_icons/PineconeLogo";
+import { useTheme } from "@/app/_components/ThemeProvider";
 
 const ALL_NAV_ITEMS = [
   {
@@ -63,6 +66,7 @@ export default function Sidebar() {
   const { signOut } = useClerk();
   const { user, isLoaded: isUserLoaded } = useUser();
   const { employee, loading } = useCurrentEmployee();
+  const { theme, toggleTheme } = useTheme();
   const [profileOpen, setProfileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -99,40 +103,63 @@ export default function Sidebar() {
     `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition active:scale-[0.98] ${
       isActive(href)
         ? "bg-gray-100 text-gray-900"
-        : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+        : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
     }`;
 
   const sidebarW = collapsed ? "w-[64px]" : "w-[260px]";
+  const isDarkMode = theme === "dark";
 
   return (
     <>
       <aside
-        className={`fixed left-0 top-0 z-10 flex h-screen flex-col border-r border-gray-100 bg-white transition-all duration-200 ${sidebarW}`}
+        className={`fixed left-0 top-0 z-10 flex h-screen flex-col border-r border-gray-200  transition-all duration-200 ${sidebarW}`}
         onMouseEnter={() => setCollapsed(false)}
-        onMouseLeave={() => { setCollapsed(true); setProfileOpen(false); }}
+        onMouseLeave={() => {
+          setCollapsed(true);
+          setProfileOpen(false);
+        }}
       >
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-100 px-4">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 px-4">
           <Link href="/admin-panel" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#0a116d]">
-              <PineconeLogo />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ">
+              <PineconeLogo className="text-black dark:text-white" />
             </div>
-            {!collapsed && (
-              loading ? (
+            {!collapsed &&
+              (loading ? (
                 <div className="h-4 w-20 rounded bg-gray-200 animate-pulse" />
               ) : (
                 <span className="font-semibold text-gray-900">
                   {hasAdminAccess ? getAdminRoleLabel(employee) : "Employee"}
                 </span>
-              )
-            )}
+              ))}
           </Link>
-          {!collapsed && <NotificationBell />}
+          {!collapsed && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="relative flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label={
+                  isDarkMode ? "Switch to light mode" : "Switch to dark mode"
+                }
+              >
+                {isDarkMode ? (
+                  <Sun className="h-4 w-4" />
+                ) : (
+                  <Moon className="h-4 w-4" />
+                )}
+              </button>
+              <NotificationBell />
+            </div>
+          )}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-2 py-4">
           <nav className="space-y-0.5">
             {!collapsed && (
-              <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">Menu</p>
+              <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">
+                Menu
+              </p>
             )}
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -144,7 +171,7 @@ export default function Sidebar() {
                   className={`flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm font-medium transition active:scale-[0.98] ${collapsed ? "justify-center" : "gap-3"} ${
                     isActive(item.href)
                       ? "bg-gray-100 text-gray-900"
-                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                   }`}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
@@ -160,7 +187,7 @@ export default function Sidebar() {
             <button
               type="button"
               onClick={() => setProfileOpen((o) => !o)}
-              className={`flex w-full items-center rounded-xl px-2 py-2.5 text-left transition hover:bg-gray-50 active:scale-[0.99] ${collapsed ? "justify-center" : "gap-2.5"}`}
+              className={`flex w-full items-center rounded-xl px-2 py-2.5 text-left transition hover:bg-gray-100 active:scale-[0.99] ${collapsed ? "justify-center" : "gap-2.5"}`}
             >
               {loading || !isUserLoaded ? (
                 <div className="h-9 w-9 shrink-0 rounded-full bg-gray-200 animate-pulse" />
@@ -185,8 +212,12 @@ export default function Sidebar() {
                       </>
                     ) : (
                       <>
-                        <p className="truncate text-sm font-medium text-gray-900">{profileName}</p>
-                        <p className="truncate text-xs text-gray-400">{profileRole}</p>
+                        <p className="truncate text-sm font-medium text-gray-900">
+                          {profileName}
+                        </p>
+                        <p className="truncate text-xs text-gray-400">
+                          {profileRole}
+                        </p>
                       </>
                     )}
                   </div>
@@ -206,7 +237,7 @@ export default function Sidebar() {
               <Link
                 href="/employee-panel/dashboard"
                 onClick={() => setProfileOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-100"
               >
                 <LayoutGrid className="h-4 w-4" />
                 <span>My dashboard</span>
@@ -217,7 +248,7 @@ export default function Sidebar() {
                   setProfileOpen(false);
                   signOut({ redirectUrl: "/sign-in" });
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-gray-700 transition hover:bg-gray-100"
               >
                 <LogOut className="h-4 w-4" />
                 <span>Sign out</span>
@@ -226,7 +257,10 @@ export default function Sidebar() {
           </div>
         </div>
       </aside>
-      <div className={`shrink-0 transition-all duration-200 ${sidebarW}`} aria-hidden />
+      <div
+        className={`shrink-0 transition-all duration-200 ${sidebarW}`}
+        aria-hidden
+      />
     </>
   );
 }

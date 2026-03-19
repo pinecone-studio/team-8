@@ -13,11 +13,14 @@ import {
   ClipboardList,
   FlaskConical,
   Smartphone,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isAdminEmployee } from "@/app/admin-panel/_lib/access";
 import NotificationBell from "@/app/_components/NotificationBell";
 import PineconeLogo from "@/app/_components/_icons/PineconeLogo";
+import { useTheme } from "@/app/_components/ThemeProvider";
 
 function formatLabel(value: string | null | undefined) {
   if (!value) return "Employee";
@@ -32,7 +35,11 @@ function formatLabel(value: string | null | undefined) {
 
 const mainNavItems = [
   { href: "/employee-panel/dashboard", label: "Dashboard", icon: LayoutGrid },
-  { href: "/employee-panel/screen-time", label: "Screen Time", icon: Smartphone },
+  {
+    href: "/employee-panel/screen-time",
+    label: "Screen Time",
+    icon: Smartphone,
+  },
   { href: "/employee-panel/requests", label: "Requests", icon: ClipboardList },
   { href: "/employee-panel/contracts", label: "Contracts", icon: FileText },
 ];
@@ -46,6 +53,7 @@ export default function Sidebar() {
   const { signOut } = useClerk();
   const { user, isLoaded: isUserLoaded } = useUser();
   const { employee, loading } = useCurrentEmployee();
+  const { theme, toggleTheme } = useTheme();
   const hasAdminAccess = isAdminEmployee(employee);
   const [profileOpen, setProfileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
@@ -83,31 +91,57 @@ export default function Sidebar() {
     }`;
 
   const sidebarW = collapsed ? "w-[64px]" : "w-[260px]";
+  const isDarkMode = theme === "dark";
 
   return (
     <>
       <aside
-        className={`fixed left-0 top-0 z-10 flex h-screen flex-col border-r border-gray-100 bg-white transition-all duration-200 ${sidebarW}`}
+        className={`fixed left-0 top-0 z-10 flex h-screen flex-col border-r border-gray-200 transition-all duration-200 ${sidebarW}`}
         onMouseEnter={() => setCollapsed(false)}
-        onMouseLeave={() => { setCollapsed(true); setProfileOpen(false); }}
+        onMouseLeave={() => {
+          setCollapsed(true);
+          setProfileOpen(false);
+        }}
       >
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-100 px-4">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 px-4">
           <Link
             href="/employee-panel/dashboard"
             className="flex items-center gap-2"
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#3652c5]">
-              <PineconeLogo />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ">
+              <PineconeLogo className="text-black dark:text-white" />
             </div>
-            {!collapsed && <span className="font-semibold text-gray-900">Employee</span>}
+            {!collapsed && (
+              <span className="font-semibold text-gray-900">Employee</span>
+            )}
           </Link>
-          {!collapsed && <NotificationBell />}
+          {!collapsed && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="relative flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label={
+                  isDarkMode ? "Switch to light mode" : "Switch to dark mode"
+                }
+              >
+                {isDarkMode ? (
+                  <Sun className="h-4 w-4" />
+                ) : (
+                  <Moon className="h-4 w-4" />
+                )}
+              </button>
+              <NotificationBell />
+            </div>
+          )}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-2 py-4">
           <nav className="space-y-0.5">
             {!collapsed && (
-              <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">Menu</p>
+              <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">
+                Menu
+              </p>
             )}
             {mainNavItems.map((item) => {
               const Icon = item.icon;
@@ -119,7 +153,7 @@ export default function Sidebar() {
                   className={`flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm font-medium transition active:scale-[0.98] ${collapsed ? "justify-center" : "gap-3"} ${
                     isActive(item.href)
                       ? "bg-gray-100 text-gray-900"
-                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                   }`}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
@@ -131,7 +165,9 @@ export default function Sidebar() {
 
           <nav className="mt-6 space-y-0.5 border-t border-gray-100 pt-4">
             {!collapsed && (
-              <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">Dev</p>
+              <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">
+                Dev
+              </p>
             )}
             {devNavItems.map((item) => {
               const Icon = item.icon;
@@ -184,8 +220,12 @@ export default function Sidebar() {
                       </>
                     ) : (
                       <>
-                        <p className="truncate text-sm font-medium text-gray-900">{profileName}</p>
-                        <p className="truncate text-xs text-gray-400">{profileRole}</p>
+                        <p className="truncate text-sm font-medium text-gray-900">
+                          {profileName}
+                        </p>
+                        <p className="truncate text-xs text-gray-400">
+                          {profileRole}
+                        </p>
                       </>
                     )}
                   </div>
@@ -227,7 +267,10 @@ export default function Sidebar() {
           </div>
         </div>
       </aside>
-      <div className={`shrink-0 transition-all duration-200 ${sidebarW}`} aria-hidden />
+      <div
+        className={`shrink-0 transition-all duration-200 ${sidebarW}`}
+        aria-hidden
+      />
     </>
   );
 }
