@@ -16,7 +16,7 @@ import {
   putContract,
   getEmployeeSignedContractViewUrl,
 } from "./contracts";
-import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { schema } from "./db";
 import { writeAuditLog } from "./graphql/resolvers/helpers/audit";
 import { finalizeBenefitApproval } from "./graphql/resolvers/helpers/finalizeBenefitApproval";
