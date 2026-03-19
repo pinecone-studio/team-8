@@ -39,7 +39,12 @@ import { isHrAdmin } from "../../_lib/access";
 
 // ── Benefit type config ───────────────────────────────────────────────────────
 
-type BenefitTypeKey = "contract" | "normal" | "finance" | "viewonly" | "screen_time";
+type BenefitTypeKey =
+  | "contract"
+  | "normal"
+  | "finance"
+  | "viewonly"
+  | "screen_time";
 
 const BENEFIT_TYPES: {
   key: BenefitTypeKey;
@@ -108,40 +113,149 @@ const BENEFIT_TYPES: {
   },
 ];
 
-
-type WorkflowStep = { icon: React.ReactNode; label: string; desc: string; color: string };
+type WorkflowStep = {
+  icon: React.ReactNode;
+  label: string;
+  desc: string;
+  color: string;
+};
 
 const WORKFLOWS: Record<BenefitTypeKey, WorkflowStep[]> = {
   contract: [
-    { icon: <Send className="h-4 w-4" />, label: "Employee Request", desc: "Employee submits a benefit request", color: "bg-slate-100 text-slate-600" },
-    { icon: <FileText className="h-4 w-4" />, label: "Contract Generated", desc: "Contract is automatically created", color: "bg-violet-100 text-violet-600" },
-    { icon: <Eye className="h-4 w-4" />, label: "Employee Signs", desc: "Employee reviews and signs the contract", color: "bg-violet-100 text-violet-600" },
-    { icon: <UserCheck className="h-4 w-4" />, label: "HR Review", desc: "HR admin reviews the request", color: "bg-blue-100 text-blue-600" },
-    { icon: <CheckCircle2 className="h-4 w-4" />, label: "Approved", desc: "Benefit becomes active", color: "bg-emerald-100 text-emerald-600" },
-    { icon: <CreditCard className="h-4 w-4" />, label: "Payment", desc: "Processed by vendor", color: "bg-emerald-100 text-emerald-600" },
+    {
+      icon: <Send className="h-4 w-4" />,
+      label: "Employee Request",
+      desc: "Employee submits a benefit request",
+      color: "bg-slate-100 text-slate-600",
+    },
+    {
+      icon: <FileText className="h-4 w-4" />,
+      label: "Contract Generated",
+      desc: "Contract is automatically created",
+      color: "bg-violet-100 text-violet-600",
+    },
+    {
+      icon: <Eye className="h-4 w-4" />,
+      label: "Employee Signs",
+      desc: "Employee reviews and signs the contract",
+      color: "bg-violet-100 text-violet-600",
+    },
+    {
+      icon: <UserCheck className="h-4 w-4" />,
+      label: "HR Review",
+      desc: "HR admin reviews the request",
+      color: "bg-blue-100 text-blue-600",
+    },
+    {
+      icon: <CheckCircle2 className="h-4 w-4" />,
+      label: "Approved",
+      desc: "Benefit becomes active",
+      color: "bg-emerald-100 text-emerald-600",
+    },
+    {
+      icon: <CreditCard className="h-4 w-4" />,
+      label: "Payment",
+      desc: "Processed by vendor",
+      color: "bg-emerald-100 text-emerald-600",
+    },
   ],
   normal: [
-    { icon: <Send className="h-4 w-4" />, label: "Employee Request", desc: "Employee submits a benefit request", color: "bg-slate-100 text-slate-600" },
-    { icon: <UserCheck className="h-4 w-4" />, label: "HR Review", desc: "HR admin reviews the request", color: "bg-blue-100 text-blue-600" },
-    { icon: <CheckCircle2 className="h-4 w-4" />, label: "Approve / Decline", desc: "Final decision is made", color: "bg-emerald-100 text-emerald-600" },
+    {
+      icon: <Send className="h-4 w-4" />,
+      label: "Employee Request",
+      desc: "Employee submits a benefit request",
+      color: "bg-slate-100 text-slate-600",
+    },
+    {
+      icon: <UserCheck className="h-4 w-4" />,
+      label: "HR Review",
+      desc: "HR admin reviews the request",
+      color: "bg-blue-100 text-blue-600",
+    },
+    {
+      icon: <CheckCircle2 className="h-4 w-4" />,
+      label: "Approve / Decline",
+      desc: "Final decision is made",
+      color: "bg-emerald-100 text-emerald-600",
+    },
   ],
   finance: [
-    { icon: <Wallet className="h-4 w-4" />, label: "Amount Request", desc: "Employee submits the amount needed", color: "bg-slate-100 text-slate-600" },
-    { icon: <LayoutGrid className="h-4 w-4" />, label: "Finance Proposal", desc: "Finance team proposes a repayment plan", color: "bg-blue-100 text-blue-600" },
-    { icon: <UserCheck className="h-4 w-4" />, label: "Employee Decision", desc: "Employee accepts or declines the plan", color: "bg-amber-100 text-amber-600" },
-    { icon: <FileText className="h-4 w-4" />, label: "Contract Generated", desc: "Contract is automatically created", color: "bg-violet-100 text-violet-600" },
-    { icon: <Shield className="h-4 w-4" />, label: "HR / C-Level Approval", desc: "Final sign-off", color: "bg-emerald-100 text-emerald-600" },
+    {
+      icon: <Wallet className="h-4 w-4" />,
+      label: "Amount Request",
+      desc: "Employee submits the amount needed",
+      color: "bg-slate-100 text-slate-600",
+    },
+    {
+      icon: <LayoutGrid className="h-4 w-4" />,
+      label: "Finance Proposal",
+      desc: "Finance team proposes a repayment plan",
+      color: "bg-blue-100 text-blue-600",
+    },
+    {
+      icon: <UserCheck className="h-4 w-4" />,
+      label: "Employee Decision",
+      desc: "Employee accepts or declines the plan",
+      color: "bg-amber-100 text-amber-600",
+    },
+    {
+      icon: <FileText className="h-4 w-4" />,
+      label: "Contract Generated",
+      desc: "Contract is automatically created",
+      color: "bg-violet-100 text-violet-600",
+    },
+    {
+      icon: <Shield className="h-4 w-4" />,
+      label: "HR / C-Level Approval",
+      desc: "Final sign-off",
+      color: "bg-emerald-100 text-emerald-600",
+    },
   ],
   viewonly: [
-    { icon: <Zap className="h-4 w-4" />, label: "System Eligibility Check", desc: "Eligibility is evaluated automatically", color: "bg-orange-100 text-orange-600" },
-    { icon: <Monitor className="h-4 w-4" />, label: "Visible on Dashboard", desc: "Employee sees their benefit status", color: "bg-blue-100 text-blue-600" },
-    { icon: <RefreshCw className="h-4 w-4" />, label: "Auto-update", desc: "Status updates in real-time", color: "bg-slate-100 text-slate-600" },
+    {
+      icon: <Zap className="h-4 w-4" />,
+      label: "System Eligibility Check",
+      desc: "Eligibility is evaluated automatically",
+      color: "bg-orange-100 text-orange-600",
+    },
+    {
+      icon: <Monitor className="h-4 w-4" />,
+      label: "Visible on Dashboard",
+      desc: "Employee sees their benefit status",
+      color: "bg-blue-100 text-blue-600",
+    },
+    {
+      icon: <RefreshCw className="h-4 w-4" />,
+      label: "Auto-update",
+      desc: "Status updates in real-time",
+      color: "bg-slate-100 text-slate-600",
+    },
   ],
   screen_time: [
-    { icon: <Monitor className="h-4 w-4" />, label: "Monday Screenshot", desc: "Employee uploads a 7-day average screenshot every Monday slot", color: "bg-fuchsia-100 text-fuchsia-600" },
-    { icon: <Zap className="h-4 w-4" />, label: "Gemini Extraction", desc: "System extracts average daily screen time automatically", color: "bg-blue-100 text-blue-600" },
-    { icon: <CheckCircle2 className="h-4 w-4" />, label: "Monthly Evaluation", desc: "All required Mondays must be present to qualify", color: "bg-amber-100 text-amber-600" },
-    { icon: <Wallet className="h-4 w-4" />, label: "Salary Uplift", desc: "System calculates the uplift percentage for payroll", color: "bg-emerald-100 text-emerald-600" },
+    {
+      icon: <Monitor className="h-4 w-4" />,
+      label: "Monday Screenshot",
+      desc: "Employee uploads a 7-day average screenshot every Monday slot",
+      color: "bg-fuchsia-100 text-fuchsia-600",
+    },
+    {
+      icon: <Zap className="h-4 w-4" />,
+      label: "Gemini Extraction",
+      desc: "System extracts average daily screen time automatically",
+      color: "bg-blue-100 text-blue-600",
+    },
+    {
+      icon: <CheckCircle2 className="h-4 w-4" />,
+      label: "Monthly Evaluation",
+      desc: "All required Mondays must be present to qualify",
+      color: "bg-amber-100 text-amber-600",
+    },
+    {
+      icon: <Wallet className="h-4 w-4" />,
+      label: "Salary Uplift",
+      desc: "System calculates the uplift percentage for payroll",
+      color: "bg-emerald-100 text-emerald-600",
+    },
   ],
 };
 
@@ -198,14 +312,24 @@ const RULE_FIELDS: {
       { value: "neq", label: "is not" },
     ],
     preview: (op, val) => {
-      const label = { '"active"': "active", '"probation"': "on probation", '"leave"': "on leave", '"terminated"': "terminated" }[val] ?? val;
+      const label =
+        {
+          '"active"': "active",
+          '"probation"': "on probation",
+          '"leave"': "on leave",
+          '"terminated"': "terminated",
+        }[val] ?? val;
       return op === "eq"
         ? `Employee must be ${label}`
         : `Employee must not be ${label}`;
     },
     defaultError: (op, val) => {
-      const label = { '"active"': "active", '"probation"': "on probation" }[val] ?? "in the required status";
-      return op === "eq" ? `Only ${label} employees are eligible.` : `Employees with this status are not eligible.`;
+      const label =
+        { '"active"': "active", '"probation"': "on probation" }[val] ??
+        "in the required status";
+      return op === "eq"
+        ? `Only ${label} employees are eligible.`
+        : `Employees with this status are not eligible.`;
     },
   },
   {
@@ -261,13 +385,23 @@ const RULE_FIELDS: {
       { value: "lte", label: "or below" },
     ],
     preview: (op, val) => {
-      const levels: Record<string, string> = { "1": "Standard", "2": "Senior", "3": "Lead", "4": "Principal" };
+      const levels: Record<string, string> = {
+        "1": "Standard",
+        "2": "Senior",
+        "3": "Lead",
+        "4": "Principal",
+      };
       return op === "gte"
         ? `Employee must be at least ${levels[val] ?? val} level`
         : `Employee responsibility level must be ${levels[val] ?? val}`;
     },
     defaultError: (_, val) => {
-      const levels: Record<string, string> = { "1": "Standard", "2": "Senior", "3": "Lead", "4": "Principal" };
+      const levels: Record<string, string> = {
+        "1": "Standard",
+        "2": "Senior",
+        "3": "Lead",
+        "4": "Principal",
+      };
       return `Available to employees at ${levels[val] ?? val} level or above.`;
     },
   },
@@ -326,11 +460,16 @@ type ScreenTimeTierRow = {
   salaryUpliftPercent: string;
 };
 
-const CATEGORIES = ["wellness", "equipment", "financial", "career", "flexibility", "other"];
+const CATEGORIES = [
+  "wellness",
+  "equipment",
+  "financial",
+  "career",
+  "flexibility",
+  "other",
+];
 
-function getFlowTypeForBenefitType(
-  type: BenefitTypeKey,
-): BenefitFlowType {
+function getFlowTypeForBenefitType(type: BenefitTypeKey): BenefitFlowType {
   if (type === "contract") return BenefitFlowType.Contract;
   if (type === "finance") return BenefitFlowType.DownPayment;
   if (type === "viewonly") return BenefitFlowType.SelfService;
@@ -363,6 +502,8 @@ export default function CreateBenefitPage() {
     vendorName: "",
     amount: "" as string,
     location: "",
+    effectiveDate: "",
+    expiryDate: "",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -374,9 +515,24 @@ export default function CreateBenefitPage() {
   });
   const [rules, setRules] = useState<RuleRow[]>([]);
   const [screenTimeTiers, setScreenTimeTiers] = useState<ScreenTimeTierRow[]>([
-    { id: "tier-1", label: "Ultra Focus", maxDailyMinutes: "60", salaryUpliftPercent: "15" },
-    { id: "tier-2", label: "Strong Balance", maxDailyMinutes: "120", salaryUpliftPercent: "10" },
-    { id: "tier-3", label: "Healthy Range", maxDailyMinutes: "180", salaryUpliftPercent: "5" },
+    {
+      id: "tier-1",
+      label: "Ultra Focus",
+      maxDailyMinutes: "60",
+      salaryUpliftPercent: "15",
+    },
+    {
+      id: "tier-2",
+      label: "Strong Balance",
+      maxDailyMinutes: "120",
+      salaryUpliftPercent: "10",
+    },
+    {
+      id: "tier-3",
+      label: "Healthy Range",
+      maxDailyMinutes: "180",
+      salaryUpliftPercent: "5",
+    },
   ]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -416,7 +572,10 @@ export default function CreateBenefitPage() {
         if (patch.fieldKey || patch.operator || patch.value) {
           const fieldCfg = RULE_FIELDS.find((f) => f.key === updated.fieldKey);
           if (fieldCfg) {
-            updated.errorMessage = fieldCfg.defaultError(updated.operator, updated.value);
+            updated.errorMessage = fieldCfg.defaultError(
+              updated.operator,
+              updated.value,
+            );
           }
         }
         return updated;
@@ -440,10 +599,7 @@ export default function CreateBenefitPage() {
     ]);
   }
 
-  function updateScreenTimeTier(
-    id: string,
-    patch: Partial<ScreenTimeTierRow>,
-  ) {
+  function updateScreenTimeTier(id: string, patch: Partial<ScreenTimeTierRow>) {
     setScreenTimeTiers((prev) =>
       prev.map((tier) => (tier.id === id ? { ...tier, ...patch } : tier)),
     );
@@ -472,17 +628,29 @@ export default function CreateBenefitPage() {
       const descriptionTrimmed = form.description.trim();
       if (selectedType === "screen_time") {
         if (screenTimeTiers.length === 0) {
-          throw new Error("Add at least one salary uplift tier for the screen time program.");
+          throw new Error(
+            "Add at least one salary uplift tier for the screen time program.",
+          );
         }
         for (const tier of screenTimeTiers) {
           if (!tier.label.trim()) {
             throw new Error("Every screen time tier needs a label.");
           }
-          if (!tier.maxDailyMinutes.trim() || Number(tier.maxDailyMinutes) <= 0) {
-            throw new Error("Every screen time tier needs a valid maximum daily minutes value.");
+          if (
+            !tier.maxDailyMinutes.trim() ||
+            Number(tier.maxDailyMinutes) <= 0
+          ) {
+            throw new Error(
+              "Every screen time tier needs a valid maximum daily minutes value.",
+            );
           }
-          if (!tier.salaryUpliftPercent.trim() || Number(tier.salaryUpliftPercent) <= 0) {
-            throw new Error("Every screen time tier needs a valid uplift percentage.");
+          if (
+            !tier.salaryUpliftPercent.trim() ||
+            Number(tier.salaryUpliftPercent) <= 0
+          ) {
+            throw new Error(
+              "Every screen time tier needs a valid uplift percentage.",
+            );
           }
         }
       }
@@ -493,7 +661,9 @@ export default function CreateBenefitPage() {
         throw new Error("Contract-based benefits require a valid total price.");
       }
       if (selectedType === "contract" && form.subsidyPercent >= 100) {
-        throw new Error("Contract-based benefits must leave an employee payment share. Set company subsidy below 100%.");
+        throw new Error(
+          "Contract-based benefits must leave an employee payment share. Set company subsidy below 100%.",
+        );
       }
       if (selectedType === "normal" && hasPricing && (!form.amount.trim() || Number(form.amount) <= 0)) {
         throw new Error("Paid normal benefits require a valid total price.");
@@ -511,8 +681,12 @@ export default function CreateBenefitPage() {
       // For normal type, only include amount when the payment toggle is on
       const amountNum =
         selectedType === "normal"
-          ? hasPricing && form.amount.trim() ? Number(form.amount) : undefined
-          : form.amount.trim() ? Number(form.amount) : undefined;
+          ? hasPricing && form.amount.trim()
+            ? Number(form.amount)
+            : undefined
+          : form.amount.trim()
+            ? Number(form.amount)
+            : undefined;
       const result = await createBenefit({
         variables: {
           input: {
@@ -540,11 +714,14 @@ export default function CreateBenefitPage() {
         const imgData = new FormData();
         imgData.append("benefitId", benefitId);
         imgData.append("file", imageFile);
-        const imageRes = await fetch(`${apiBaseUrl}/api/benefits/upload-image`, {
-          method: "POST",
-          body: imgData,
-          headers: uploadHeaders,
-        });
+        const imageRes = await fetch(
+          `${apiBaseUrl}/api/benefits/upload-image`,
+          {
+            method: "POST",
+            body: imgData,
+            headers: uploadHeaders,
+          },
+        );
         const imageJson = await imageRes.json().catch(() => ({}));
         if (!imageRes.ok) {
           throw new Error(
@@ -622,11 +799,16 @@ export default function CreateBenefitPage() {
       const err = e as {
         message?: string;
         graphQLErrors?: Array<{ message?: string }>;
-        networkError?: Error & { result?: { errors?: Array<{ message?: string }>; message?: string } };
+        networkError?: Error & {
+          result?: { errors?: Array<{ message?: string }>; message?: string };
+        };
       };
-      if (err?.graphQLErrors?.[0]?.message) message = err.graphQLErrors[0].message;
-      else if (err?.networkError?.result?.errors?.[0]?.message) message = err.networkError.result.errors[0].message;
-      else if (err?.networkError?.result?.message) message = err.networkError.result.message;
+      if (err?.graphQLErrors?.[0]?.message)
+        message = err.graphQLErrors[0].message;
+      else if (err?.networkError?.result?.errors?.[0]?.message)
+        message = err.networkError.result.errors[0].message;
+      else if (err?.networkError?.result?.message)
+        message = err.networkError.result.message;
       else if (err?.networkError?.message) message = err.networkError.message;
       else if (err?.message) message = err.message;
       setError(message);
@@ -660,7 +842,9 @@ export default function CreateBenefitPage() {
               Company Benefits
             </Link>
             <span className="text-gray-300">/</span>
-            <span className="text-sm font-medium text-gray-700">Create New Benefit</span>
+            <span className="text-sm font-medium text-gray-700">
+              Create New Benefit
+            </span>
           </div>
         </div>
 
@@ -668,20 +852,26 @@ export default function CreateBenefitPage() {
           <div className="grid grid-cols-1 gap-8 xl:grid-cols-5">
             {/* ── LEFT: Form ──────────────────────────────────────────────── */}
             <div className="flex flex-col gap-6 xl:col-span-3">
-
               {/* Step 1: Benefit type */}
               <div className="rounded-2xl border border-gray-100 bg-white p-6">
-              <div className="mb-1 flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">1</span>
-                  <h2 className="text-base font-semibold text-gray-900">Select Benefit Type</h2>
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">
+                    1
+                  </span>
+                  <h2 className="text-base font-semibold text-gray-900">
+                    Select Benefit Type
+                  </h2>
                 </div>
                 <p className="mb-5 ml-8 text-sm text-gray-400">
-                  The workflow preview updates automatically when you select a type
+                  The workflow preview updates automatically when you select a
+                  type
                 </p>
                 <div className="mb-5 ml-8 rounded-xl border border-fuchsia-100 bg-fuchsia-50 px-4 py-3 text-sm text-fuchsia-800">
-                  Screen Time is managed as a standalone feature now.
-                  {" "}
-                  <Link href="/admin-panel/screen-time" className="font-medium underline underline-offset-2">
+                  Screen Time is managed as a standalone feature now.{" "}
+                  <Link
+                    href="/admin-panel/screen-time"
+                    className="font-medium underline underline-offset-2"
+                  >
                     Open Screen Time
                   </Link>
                 </div>
@@ -697,22 +887,33 @@ export default function CreateBenefitPage() {
                           : "border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50"
                       }`}
                     >
-                      <div className={`mb-2 flex h-9 w-9 items-center justify-center rounded-lg ${selectedType === type.key ? type.bg : "bg-gray-100"} ${selectedType === type.key ? type.color : "text-gray-500"}`}>
+                      <div
+                        className={`mb-2 flex h-9 w-9 items-center justify-center rounded-lg ${selectedType === type.key ? type.bg : "bg-gray-100"} ${selectedType === type.key ? type.color : "text-gray-500"}`}
+                      >
                         {type.icon}
                       </div>
-                      <p className={`text-sm font-semibold ${selectedType === type.key ? "text-gray-900" : "text-gray-700"}`}>
+                      <p
+                        className={`text-sm font-semibold ${selectedType === type.key ? "text-gray-900" : "text-gray-700"}`}
+                      >
                         {type.label}
                       </p>
-                      <p className="mt-0.5 text-xs text-gray-400">{type.desc}</p>
+                      <p className="mt-0.5 text-xs text-gray-400">
+                        {type.desc}
+                      </p>
                       <div className="mt-2 flex flex-wrap gap-1">
                         {type.examples.map((ex) => (
-                          <span key={ex} className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500">
+                          <span
+                            key={ex}
+                            className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500"
+                          >
                             {ex}
                           </span>
                         ))}
                       </div>
                       {selectedType === type.key && (
-                        <div className={`absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full ${type.bg}`}>
+                        <div
+                          className={`absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full ${type.bg}`}
+                        >
                           <CheckCircle2 className={`h-4 w-4 ${type.color}`} />
                         </div>
                       )}
@@ -722,12 +923,20 @@ export default function CreateBenefitPage() {
               </div>
 
               {/* Step 2: Basic info */}
-              <div className={`rounded-2xl border bg-white p-6 transition-opacity ${!selectedType ? "opacity-40 pointer-events-none" : "border-gray-100"}`}>
+              <div
+                className={`rounded-2xl border bg-white p-6 transition-opacity ${!selectedType ? "opacity-40 pointer-events-none" : "border-gray-100"}`}
+              >
                 <div className="mb-1 flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">2</span>
-                  <h2 className="text-base font-semibold text-gray-900">Basic Information</h2>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">
+                    2
+                  </span>
+                  <h2 className="text-base font-semibold text-gray-900">
+                    Basic Information
+                  </h2>
                 </div>
-                <p className="mb-5 ml-8 text-sm text-gray-400">Name and configuration for this benefit</p>
+                <p className="mb-5 ml-8 text-sm text-gray-400">
+                  Name and configuration for this benefit
+                </p>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="sm:col-span-2">
@@ -737,36 +946,90 @@ export default function CreateBenefitPage() {
                     <input
                       type="text"
                       value={form.name}
-                      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, name: e.target.value }))
+                      }
                       placeholder="e.g. Gym Membership — Pulse 50%"
                       className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm placeholder-gray-300 transition focus:border-gray-400 focus:outline-none"
                     />
                   </div>
                   <div className="sm:col-span-2">
                     <label className="mb-1.5 block text-xs font-medium text-gray-600">
-                      Description <span className="text-gray-300">(optional)</span>
+                      Description{" "}
+                      <span className="text-gray-300">(optional)</span>
                     </label>
                     <textarea
                       value={form.description}
-                      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, description: e.target.value }))
+                      }
                       placeholder="e.g. Company-subsidized gym access at Pulse Fitness. 50% covered by employer."
                       rows={3}
                       className="w-full resize-y rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm placeholder-gray-300 transition focus:border-gray-400 focus:outline-none"
                     />
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-gray-600">Category</label>
-                    <select
-                      value={form.category}
-                      onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                      className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-gray-400 focus:outline-none"
-                    >
-                      {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c.charAt(0).toUpperCase() + c.slice(1)}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="grid gap-2 sm:col-span-2 sm:grid-cols-3">
+                    <div className="w-full min-w-0">
+                      <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                        Category
+                      </label>
+                      <select
+                        value={form.category}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, category: e.target.value }))
+                        }
+                        className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-gray-400 focus:outline-none"
+                      >
+                        {CATEGORIES.map((c) => (
+                          <option key={c} value={c}>
+                            {c.charAt(0).toUpperCase() + c.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {(selectedType === "normal" ||
+                      selectedType === "viewonly") && (
+                      <>
+                        <div className="w-full min-w-0">
+                          <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-gray-600">
+                            Effective Date
+                            <span className="text-[11px] font-normal text-gray-400">
+                              yyyy.mm.dd
+                            </span>
+                          </label>
+                          <input
+                            type="date"
+                            value={form.effectiveDate}
+                            onChange={(e) =>
+                              setForm((f) => ({
+                                ...f,
+                                effectiveDate: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-gray-400 focus:outline-none"
+                          />
+                        </div>
+                        <div className="w-full min-w-0">
+                          <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-gray-600">
+                            Expiry Date
+                            <span className="text-[11px] font-normal text-gray-400">
+                              yyyy.mm.dd
+                            </span>
+                          </label>
+                          <input
+                            type="date"
+                            value={form.expiryDate}
+                            onChange={(e) =>
+                              setForm((f) => ({
+                                ...f,
+                                expiryDate: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-gray-400 focus:outline-none"
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
                   {selectedType !== "normal" && selectedType !== "viewonly" && (
                     <div>
@@ -779,7 +1042,12 @@ export default function CreateBenefitPage() {
                           min={0}
                           max={selectedType === "contract" ? 99 : 100}
                           value={form.subsidyPercent}
-                          onChange={(e) => setForm((f) => ({ ...f, subsidyPercent: Number(e.target.value) || 0 }))}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              subsidyPercent: Number(e.target.value) || 0,
+                            }))
+                          }
                           className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-gray-400 focus:outline-none"
                         />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
@@ -833,8 +1101,8 @@ export default function CreateBenefitPage() {
                             </span>
                           </div>
                           <p className="mt-1 text-xs text-gray-500">
-                            Enabled automatic benefits are always fully funded by
-                            the company.
+                            Enabled automatic benefits are always fully funded
+                            by the company.
                           </p>
                         </div>
                       ) : (
@@ -847,12 +1115,15 @@ export default function CreateBenefitPage() {
                   )}
                   <div className="sm:col-span-2">
                     <label className="mb-1.5 block text-xs font-medium text-gray-600">
-                      Vendor Name <span className="text-gray-300">(optional)</span>
+                      Vendor Name{" "}
+                      <span className="text-gray-300">(optional)</span>
                     </label>
                     <input
                       type="text"
                       value={form.vendorName}
-                      onChange={(e) => setForm((f) => ({ ...f, vendorName: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, vendorName: e.target.value }))
+                      }
                       placeholder="e.g. Pulse Fitness"
                       className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm placeholder-gray-300 transition focus:border-gray-400 focus:outline-none"
                     />
@@ -860,8 +1131,12 @@ export default function CreateBenefitPage() {
                 </div>
 
                 {selectedTypeConfig && (
-                  <div className={`mt-4 flex items-start gap-2 rounded-xl border ${selectedTypeConfig.border} ${selectedTypeConfig.bg} p-3`}>
-                    <Info className={`mt-0.5 h-4 w-4 shrink-0 ${selectedTypeConfig.color}`} />
+                  <div
+                    className={`mt-4 flex items-start gap-2 rounded-xl border ${selectedTypeConfig.border} ${selectedTypeConfig.bg} p-3`}
+                  >
+                    <Info
+                      className={`mt-0.5 h-4 w-4 shrink-0 ${selectedTypeConfig.color}`}
+                    />
                     <p className={`text-xs ${selectedTypeConfig.color}`}>
                       {selectedType === "contract" && "A contract signature is required before payment is processed. HR admin must approve."}
                       {selectedType === "normal" &&
@@ -880,19 +1155,26 @@ export default function CreateBenefitPage() {
                   <div className="mt-5 border-t border-gray-100 pt-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Payment</p>
-                        <p className="mt-0.5 text-xs text-gray-400">Toggle on if employees need to pay for this benefit</p>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
+                          Payment
+                        </p>
+                        <p className="mt-0.5 text-xs text-gray-400">
+                          Toggle on if employees need to pay for this benefit
+                        </p>
                       </div>
                       <button
                         type="button"
                         onClick={() => {
                           setHasPricing((v) => !v);
-                          if (hasPricing) setForm((f) => ({ ...f, amount: "" }));
+                          if (hasPricing)
+                            setForm((f) => ({ ...f, amount: "" }));
                         }}
                         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${hasPricing ? "bg-emerald-500" : "bg-gray-200"}`}
                         aria-pressed={hasPricing}
                       >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${hasPricing ? "translate-x-6" : "translate-x-1"}`} />
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${hasPricing ? "translate-x-6" : "translate-x-1"}`}
+                        />
                       </button>
                     </div>
 
@@ -908,7 +1190,12 @@ export default function CreateBenefitPage() {
                               min={0}
                               max={100}
                               value={form.subsidyPercent}
-                              onChange={(e) => setForm((f) => ({ ...f, subsidyPercent: Number(e.target.value) || 0 }))}
+                              onChange={(e) =>
+                                setForm((f) => ({
+                                  ...f,
+                                  subsidyPercent: Number(e.target.value) || 0,
+                                }))
+                              }
                               className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-emerald-400 focus:outline-none"
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
@@ -918,21 +1205,38 @@ export default function CreateBenefitPage() {
                         </div>
                         <div>
                           <label className="mb-1.5 block text-xs font-medium text-gray-600">
-                            Total Price (₮) <span className="text-red-400">*</span>
+                            Total Price (₮){" "}
+                            <span className="text-red-400">*</span>
                           </label>
                           <input
                             type="number"
                             min={0}
                             value={form.amount}
-                            onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                            onChange={(e) =>
+                              setForm((f) => ({ ...f, amount: e.target.value }))
+                            }
                             placeholder="e.g. 120000"
                             className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm placeholder-gray-300 transition focus:border-emerald-400 focus:outline-none"
                           />
-                        {form.amount && (
+                          {form.amount && (
                             <p className="mt-1 text-xs text-gray-400">
-                              Company: {Math.round(Number(form.amount) * form.subsidyPercent / 100).toLocaleString()}₮
+                              Company:{" "}
+                              {Math.round(
+                                (Number(form.amount) * form.subsidyPercent) /
+                                  100,
+                              ).toLocaleString()}
+                              ₮
                               {100 - form.subsidyPercent > 0 && (
-                                <> · Employee: {Math.round(Number(form.amount) * (100 - form.subsidyPercent) / 100).toLocaleString()}₮</>
+                                <>
+                                  {" "}
+                                  · Employee:{" "}
+                                  {Math.round(
+                                    (Number(form.amount) *
+                                      (100 - form.subsidyPercent)) /
+                                      100,
+                                  ).toLocaleString()}
+                                  ₮
+                                </>
                               )}
                             </p>
                           )}
@@ -945,35 +1249,53 @@ export default function CreateBenefitPage() {
                 {/* Contract-specific extra fields */}
                 {selectedType === "contract" && (
                   <div className="mt-5 border-t border-gray-100 pt-5">
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-violet-600">Contract Benefit Details</p>
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-violet-600">
+                      Contract Benefit Details
+                    </p>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <label className="mb-1.5 block text-xs font-medium text-gray-600">
-                          Total Price (₮) <span className="text-red-400">*</span>
+                          Total Price (₮){" "}
+                          <span className="text-red-400">*</span>
                         </label>
                         <input
                           type="number"
                           min={0}
                           value={form.amount}
-                          onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                          onChange={(e) =>
+                            setForm((f) => ({ ...f, amount: e.target.value }))
+                          }
                           placeholder="e.g. 120000"
                           className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm placeholder-gray-300 transition focus:border-violet-400 focus:outline-none"
                         />
                         {form.amount && form.subsidyPercent > 0 && (
                           <p className="mt-1 text-xs text-gray-400">
-                            Company: {Math.round(Number(form.amount) * form.subsidyPercent / 100).toLocaleString()}₮ · You: {Math.round(Number(form.amount) * (100 - form.subsidyPercent) / 100).toLocaleString()}₮
+                            Company:{" "}
+                            {Math.round(
+                              (Number(form.amount) * form.subsidyPercent) / 100,
+                            ).toLocaleString()}
+                            ₮ · You:{" "}
+                            {Math.round(
+                              (Number(form.amount) *
+                                (100 - form.subsidyPercent)) /
+                                100,
+                            ).toLocaleString()}
+                            ₮
                           </p>
                         )}
                       </div>
                       <div>
                         <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600">
                           <MapPin className="h-3.5 w-3.5" />
-                          Location <span className="text-gray-300">(optional)</span>
+                          Location{" "}
+                          <span className="text-gray-300">(optional)</span>
                         </label>
                         <input
                           type="text"
                           value={form.location}
-                          onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                          onChange={(e) =>
+                            setForm((f) => ({ ...f, location: e.target.value }))
+                          }
                           placeholder="e.g. Ulaanbaatar, Khan-Uul"
                           className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm placeholder-gray-300 transition focus:border-violet-400 focus:outline-none"
                         />
@@ -981,16 +1303,23 @@ export default function CreateBenefitPage() {
                       <div className="sm:col-span-2">
                         <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600">
                           <ImageIcon className="h-3.5 w-3.5" />
-                          Benefit Image <span className="text-gray-300">(optional)</span>
+                          Benefit Image{" "}
+                          <span className="text-gray-300">(optional)</span>
                         </label>
                         <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 transition hover:border-violet-300 hover:bg-violet-50">
                           {imagePreview ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={imagePreview} alt="Preview" className="h-24 w-auto rounded-lg object-cover" />
+                            <img
+                              src={imagePreview}
+                              alt="Preview"
+                              className="h-24 w-auto rounded-lg object-cover"
+                            />
                           ) : (
                             <>
                               <Upload className="h-6 w-6 text-gray-300" />
-                              <p className="text-xs text-gray-400">Click to upload an image (JPG, PNG, WEBP)</p>
+                              <p className="text-xs text-gray-400">
+                                Click to upload an image (JPG, PNG, WEBP)
+                              </p>
                             </>
                           )}
                           <input
@@ -1006,7 +1335,9 @@ export default function CreateBenefitPage() {
                           />
                         </label>
                         {imageFile && (
-                          <p className="mt-1 text-xs text-gray-500">{imageFile.name}</p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {imageFile.name}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1021,7 +1352,10 @@ export default function CreateBenefitPage() {
                           Screen Time Salary Uplift Rules
                         </p>
                         <p className="mt-1 text-xs text-gray-500">
-                          Employees upload a weekly 7-day average screenshot on each Monday slot. Gemini extracts the average daily minutes automatically, and the month is eligible only if every Monday slot is submitted.
+                          Employees upload a weekly 7-day average screenshot on
+                          each Monday slot. Gemini extracts the average daily
+                          minutes automatically, and the month is eligible only
+                          if every Monday slot is submitted.
                         </p>
                       </div>
                     </div>
@@ -1029,7 +1363,11 @@ export default function CreateBenefitPage() {
                     <div className="space-y-3">
                       {screenTimeTiers
                         .slice()
-                        .sort((left, right) => Number(left.maxDailyMinutes || 0) - Number(right.maxDailyMinutes || 0))
+                        .sort(
+                          (left, right) =>
+                            Number(left.maxDailyMinutes || 0) -
+                            Number(right.maxDailyMinutes || 0),
+                        )
                         .map((tier) => (
                           <div
                             key={tier.id}
@@ -1043,7 +1381,9 @@ export default function CreateBenefitPage() {
                                 type="text"
                                 value={tier.label}
                                 onChange={(e) =>
-                                  updateScreenTimeTier(tier.id, { label: e.target.value })
+                                  updateScreenTimeTier(tier.id, {
+                                    label: e.target.value,
+                                  })
                                 }
                                 className="w-full rounded-xl border border-fuchsia-100 bg-white px-3 py-2 text-sm text-gray-700 focus:border-fuchsia-400 focus:outline-none"
                               />
@@ -1105,19 +1445,31 @@ export default function CreateBenefitPage() {
                     </button>
 
                     <div className="mt-4 rounded-xl border border-fuchsia-100 bg-fuchsia-50 p-3 text-xs text-fuchsia-700">
-                      Example: set 60 minutes → 15%, 120 minutes → 10%, 180 minutes → 5%. Gemini extracts each weekly screenshot automatically, and the system awards the first matching band where the monthly average daily screen time is less than or equal to the band limit.
+                      Example: set 60 minutes → 15%, 120 minutes → 10%, 180
+                      minutes → 5%. Gemini extracts each weekly screenshot
+                      automatically, and the system awards the first matching
+                      band where the monthly average daily screen time is less
+                      than or equal to the band limit.
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Step 3: Rules */}
-              <div className={`rounded-2xl border bg-white p-6 transition-opacity ${!selectedType ? "opacity-40 pointer-events-none" : "border-gray-100"}`}>
+              <div
+                className={`rounded-2xl border bg-white p-6 transition-opacity ${!selectedType ? "opacity-40 pointer-events-none" : "border-gray-100"}`}
+              >
                 <div className="mb-1 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">3</span>
-                    <h2 className="text-base font-semibold text-gray-900">Eligibility Rules</h2>
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">optional</span>
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">
+                      3
+                    </span>
+                    <h2 className="text-base font-semibold text-gray-900">
+                      Eligibility Rules
+                    </h2>
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                      optional
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -1129,12 +1481,15 @@ export default function CreateBenefitPage() {
                   </button>
                 </div>
                 <p className="mb-5 ml-8 text-sm text-gray-400">
-                  Define the conditions an employee must meet to be eligible for this benefit
+                  Define the conditions an employee must meet to be eligible for
+                  this benefit
                 </p>
 
                 {rules.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-gray-200 py-8 text-center">
-                    <p className="text-sm text-gray-400">No rules — all employees will be eligible</p>
+                    <p className="text-sm text-gray-400">
+                      No rules — all employees will be eligible
+                    </p>
                     <button
                       type="button"
                       onClick={addRule}
@@ -1146,24 +1501,37 @@ export default function CreateBenefitPage() {
                 ) : (
                   <div className="flex flex-col gap-3">
                     {rules.map((rule, idx) => {
-                      const fieldCfg = RULE_FIELDS.find((f) => f.key === rule.fieldKey)!;
+                      const fieldCfg = RULE_FIELDS.find(
+                        (f) => f.key === rule.fieldKey,
+                      )!;
                       const preview = getRulePreview(rule);
                       return (
-                        <div key={rule.id} className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                        <div
+                          key={rule.id}
+                          className="rounded-xl border border-gray-100 bg-gray-50 p-4"
+                        >
                           {idx > 0 && (
                             <div className="mb-3 flex items-center gap-2">
-                              <span className="rounded bg-gray-200 px-2 py-0.5 text-[10px] font-bold uppercase text-gray-500">AND</span>
+                              <span className="rounded bg-gray-200 px-2 py-0.5 text-[10px] font-bold uppercase text-gray-500">
+                                AND
+                              </span>
                             </div>
                           )}
                           <div className="flex items-start gap-2">
                             <div className="flex-1 grid grid-cols-3 gap-2">
                               {/* Field */}
                               <div>
-                                <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-400">Condition</label>
+                                <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                                  Condition
+                                </label>
                                 <select
                                   value={rule.fieldKey}
                                   onChange={(e) => {
-                                    const newField = RULE_FIELDS.find((f) => f.key === e.target.value as RuleFieldKey)!;
+                                    const newField = RULE_FIELDS.find(
+                                      (f) =>
+                                        f.key ===
+                                        (e.target.value as RuleFieldKey),
+                                    )!;
                                     updateRule(rule.id, {
                                       fieldKey: e.target.value as RuleFieldKey,
                                       operator: newField.operators[0].value,
@@ -1173,43 +1541,69 @@ export default function CreateBenefitPage() {
                                   className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs focus:outline-none"
                                 >
                                   {RULE_FIELDS.map((f) => (
-                                    <option key={f.key} value={f.key}>{f.label}</option>
+                                    <option key={f.key} value={f.key}>
+                                      {f.label}
+                                    </option>
                                   ))}
                                 </select>
                               </div>
                               {/* Operator */}
                               <div>
-                                <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-400">Operator</label>
+                                <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                                  Operator
+                                </label>
                                 <select
                                   value={rule.operator}
-                                  onChange={(e) => updateRule(rule.id, { operator: e.target.value })}
+                                  onChange={(e) =>
+                                    updateRule(rule.id, {
+                                      operator: e.target.value,
+                                    })
+                                  }
                                   className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs focus:outline-none"
                                 >
                                   {fieldCfg.operators.map((op) => (
-                                    <option key={op.value} value={op.value}>{op.label}</option>
+                                    <option key={op.value} value={op.value}>
+                                      {op.label}
+                                    </option>
                                   ))}
                                 </select>
                               </div>
                               {/* Value */}
                               <div>
                                 <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-400">
-                                  Value {fieldCfg.unit ? `(${fieldCfg.unit})` : ""}
+                                  Value{" "}
+                                  {fieldCfg.unit ? `(${fieldCfg.unit})` : ""}
                                 </label>
-                                {fieldCfg.valueType === "select" || fieldCfg.valueType === "boolean" ? (
+                                {fieldCfg.valueType === "select" ||
+                                fieldCfg.valueType === "boolean" ? (
                                   <select
                                     value={rule.value}
-                                    onChange={(e) => updateRule(rule.id, { value: e.target.value })}
+                                    onChange={(e) =>
+                                      updateRule(rule.id, {
+                                        value: e.target.value,
+                                      })
+                                    }
                                     className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs focus:outline-none"
                                   >
                                     {fieldCfg.options!.map((opt) => (
-                                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                      <option key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                      </option>
                                     ))}
                                   </select>
                                 ) : (
                                   <input
-                                    type={fieldCfg.valueType === "number" ? "number" : "text"}
+                                    type={
+                                      fieldCfg.valueType === "number"
+                                        ? "number"
+                                        : "text"
+                                    }
                                     value={rule.value}
-                                    onChange={(e) => updateRule(rule.id, { value: e.target.value })}
+                                    onChange={(e) =>
+                                      updateRule(rule.id, {
+                                        value: e.target.value,
+                                      })
+                                    }
                                     className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs focus:outline-none"
                                   />
                                 )}
@@ -1240,7 +1634,8 @@ export default function CreateBenefitPage() {
                   <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 p-3">
                     <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                     <p className="text-xs text-amber-700">
-                      Rules will be submitted as proposals and require approval from a second HR admin before taking effect.
+                      Rules will be submitted as proposals and require approval
+                      from a second HR admin before taking effect.
                     </p>
                   </div>
                 )}
@@ -1250,40 +1645,68 @@ export default function CreateBenefitPage() {
               {selectedType === "contract" && (
                 <div className="rounded-2xl border border-gray-100 bg-white p-6">
                   <div className="mb-1 flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">4</span>
-                    <h2 className="text-base font-semibold text-gray-900">Contract Upload</h2>
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">optional</span>
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">
+                      4
+                    </span>
+                    <h2 className="text-base font-semibold text-gray-900">
+                      Contract Upload
+                    </h2>
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                      optional
+                    </span>
                   </div>
                   <p className="mb-5 ml-8 text-sm text-gray-400">
-                    Upload the vendor contract PDF that employees will need to review and sign
+                    Upload the vendor contract PDF that employees will need to
+                    review and sign
                   </p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-gray-600">Version</label>
+                      <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                        Version
+                      </label>
                       <input
                         type="text"
                         value={contractMeta.version}
-                        onChange={(e) => setContractMeta((m) => ({ ...m, version: e.target.value }))}
+                        onChange={(e) =>
+                          setContractMeta((m) => ({
+                            ...m,
+                            version: e.target.value,
+                          }))
+                        }
                         placeholder="e.g. 1.0"
                         className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm placeholder-gray-300 transition focus:border-gray-400 focus:outline-none"
                       />
                     </div>
                     <div />
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-gray-600">Effective Date</label>
+                      <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                        Effective Date
+                      </label>
                       <input
                         type="date"
                         value={contractMeta.effectiveDate}
-                        onChange={(e) => setContractMeta((m) => ({ ...m, effectiveDate: e.target.value }))}
+                        onChange={(e) =>
+                          setContractMeta((m) => ({
+                            ...m,
+                            effectiveDate: e.target.value,
+                          }))
+                        }
                         className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-gray-400 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-gray-600">Expiry Date</label>
+                      <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                        Expiry Date
+                      </label>
                       <input
                         type="date"
                         value={contractMeta.expiryDate}
-                        onChange={(e) => setContractMeta((m) => ({ ...m, expiryDate: e.target.value }))}
+                        onChange={(e) =>
+                          setContractMeta((m) => ({
+                            ...m,
+                            expiryDate: e.target.value,
+                          }))
+                        }
                         className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-gray-400 focus:outline-none"
                       />
                     </div>
@@ -1296,7 +1719,9 @@ export default function CreateBenefitPage() {
                         <Upload className="h-5 w-5 shrink-0 text-gray-300" />
                         <div>
                           <p className="text-sm font-medium text-gray-600">
-                            {contractFile ? contractFile.name : "Upload contract PDF"}
+                            {contractFile
+                              ? contractFile.name
+                              : "Upload contract PDF"}
                           </p>
                           <p className="text-xs text-gray-400">PDF, max 10MB</p>
                         </div>
@@ -1304,7 +1729,9 @@ export default function CreateBenefitPage() {
                           type="file"
                           accept="application/pdf"
                           className="hidden"
-                          onChange={(e) => setContractFile(e.target.files?.[0] ?? null)}
+                          onChange={(e) =>
+                            setContractFile(e.target.files?.[0] ?? null)
+                          }
                         />
                       </label>
                     </div>
@@ -1350,7 +1777,9 @@ export default function CreateBenefitPage() {
             <div className="xl:col-span-2">
               <div className="sticky top-8">
                 <div className="rounded-2xl border border-gray-100 bg-white p-6">
-                  <h3 className="mb-1 text-sm font-semibold text-gray-900">Workflow Preview</h3>
+                  <h3 className="mb-1 text-sm font-semibold text-gray-900">
+                    Workflow Preview
+                  </h3>
                   <p className="mb-5 text-xs text-gray-400">
                     Select a benefit type to see the workflow
                   </p>
@@ -1360,15 +1789,27 @@ export default function CreateBenefitPage() {
                       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-100">
                         <Eye className="h-5 w-5 text-gray-400" />
                       </div>
-                      <p className="text-sm font-medium text-gray-500">Select a benefit type</p>
-                      <p className="mt-1 text-xs text-gray-400">The workflow will appear here</p>
+                      <p className="text-sm font-medium text-gray-500">
+                        Select a benefit type
+                      </p>
+                      <p className="mt-1 text-xs text-gray-400">
+                        The workflow will appear here
+                      </p>
                     </div>
                   ) : (
                     <>
                       {/* Type badge */}
-                      <div className={`mb-5 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 ${selectedTypeConfig!.border} ${selectedTypeConfig!.bg}`}>
-                        <span className={selectedTypeConfig!.color}>{selectedTypeConfig!.icon}</span>
-                        <span className={`text-xs font-semibold ${selectedTypeConfig!.color}`}>{selectedTypeConfig!.label}</span>
+                      <div
+                        className={`mb-5 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 ${selectedTypeConfig!.border} ${selectedTypeConfig!.bg}`}
+                      >
+                        <span className={selectedTypeConfig!.color}>
+                          {selectedTypeConfig!.icon}
+                        </span>
+                        <span
+                          className={`text-xs font-semibold ${selectedTypeConfig!.color}`}
+                        >
+                          {selectedTypeConfig!.label}
+                        </span>
                       </div>
 
                       {/* Steps */}
@@ -1376,7 +1817,9 @@ export default function CreateBenefitPage() {
                         {workflowPreviewSteps.map((step, idx) => (
                           <div key={idx} className="flex gap-3">
                             <div className="flex flex-col items-center">
-                              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${step.color}`}>
+                              <div
+                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${step.color}`}
+                              >
                                 {step.icon}
                               </div>
                               {idx < workflowPreviewSteps.length - 1 && (
@@ -1384,8 +1827,12 @@ export default function CreateBenefitPage() {
                               )}
                             </div>
                             <div className="pb-5">
-                              <p className="text-sm font-medium text-gray-800">{step.label}</p>
-                              <p className="text-xs text-gray-400">{step.desc}</p>
+                              <p className="text-sm font-medium text-gray-800">
+                                {step.label}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {step.desc}
+                              </p>
                             </div>
                           </div>
                         ))}
@@ -1399,9 +1846,14 @@ export default function CreateBenefitPage() {
                           </p>
                           <div className="flex flex-col gap-1.5">
                             {rules.map((rule) => (
-                              <div key={rule.id} className="flex items-start gap-2 rounded-lg bg-gray-50 px-3 py-2">
+                              <div
+                                key={rule.id}
+                                className="flex items-start gap-2 rounded-lg bg-gray-50 px-3 py-2"
+                              >
                                 <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
-                                <p className="text-xs text-gray-600">{getRulePreview(rule)}</p>
+                                <p className="text-xs text-gray-600">
+                                  {getRulePreview(rule)}
+                                </p>
                               </div>
                             ))}
                           </div>

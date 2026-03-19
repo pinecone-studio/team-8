@@ -1,8 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { CheckCircle2, ChevronDown, Search, X, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronDown, Clock3, Search, X } from "lucide-react";
 import {
+  type GetContractAcceptancesQuery,
+  useGetAdminBenefitsQuery,
+  useGetContractAcceptancesQuery,
+  useGetContractsForBenefitQuery,
   useGetEmployeesQuery,
   useGetDepartmentsQuery,
   useGetEmployeeBenefitsQuery,
@@ -10,27 +14,9 @@ import {
   GetEmployeeBenefitsDocument,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
+import { getContractProxyUrl } from "@/lib/contracts";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
 import { EmployeeAvatar } from "@/components/ui/employee-avatar";
-
-// ── Status badge ─────────────────────────────────────────────────────────────
-
-function EligibilityBadge({ passed, label }: { passed: boolean; label: string }) {
-  if (passed) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600">
-        <CheckCircle2 className="h-4 w-4" />
-        {label}
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-red-600">
-      <XCircle className="h-4 w-4" />
-      {label}
-    </span>
-  );
-}
 
 // ── Employee picker ───────────────────────────────────────────────────────────
 
@@ -45,19 +31,61 @@ type EmployeeOption = {
   employmentStatus?: string | null;
 };
 
+function formatRoleLabel(role: string | null | undefined) {
+  if (!role) return "—";
+
+  const normalized = role.trim().replace(/_/g, " ");
+  const words = normalized.split(/\s+/);
+
+  return words
+    .map((word) => {
+      if (word.toLowerCase() === "hr") return "HR";
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+function formatDateLabel(value: string | null | undefined) {
+  if (!value) return null;
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value.split("T")[0] ?? value;
+  }
+
+  return parsed.toLocaleDateString("en-CA");
+}
+
 function EmployeePicker({
   selectedEmployee,
+  selectedEmployeeImageUrl,
   onSelect,
   departments,
+  onSelectionChange,
+  benefitFilter,
+  benefitOptions,
+  benefitMenuOpen,
+  onBenefitMenuToggle,
+  onBenefitFilterChange,
+  benefitsFilterRef,
 }: {
   selectedEmployee: EmployeeOption | null;
+  selectedEmployeeImageUrl?: string | null;
   onSelect: (emp: EmployeeOption | null) => void;
   departments: string[];
+  onSelectionChange?: () => void;
+  benefitFilter?: string;
+  benefitOptions?: string[];
+  benefitMenuOpen?: boolean;
+  onBenefitMenuToggle?: () => void;
+  onBenefitFilterChange?: (value: string) => void;
+  benefitsFilterRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
-  const [open, setOpen] = useState(false);
+  const [roleFilter, setRoleFilter] = useState("");
+  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Debounce text search 300 ms
@@ -66,33 +94,48 @@ function EmployeePicker({
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // Close dropdown on outside click
+  // Close filter menu on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
+        setRoleMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const minChars = 2;
-  const hasSearch = debouncedSearch.length >= minChars;
+  const hasSearch = debouncedSearch.length > 0;
   const hasDept = !!deptFilter;
-  const shouldQuery = hasSearch || hasDept;
+  const hasRole = !!roleFilter;
+
+  const { data: roleSeedData } = useGetEmployeesQuery({
+    variables: {
+      limit: 100,
+    },
+    fetchPolicy: "cache-first",
+  });
 
   const { data, loading } = useGetEmployeesQuery({
     variables: {
       search: hasSearch ? debouncedSearch : undefined,
       department: hasDept ? deptFilter : undefined,
-      limit: 30,
+      limit: !hasSearch && !hasDept && !hasRole ? 100 : hasRole && !hasSearch && !hasDept ? 100 : 30,
     },
-    skip: !shouldQuery,
     fetchPolicy: "cache-and-network",
   });
 
-  const results = data?.getEmployees ?? [];
+  const roleOptions = Array.from(
+    new Set(
+      (roleSeedData?.getEmployees ?? [])
+        .map((emp) => emp.role?.trim())
+        .filter((role): role is string => Boolean(role)),
+    ),
+  ).sort((a, b) => a.localeCompare(b));
+
+  const results = (data?.getEmployees ?? []).filter((emp) =>
+    roleFilter ? (emp.role ?? "").toLowerCase() === roleFilter.toLowerCase() : true,
+  );
 
   // Group results by department for structured display
   const grouped = results.reduce<Record<string, EmployeeOption[]>>((acc, emp) => {
@@ -101,6 +144,8 @@ function EmployeePicker({
     return acc;
   }, {});
   const groupKeys = Object.keys(grouped).sort();
+  const resultCountLabel =
+    results.length === 1 ? "1 employee found" : `${results.length} employees found`;
 
   function formatStatus(s: string | null | undefined) {
     if (!s) return "";
@@ -109,96 +154,182 @@ function EmployeePicker({
 
   const handleSelect = (emp: EmployeeOption) => {
     onSelect(emp);
+    onSelectionChange?.();
     setSearchInput("");
     setDebouncedSearch("");
-    setOpen(false);
+    setRoleMenuOpen(false);
   };
 
   const handleClear = () => {
     onSelect(null);
+    onSelectionChange?.();
     setSearchInput("");
     setDebouncedSearch("");
     setDeptFilter("");
-    setOpen(false);
+    setRoleFilter("");
+    setRoleMenuOpen(false);
   };
-
-  // ── Selected state: show chip ─────────────────────────────────────────────
-  if (selectedEmployee) {
-    return (
-      <div className="max-w-2xl">
-        <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5">
-          <EmployeeAvatar
-            name={selectedEmployee.name}
-            imageUrl={selectedEmployee.avatarUrl}
-            className="h-8 w-8"
-          />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-blue-900">{selectedEmployee.name}</p>
-            <p className="text-xs text-blue-600">
-              {selectedEmployee.email ?? ""}
-              {selectedEmployee.department ? ` · ${selectedEmployee.department}` : ""}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleClear}
-            className="rounded p-0.5 text-blue-400 hover:bg-blue-100 hover:text-blue-600"
-            aria-label="Clear selection"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   // ── Search state ──────────────────────────────────────────────────────────
   return (
-    <div className="max-w-2xl" ref={containerRef}>
-      <div className="flex gap-2">
-        {/* Name / email search */}
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => {
-              setSearchInput(e.target.value);
-              setOpen(true);
-            }}
-            onFocus={() => setOpen(true)}
-            placeholder="Search by name or email…"
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-300"
-          />
-        </div>
+    <div className="max-w-5xl" ref={containerRef}>
+      <div>
+        {selectedEmployee && (
+          <div className="mb-5 flex items-center gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 shadow-sm">
+            <EmployeeAvatar
+              name={selectedEmployee.name}
+              imageUrl={selectedEmployeeImageUrl}
+              className="h-11 w-11 shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-xl font-semibold text-slate-900">{selectedEmployee.name}</p>
+              <p className="text-base text-slate-600">
+                {selectedEmployee.email ?? "No email"}
+                {selectedEmployee.department ? ` · ${selectedEmployee.department}` : ""}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleClear}
+              className="rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              aria-label="Clear selection"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        )}
 
-        {/* Department filter */}
-        <div className="relative">
-          <select
-            value={deptFilter}
-            onChange={(e) => {
-              setDeptFilter(e.target.value);
-              setOpen(true);
-            }}
-            className="appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-3 pr-8 text-sm text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-300"
-          >
-            <option value="">All departments</option>
-            {departments.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-        </div>
+        {!selectedEmployee && (
+          <div className="mb-4 flex flex-wrap gap-4">
+            <div className="relative min-w-[320px] flex-[1.8]">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search employee"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+              />
+            </div>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setRoleMenuOpen((prev) => !prev)}
+                className="inline-flex min-w-[200px] items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50"
+              >
+                {roleFilter ? formatRoleLabel(roleFilter) : "All Positions"}
+                <ChevronDown
+                  className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${roleMenuOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {roleMenuOpen && (
+                <div className="absolute left-0 top-full z-30 mt-1.5 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRoleFilter("");
+                      setRoleMenuOpen(false);
+                    }}
+                    className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm transition hover:bg-slate-50 ${
+                      !roleFilter ? "bg-slate-50 text-slate-900" : "text-slate-700"
+                    }`}
+                  >
+                    <span className="font-medium">All Positions</span>
+                    {!roleFilter && <span className="text-xs text-slate-400">Selected</span>}
+                  </button>
+                  <div className="max-h-72 overflow-y-auto py-1">
+                    {roleOptions.map((role) => (
+                      <button
+                        key={role}
+                        type="button"
+                        onClick={() => {
+                          setRoleFilter(role);
+                          setRoleMenuOpen(false);
+                        }}
+                        className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm transition hover:bg-slate-50 ${
+                          roleFilter === role ? "bg-slate-50 text-slate-900" : "text-slate-700"
+                        }`}
+                      >
+                        <span className="truncate font-medium">{formatRoleLabel(role)}</span>
+                        {roleFilter === role && <span className="text-xs text-slate-400">Selected</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {benefitOptions && onBenefitFilterChange && onBenefitMenuToggle && benefitsFilterRef && (
+              <div className="relative" ref={benefitsFilterRef}>
+                <button
+                  type="button"
+                  onClick={onBenefitMenuToggle}
+                  className="inline-flex min-w-[280px] items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50"
+                >
+                  <span className="truncate">{benefitFilter || "All Benefits"}</span>
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200 ${benefitMenuOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {benefitMenuOpen && (
+                  <div className="absolute left-0 top-full z-30 mt-1.5 w-[420px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => onBenefitFilterChange("")}
+                      className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition hover:bg-slate-50 ${
+                        !benefitFilter ? "bg-slate-50 text-slate-900" : "text-slate-700"
+                      }`}
+                    >
+                      <span className="font-medium">All Benefits</span>
+                      {!benefitFilter && <span className="text-xs text-slate-400">Selected</span>}
+                    </button>
+                    {benefitOptions.length > 0 ? (
+                      <div className="max-h-80 overflow-y-auto py-1">
+                        {benefitOptions.map((benefitName) => (
+                          <button
+                            key={benefitName}
+                            type="button"
+                            onClick={() => onBenefitFilterChange(benefitName)}
+                            className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition hover:bg-slate-50 ${
+                              benefitFilter === benefitName ? "bg-slate-50 text-slate-900" : "text-slate-700"
+                            }`}
+                          >
+                            <span className="truncate font-medium">{benefitName}</span>
+                            {benefitFilter === benefitName && (
+                              <span className="text-xs text-slate-400">Selected</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="px-4 py-4 text-sm text-slate-400">Select an employee first</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(searchInput || deptFilter || roleFilter) && (
+              <button
+                type="button"
+                onClick={handleClear}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-500 shadow-sm transition hover:bg-slate-50"
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+
       </div>
 
-      {/* Results dropdown */}
-      {open && (
-        <div className="mt-1 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
-          {!shouldQuery ? (
-            <div className="px-4 py-6 text-center text-sm text-slate-400">
-              Type a name or pick a department to search employees…
-            </div>
-          ) : loading ? (
+      {!selectedEmployee && (
+        <div className="relative z-10 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          {loading ? (
             <div className="px-2 py-2 space-y-1">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3 border-b border-slate-100 px-2 py-2.5 last:border-b-0">
@@ -214,50 +345,95 @@ function EmployeePicker({
               ))}
             </div>
           ) : results.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-slate-400">
-              No employees match your search.
+            <div className="px-6 py-7 text-center">
+              <p className="text-base font-semibold text-slate-800">No matching employee found</p>
+              <p className="mt-1 text-sm text-slate-500">
+                Try a different name or clear the active department or position filter and search again.
+              </p>
             </div>
           ) : (
-            groupKeys.map((dept) => (
-              <div key={dept}>
-                {/* Department group header */}
-                <div className="sticky top-0 border-b border-slate-100 bg-slate-50 px-4 py-1.5">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                    {dept}
-                  </span>
+            <div className="bg-white">
+              <div className="relative z-[1] border-b border-slate-200 bg-white px-5 py-4">
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {hasDept && !hasSearch && !hasRole
+                        ? deptFilter
+                        : hasRole && !hasSearch && !hasDept
+                          ? formatRoleLabel(roleFilter)
+                          : !hasSearch && !hasDept && !hasRole
+                            ? "Employee Directory"
+                            : "Matching Employees"}
+                    </p>
+                    <p className="mt-1 text-sm text-gray-400">
+                      {hasDept && !hasSearch && !hasRole
+                        ? `Employees in the ${deptFilter} department`
+                        : hasRole && !hasSearch && !hasDept
+                          ? `Employees with the ${formatRoleLabel(roleFilter)} position`
+                          : !hasSearch && !hasDept && !hasRole
+                            ? "Browse and select an employee to inspect eligibility"
+                            : "Employees that match your current filters"}
+                    </p>
+                  </div>
+                  {results.length > 0 && (
+                    <p className="text-xs text-slate-400">{resultCountLabel}</p>
+                  )}
                 </div>
-                {grouped[dept].map((emp) => (
-                  <button
-                    key={emp.id}
-                    type="button"
-                    onClick={() => handleSelect(emp)}
-                    className="flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-blue-50 transition"
-                  >
-                    <EmployeeAvatar
-                      name={emp.name}
-                      imageUrl={emp.avatarUrl}
-                      className="h-7 w-7"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-slate-900 truncate">{emp.name}</p>
-                      <p className="text-xs text-slate-500 truncate">{emp.email ?? ""}</p>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      {emp.role && (
-                        <span className="inline-flex rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
-                          {emp.role}
-                        </span>
-                      )}
-                      {emp.employmentStatus && emp.employmentStatus !== "active" && (
-                        <span className="inline-flex rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-orange-600">
-                          {formatStatus(emp.employmentStatus)}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                ))}
               </div>
-            ))
+
+              <div className="relative z-0 overflow-x-auto border-t border-slate-200 bg-white">
+                <table className="min-w-full text-left text-sm table-fixed">
+                  <thead className="relative z-[1] border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-5 py-3">Name</th>
+                      <th className="px-5 py-3">Position</th>
+                      <th className="px-5 py-3">Department</th>
+                      <th className="px-5 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {groupKeys.flatMap((dept) =>
+                      grouped[dept].map((emp) => (
+                        <tr
+                          key={emp.id}
+                          className="cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors hover:bg-slate-50"
+                          onClick={() => handleSelect(emp)}
+                        >
+                          <td className="px-5 py-3 text-slate-700">
+                            <div className="flex items-center gap-3">
+                              <EmployeeAvatar
+                                name={emp.name}
+                                imageUrl={emp.avatarUrl}
+                                className="h-8 w-8 shrink-0"
+                              />
+                              <div className="flex min-w-0 flex-col">
+                                <span className="truncate font-medium text-slate-900">{emp.name}</span>
+                                <span className="truncate text-xs text-slate-400">
+                                  {emp.email ?? "No email"}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3 text-slate-700">{formatRoleLabel(emp.role)}</td>
+                          <td className="px-5 py-3 text-slate-700">{emp.department ?? "—"}</td>
+                          <td className="px-5 py-3">
+                            {emp.employmentStatus && emp.employmentStatus !== "active" ? (
+                              <span className="inline-flex rounded px-2 py-0.5 text-xs font-medium text-orange-700 bg-orange-50">
+                                {formatStatus(emp.employmentStatus)}
+                              </span>
+                            ) : (
+                              <span className="inline-flex rounded px-2 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700">
+                                Active
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )),
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -270,6 +446,149 @@ function EmployeePicker({
 interface OverrideFormState {
   benefitId: string;
   benefitName: string;
+}
+
+type ContractAcceptanceItem = GetContractAcceptancesQuery["contractAcceptances"][number];
+
+function getMatchedContract(
+  contractsData: ReturnType<typeof useGetContractsForBenefitQuery>["data"],
+  contractAcceptance: ContractAcceptanceItem | undefined,
+) {
+  return (
+    contractsData?.contracts.find((contract) => contract.id === contractAcceptance?.contractId) ??
+    contractsData?.contracts.find((contract) => contract.version === contractAcceptance?.contractVersion) ??
+    contractsData?.contracts.find((contract) => contract.isActive) ??
+    null
+  );
+}
+
+function SignedContractDetails({
+  benefitId,
+  contractAcceptance,
+}: {
+  benefitId: string;
+  contractAcceptance: ContractAcceptanceItem | undefined;
+}) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const { data: contractsData, loading: contractsLoading } = useGetContractsForBenefitQuery({
+    variables: { benefitId },
+    skip: false,
+  });
+
+  const matchingContract = getMatchedContract(contractsData, contractAcceptance);
+  const contractUrl = getContractProxyUrl(matchingContract?.viewUrl);
+
+  if (!contractAcceptance) {
+    return (
+      <span className="inline-flex flex-col gap-1">
+        <span className="inline-flex w-fit rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
+          Contract not signed yet
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <>
+      <span className="inline-flex flex-col gap-1">
+        {contractsLoading ? (
+          <span className="text-xs text-slate-400">Loading contract...</span>
+        ) : contractUrl ? (
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+          >
+            Review contract
+          </button>
+        ) : (
+          <span className="text-xs text-amber-600">Contract preview unavailable</span>
+        )}
+      </span>
+
+      {previewOpen && contractUrl && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-6"
+          onClick={() => setPreviewOpen(false)}
+        >
+          <div
+            className="relative h-[85vh] w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Signed Benefit Contract</p>
+                <p className="text-xs text-slate-400">
+                  {contractAcceptance.contractVersion
+                    ? `Version ${contractAcceptance.contractVersion}`
+                    : "Contract document"}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <a
+                  href={contractUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-medium text-slate-700 underline decoration-slate-300 underline-offset-4 transition hover:text-slate-900"
+                >
+                  Open full document
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen(false)}
+                  className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <iframe
+              src={contractUrl}
+              className="h-[calc(85vh-57px)] w-full bg-slate-50"
+              title={`Signed contract for benefit ${benefitId}`}
+            />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function ContractExpiryDetails({
+  benefitId,
+  contractAcceptance,
+  failedRuleMessage,
+  requiresContract,
+}: {
+  benefitId: string;
+  contractAcceptance: ContractAcceptanceItem | undefined;
+  failedRuleMessage: string | null | undefined;
+  requiresContract: boolean;
+}) {
+  const { data: contractsData } = useGetContractsForBenefitQuery({
+    variables: { benefitId },
+    skip: !requiresContract,
+  });
+  const matchingContract = getMatchedContract(contractsData, contractAcceptance);
+  const expiryLabel = formatDateLabel(matchingContract?.expiryDate);
+
+  if (!failedRuleMessage && !expiryLabel) {
+    return <span>—</span>;
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {failedRuleMessage && <span>{failedRuleMessage}</span>}
+      {contractAcceptance?.acceptedAt && (
+        <span className="text-xs font-medium text-slate-500">
+          Signed {formatDateLabel(contractAcceptance.acceptedAt)}
+        </span>
+      )}
+      {expiryLabel && (
+        <span className="text-xs font-medium text-slate-500">Contract ends {expiryLabel}</span>
+      )}
+    </div>
+  );
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -288,14 +607,22 @@ export default function EligibilityInspector() {
   const [overrideExpiresAt, setOverrideExpiresAt] = useState("");
   const [overrideError, setOverrideError] = useState<string | null>(null);
   const [overrideSuccess, setOverrideSuccess] = useState(false);
+  const [benefitFilter, setBenefitFilter] = useState("");
+  const [benefitMenuOpen, setBenefitMenuOpen] = useState(false);
+  const benefitsFilterRef = useRef<HTMLDivElement>(null);
 
   const { data: departmentsData } = useGetDepartmentsQuery({ skip: !isHr });
+  const { data: adminBenefitsData } = useGetAdminBenefitsQuery({ skip: !isHr });
 
   const {
     data: eligibilityData,
     loading: eligibilityLoading,
     previousData: prevEligibilityData,
   } = useGetEmployeeBenefitsQuery({
+    variables: { employeeId: selectedEmployeeId },
+    skip: !selectedEmployeeId || !isHr,
+  });
+  const { data: contractAcceptancesData } = useGetContractAcceptancesQuery({
     variables: { employeeId: selectedEmployeeId },
     skip: !selectedEmployeeId || !isHr,
   });
@@ -333,6 +660,70 @@ export default function EligibilityInspector() {
     if (aRank !== bRank) return aRank - bRank;
     return a.benefit.name.localeCompare(b.benefit.name);
   });
+  const benefitOptions = Array.from(
+    new Set((adminBenefitsData?.adminBenefits ?? []).map((benefit) => benefit.name).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b));
+  const filteredEligibilities = benefitFilter
+    ? sortedEligibilities.filter((row) => row.benefit.name === benefitFilter)
+    : sortedEligibilities;
+  const selectedEmployeeImageUrl = selectedEmployee?.avatarUrl ?? null;
+  const latestContractAcceptanceByBenefit = (contractAcceptancesData?.contractAcceptances ?? []).reduce<
+    Record<string, ContractAcceptanceItem>
+  >((acc, acceptance) => {
+    const existing = acc[acceptance.benefitId];
+    const existingTime = existing ? new Date(existing.acceptedAt).getTime() : 0;
+    const nextTime = new Date(acceptance.acceptedAt).getTime();
+
+    if (!existing || nextTime > existingTime) {
+      acc[acceptance.benefitId] = acceptance;
+    }
+
+    return acc;
+  }, {});
+
+  const getEligibilityStatusDisplay = (status: string) => {
+    if (status === "ACTIVE") {
+      return {
+        label: "Active",
+        className: "text-emerald-600",
+        icon: <CheckCircle2 className="h-5 w-5" />,
+      };
+    }
+
+    if (status === "PENDING") {
+      return {
+        label: "Pending",
+        className: "text-amber-500",
+        icon: <Clock3 className="h-5 w-5" />,
+      };
+    }
+
+    if (status === "ELIGIBLE") {
+      return {
+        label: "Eligible",
+        className: "text-blue-600",
+        icon: <CheckCircle2 className="h-5 w-5" />,
+      };
+    }
+
+    return {
+      label: "Not Eligible",
+      className: "text-slate-500",
+      icon: <X className="h-5 w-5" />,
+    };
+  };
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (benefitsFilterRef.current && !benefitsFilterRef.current.contains(event.target as Node)) {
+        setBenefitMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
   // ── 1. Loading skeleton (no real text, no access banner) ──────────────────
   if (meLoading) {
     return (
@@ -401,45 +792,61 @@ export default function EligibilityInspector() {
     <main className="flex-1 px-8 py-9">
       <section className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Employee Eligibility Inspector</h1>
-          <p className="mt-1 text-sm text-gray-400">
-            Search by name, email, or department to review an employee&apos;s benefit eligibility.
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+            Employee Eligibility Inspector
+          </h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+            Review an employee&apos;s benefit eligibility from a clean search and department filter panel.
           </p>
         </div>
 
         {/* Employee picker */}
         <div className="mb-6">
-          <label className="mb-2 block text-sm font-medium text-slate-700">Find Employee</label>
+          <label className="mb-3 block text-sm font-semibold text-slate-700">Find employee</label>
           <EmployeePicker
             selectedEmployee={selectedEmployee}
+            selectedEmployeeImageUrl={selectedEmployeeImageUrl}
             onSelect={setSelectedEmployee}
             departments={departments}
+            onSelectionChange={() => {
+              setBenefitFilter("");
+              setBenefitMenuOpen(false);
+            }}
+            benefitFilter={benefitFilter}
+            benefitOptions={benefitOptions}
+            benefitMenuOpen={benefitMenuOpen}
+            onBenefitMenuToggle={() => setBenefitMenuOpen((prev) => !prev)}
+            onBenefitFilterChange={(value) => {
+              setBenefitFilter(value);
+              setBenefitMenuOpen(false);
+            }}
+            benefitsFilterRef={benefitsFilterRef}
           />
         </div>
 
         {overrideSuccess && (
-          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800">
+          <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700">
             Eligibility override applied successfully.
           </div>
         )}
 
         {/* Employee profile */}
         {selectedEmployee && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 mb-6">
-            <h2 className="text-sm font-semibold text-gray-900">Employee Profile</h2>
+          <div className="mb-5 rounded-[28px] border border-slate-200 bg-white px-8 py-5">
+            <h2 className="text-xl font-semibold text-slate-900">Employee Profile</h2>
             {(() => {
               const nameValue = (
                 <div className="flex items-center gap-2">
                   <EmployeeAvatar
                     name={selectedEmployee.name}
                     imageUrl={selectedEmployee.avatarUrl}
-                    className="h-7 w-7"
+                    className="h-7 w-7 shrink-0"
                   />
                   <span>{selectedEmployee.name}</span>
                 </div>
               );
               return (
-            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-5 grid gap-x-8 gap-y-5 md:grid-cols-2 xl:grid-cols-4">
               {[
                 { label: "Name",       value: nameValue },
                 { label: "Role",       value: selectedEmployee.role ?? "—" },
@@ -447,8 +854,8 @@ export default function EligibilityInspector() {
                 { label: "Status",     value: selectedEmployee.employmentStatus ?? "—" },
               ].map((item) => (
                 <div key={item.label}>
-                  <p className="text-xs text-slate-400">{item.label}</p>
-                  <div className="mt-0.5 text-sm font-medium text-slate-900">{item.value}</div>
+                  <p className="text-sm text-slate-400">{item.label}</p>
+                  <div className="mt-1 text-base font-semibold text-slate-900">{item.value}</div>
                 </div>
               ))}
             </div>
@@ -457,107 +864,96 @@ export default function EligibilityInspector() {
           </div>
         )}
 
-        {/* Benefits table */}
+        {/* Benefits Eligibility */}
         {selectedEmployeeId && (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            <div className="border-b border-slate-200 px-5 py-4">
-              <h2 className="text-sm font-semibold text-gray-900">Benefits Eligibility</h2>
+          <div
+            key={selectedEmployeeId}
+            className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm animate-in fade-in duration-300"
+          >
+            <div className="border-b border-slate-200/70 px-5 py-4">
+              <h2 className="text-base font-semibold text-gray-900">Benefits Eligibility</h2>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="min-w-full text-left">
-                <thead className="border-b border-slate-200 bg-slate-50">
-                  <tr>
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Benefit</th>
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Override</th>
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Blocking Rule</th>
-                    {canOverride && <th className="px-5 py-3" />}
-                  </tr>
-                </thead>
-                <tbody>
-                  {eligibilityLoading ? (
-                    <>
-                      {Array.from({ length: eligibilitySkeletonCount }).map((_, i) => (
-                        <tr key={i} className="border-b border-slate-100 last:border-b-0">
-                          {/* Benefit name — medium-wide bar */}
+              {eligibilityLoading ? (
+                <div className="px-5 py-4">
+                  {Array.from({ length: eligibilitySkeletonCount }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-4 border-b border-slate-100 py-4 last:border-b-0"
+                    >
+                      <div className="h-4 w-52 animate-pulse rounded-full bg-slate-200/80" />
+                      <div className="h-6 w-24 animate-pulse rounded-full bg-slate-200/80" />
+                      <div className="h-4 w-16 animate-pulse rounded-full bg-slate-200/80" />
+                      <div className="h-4 flex-1 animate-pulse rounded-full bg-slate-200/80" />
+                      {canOverride && (
+                        <div className="h-9 w-20 animate-pulse rounded-xl bg-slate-200/80" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : filteredEligibilities.length === 0 ? (
+                <div className="px-5 py-6 text-sm text-slate-400">
+                  No benefits match the current selection.
+                </div>
+              ) : (
+                <table className="min-w-full text-left text-sm">
+                  <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-5 py-4">Benefit</th>
+                      <th className="px-5 py-4">Status</th>
+                      <th className="px-5 py-4">Contract Status</th>
+                      <th className="px-5 py-4">Contract Expiry</th>
+                      {canOverride && <th className="px-5 py-4 text-right">Action</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredEligibilities.map((row) => {
+                      const statusDisplay = getEligibilityStatusDisplay(row.status);
+                      const hasOverride = !!row.overrideStatus;
+                      const contractAcceptance = latestContractAcceptanceByBenefit[row.benefitId];
+                      return (
+                        <tr key={row.benefitId} className="border-b border-slate-100 last:border-b-0">
+                          <td className="px-5 py-4 text-[15px] font-medium text-slate-900">{row.benefit.name}</td>
                           <td className="px-5 py-4">
-                            <div className="h-3.5 w-36 rounded-full bg-slate-200/80 animate-pulse" />
+                            <span className={`inline-flex items-center gap-2 text-sm font-semibold ${statusDisplay.className}`}>
+                              {statusDisplay.icon}
+                              {statusDisplay.label}
+                            </span>
                           </td>
-                          {/* Status — icon circle + label text (mirrors EligibilityBadge) */}
-                          <td className="px-5 py-4">
-                            <div className="inline-flex items-center gap-1.5">
-                              <div className="h-4 w-4 rounded-full bg-slate-200/80 animate-pulse shrink-0" />
-                              <div className="h-3.5 w-16 rounded-full bg-slate-200/80 animate-pulse" />
+                          <td className="px-5 py-4 text-slate-500">
+                            <div className="flex flex-col gap-2">
+                              {hasOverride ? (
+                                <span className="inline-flex flex-col gap-1">
+                                  <span className="inline-flex w-fit rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-orange-700">
+                                    {row.overrideStatus}
+                                  </span>
+                                  {row.overrideExpiresAt && (
+                                    <span className="text-xs text-slate-400">
+                                      Expires {formatDateLabel(row.overrideExpiresAt)}
+                                    </span>
+                                  )}
+                                </span>
+                              ) : null}
+
+                              {row.benefit.requiresContract && (
+                                <SignedContractDetails
+                                  benefitId={row.benefitId}
+                                  contractAcceptance={contractAcceptance}
+                                />
+                              )}
                             </div>
                           </td>
-                          {/* Override — badge-shaped rectangle */}
-                          <td className="px-5 py-4">
-                            <div className="inline-flex rounded bg-slate-200/80 animate-pulse h-5 w-20" />
-                          </td>
-                          {/* Blocking rule — longer content bar */}
-                          <td className="px-5 py-4">
-                            <div className="h-3.5 w-52 rounded-full bg-slate-200/80 animate-pulse" />
-                          </td>
-                          {/* Override button — button outline with inner text */}
-                          {canOverride && (
-                            <td className="px-5 py-4">
-                              <div className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-1.5">
-                                <div className="h-3 w-14 rounded-full bg-slate-200/80 animate-pulse" />
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </>
-                  ) : eligibilities.length === 0 ? (
-                    <tr>
-                      <td colSpan={canOverride ? 5 : 4} className="px-5 py-6 text-sm text-slate-400">
-                        No benefits found for this employee.
-                      </td>
-                    </tr>
-                  ) : (
-                    sortedEligibilities.map((row) => {
-                      const eligible =
-                        row.status === "ELIGIBLE" || row.status === "ACTIVE" || row.status === "PENDING";
-                      const statusLabel =
-                        row.status === "ACTIVE"
-                          ? "Active"
-                          : row.status === "PENDING"
-                            ? "Pending"
-                            : row.status === "ELIGIBLE"
-                              ? "Eligible"
-                              : "Not Eligible";
-                      const hasOverride = !!row.overrideStatus;
-                      return (
-                        <tr key={row.benefitId} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
-                          <td className="px-5 py-4 text-sm font-medium text-slate-900">
-                            {row.benefit.name}
-                          </td>
-                          <td className="px-5 py-4">
-                            <EligibilityBadge passed={eligible} label={statusLabel} />
-                          </td>
-                          <td className="px-5 py-4 text-sm text-slate-500">
-                            {hasOverride ? (
-                              <span className="inline-flex flex-col gap-0.5">
-                                <span className="inline-flex rounded bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700">
-                                  {row.overrideStatus}
-                                </span>
-                                {row.overrideExpiresAt && (
-                                  <span className="text-xs text-slate-400">
-                                    expires {row.overrideExpiresAt.split("T")[0]}
-                                  </span>
-                                )}
-                              </span>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                          <td className="px-5 py-4 text-sm text-slate-500">
-                            {row.failedRule?.errorMessage ?? "—"}
+                          <td className="max-w-md px-5 py-4 text-slate-500">
+                            <ContractExpiryDetails
+                              benefitId={row.benefitId}
+                              contractAcceptance={contractAcceptance}
+                              failedRuleMessage={row.failedRule?.errorMessage}
+                              requiresContract={row.benefit.requiresContract}
+                            />
                           </td>
                           {canOverride && (
-                            <td className="px-5 py-4">
+                            <td className="px-5 py-4 text-right">
                               <button
                                 type="button"
                                 onClick={() =>
@@ -566,7 +962,7 @@ export default function EligibilityInspector() {
                                     benefitName: row.benefit.name,
                                   })
                                 }
-                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                               >
                                 Override
                               </button>
@@ -574,18 +970,11 @@ export default function EligibilityInspector() {
                           )}
                         </tr>
                       );
-                    })
-                  )}
-                </tbody>
-              </table>
+                    })}
+                  </tbody>
+                </table>
+              )}
             </div>
-          </div>
-        )}
-
-        {!selectedEmployeeId && (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center text-sm text-slate-400">
-            <Search className="mx-auto mb-3 h-6 w-6 text-slate-300" />
-            Search for an employee above to inspect their benefit eligibility.
           </div>
         )}
 
