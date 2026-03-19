@@ -558,6 +558,7 @@ export type OverrideEligibilityInput = {
 export type ProposeRuleChangeInput = {
   benefitId: Scalars['String']['input'];
   changeType: Scalars['String']['input'];
+  proposalId?: InputMaybe<Scalars['String']['input']>;
   proposedData: Scalars['String']['input'];
   ruleId?: InputMaybe<Scalars['String']['input']>;
   summary: Scalars['String']['input'];
@@ -658,6 +659,7 @@ export type QueryGetEmployeeByEmailArgs = {
 
 
 export type QueryGetEmployeesArgs = {
+  benefitId?: InputMaybe<Scalars['String']['input']>;
   department?: InputMaybe<Scalars['String']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
