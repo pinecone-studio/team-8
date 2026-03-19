@@ -16,9 +16,14 @@ export const createBenefit = async (
       subsidyPercent: number;
       vendorName?: string | null;
       requiresContract?: boolean | null;
-      flowType?: string | null;
       approvalPolicy?: string | null;
-      flowType?: "contract" | "normal" | "down_payment" | "self_service" | null;
+      flowType?:
+        | "contract"
+        | "normal"
+        | "down_payment"
+        | "self_service"
+        | "screen_time"
+        | null;
       amount?: number | null;
       location?: string | null;
       imageUrl?: string | null;
@@ -42,9 +47,6 @@ export const createBenefit = async (
       requiresContract: flowType === "screen_time" ? false : input.requiresContract ?? false,
       flowType,
       approvalPolicy: input.approvalPolicy ?? "hr",
-      flowType:
-        input.flowType ??
-        (input.requiresContract ? "contract" : "normal"),
       amount: input.amount ?? null,
       location: input.location ?? null,
       imageUrl: input.imageUrl ?? null,
