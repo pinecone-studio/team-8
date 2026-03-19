@@ -6,7 +6,7 @@ import {
   Clock,
   XCircle,
   MapPin,
-  DollarSign,
+  CreditCard,
 } from "lucide-react";
 import type { BenefitEligibility } from "@/graphql/generated/graphql";
 import {
@@ -26,7 +26,7 @@ function formatCategory(cat: string) {
 
 function StatusPill({ status }: { status: BenefitEligibilityStatus }) {
   const map: Record<BenefitEligibilityStatus, string> = {
-    [BenefitEligibilityStatus.Eligible]: "bg-emerald-600 text-white shadow-sm",
+    [BenefitEligibilityStatus.Eligible]: "bg-blue-600 text-white shadow-sm",
     [BenefitEligibilityStatus.Active]: "bg-emerald-600 text-white shadow-sm",
     [BenefitEligibilityStatus.Pending]: "bg-amber-500 text-white shadow-sm",
     [BenefitEligibilityStatus.Locked]: "bg-red-500 text-white shadow-sm",
@@ -120,8 +120,8 @@ export default function BenefitDetailModal({
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                   Total Price
                 </p>
-                <div className="mt-1.5 flex items-center gap-1 rounded-xl bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-800 ring-1 ring-gray-100">
-                  <DollarSign className="h-3.5 w-3.5 text-gray-400" />
+                <div className="mt-1.5 flex items-center gap-1.5 rounded-xl bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-800 ring-1 ring-gray-100">
+                  <CreditCard className="h-4 w-4 text-gray-400" />
                   {b.amount.toLocaleString()}₮
                 </div>
               </div>
@@ -129,7 +129,7 @@ export default function BenefitDetailModal({
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                   Company Covers
                 </p>
-                <div className="mt-1.5 rounded-xl bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                <div className="mt-1.5 rounded-xl bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-700 ring-1 ring-gray-100">
                   {b.subsidyPercent}% (
                   {Math.round(
                     (b.amount * b.subsidyPercent) / 100,
@@ -175,9 +175,9 @@ export default function BenefitDetailModal({
                 </p>
               </div>
             ) : isEligible ? (
-              <div className="flex items-center gap-2.5 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                <p className="text-sm font-medium text-emerald-800">
+              <div className="flex items-center gap-2.5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-blue-600" />
+                <p className="text-sm font-medium text-blue-800">
                   You are eligible for this benefit
                 </p>
               </div>
