@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
+  CalendarDays,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   CreditCard,
   Eye,
   FileText,
@@ -25,6 +28,7 @@ import {
   UserCheck,
   Wallet,
   Zap,
+  X,
 } from "lucide-react";
 import Sidebar from "../../_components/SideBar";
 import {
@@ -144,6 +148,444 @@ const WORKFLOWS: Record<BenefitTypeKey, WorkflowStep[]> = {
     { icon: <Wallet className="h-4 w-4" />, label: "Salary Uplift", desc: "System calculates the uplift percentage for payroll", color: "bg-emerald-100 text-emerald-600" },
   ],
 };
+
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const DAY_ABBRS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+function isoToLocal(iso: string): Date | null {
+  if (!iso) return null;
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function dateToIso(d: Date): string {
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, "0"),
+    String(d.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function sameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function shiftMonth(year: number, month: number, delta: number) {
+  const d = new Date(year, month + delta, 1);
+  return { year: d.getFullYear(), month: d.getMonth() };
+}
+
+function buildGrid(year: number, month: number): (Date | null)[] {
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const totalDays = new Date(year, month + 1, 0).getDate();
+  const cells: (Date | null)[] = Array(firstWeekday).fill(null);
+  for (let n = 1; n <= totalDays; n++) cells.push(new Date(year, month, n));
+  while (cells.length % 7 !== 0) cells.push(null);
+  return cells;
+}
+
+function formatPickerDate(iso: string) {
+  if (!iso) return "yyyy.mm.dd";
+  const parsed = isoToLocal(iso);
+  if (!parsed) return "yyyy.mm.dd";
+  return parsed.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function RangePickerMonth({
+  year,
+  month,
+  start,
+  end,
+  hover,
+  minDate,
+  phase,
+  onDayClick,
+  onDayHover,
+}: {
+  year: number;
+  month: number;
+  start: Date | null;
+  end: Date | null;
+  hover: Date | null;
+  minDate: Date | null;
+  phase: "idle" | "end";
+  onDayClick: (date: Date) => void;
+  onDayHover: (date: Date | null) => void;
+}) {
+  const today = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }, []);
+  const cells = useMemo(() => buildGrid(year, month), [year, month]);
+  const previewEnd = end ?? (phase === "end" && hover ? hover : null);
+  const lo =
+    start && previewEnd ? (start <= previewEnd ? start : previewEnd) : start;
+  const hi =
+    start && previewEnd ? (start <= previewEnd ? previewEnd : start) : null;
+  const single = lo && hi && sameDay(lo, hi);
+
+  return (
+    <div className="w-full min-w-0">
+      <div className="mb-1 grid grid-cols-7">
+        {DAY_ABBRS.map((abbr) => (
+          <div
+            key={abbr}
+            className="flex h-7 items-center justify-center text-[11px] font-semibold text-slate-400"
+          >
+            {abbr}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-y-0.5">
+        {cells.map((date, index) => {
+          if (!date) return <div key={`empty-${index}`} className="h-8" />;
+
+          const isLo = lo ? sameDay(date, lo) : false;
+          const isHi = hi ? sameDay(date, hi) : false;
+          const inRange =
+            !single && lo !== null && hi !== null && date > lo && date < hi;
+          const isToday = sameDay(date, today);
+          const disabled = minDate ? date < minDate : false;
+
+          let buttonClass = "text-slate-700 hover:bg-slate-100";
+          if (disabled) buttonClass = "cursor-not-allowed text-slate-300";
+          else if (isLo || isHi) buttonClass = "bg-blue-600 text-white hover:bg-blue-600";
+          else if (inRange) buttonClass = "text-blue-700 hover:bg-blue-100";
+          else if (isToday) buttonClass = "ring-1 ring-blue-300 ring-offset-1 hover:bg-slate-100";
+
+          return (
+            <div
+              key={date.toISOString()}
+              className={`flex h-8 items-center justify-center ${
+                !single && (isLo || isHi || inRange) ? "bg-blue-50" : ""
+              }`}
+            >
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => onDayClick(date)}
+                onMouseEnter={() => onDayHover(date)}
+                onMouseLeave={() => onDayHover(null)}
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors ${buttonClass}`}
+              >
+                {date.getDate()}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DateRangePicker({
+  startDate,
+  endDate,
+  onChange,
+}: {
+  startDate: string;
+  endDate: string;
+  onChange: (start: string, end: string) => void;
+}) {
+  const start = isoToLocal(startDate);
+  const end = isoToLocal(endDate);
+  const initial = start ?? new Date();
+  const [open, setOpen] = useState(false);
+  const [phase, setPhase] = useState<"idle" | "end">("idle");
+  const [hover, setHover] = useState<Date | null>(null);
+  const [view, setView] = useState({
+    year: initial.getFullYear(),
+    month: initial.getMonth(),
+  });
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setOpen(false);
+        setPhase("idle");
+        setHover(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  const right = shiftMonth(view.year, view.month, 1);
+  const hasRange = startDate || endDate;
+  const triggerLabel = startDate
+    ? endDate
+      ? `${formatPickerDate(startDate)} - ${formatPickerDate(endDate)}`
+      : `${formatPickerDate(startDate)} - ...`
+    : "Select contract date range";
+
+  function handleDayClick(date: Date) {
+    if (phase === "idle") {
+      onChange(dateToIso(date), "");
+      setPhase("end");
+      return;
+    }
+
+    const from = start ?? date;
+    if (date < from) {
+      onChange(dateToIso(date), dateToIso(from));
+    } else {
+      onChange(dateToIso(from), dateToIso(date));
+    }
+    setPhase("idle");
+    setHover(null);
+    setOpen(false);
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => {
+          if (!open) {
+            const base = start ?? end ?? new Date();
+            setView({ year: base.getFullYear(), month: base.getMonth() });
+            setPhase(startDate && !endDate ? "end" : "idle");
+          }
+          setOpen((current) => !current);
+        }}
+        className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm transition hover:border-gray-300 focus:outline-none"
+      >
+        <span className={hasRange ? "text-gray-900" : "text-gray-400"}>
+          {triggerLabel}
+        </span>
+        <span className="flex items-center gap-2">
+          {hasRange && (
+            <span
+              onClick={(event) => {
+                event.stopPropagation();
+                onChange("", "");
+                setPhase("idle");
+                setHover(null);
+              }}
+              className="rounded p-0.5 text-gray-300 transition hover:text-gray-500"
+            >
+              <X className="h-3.5 w-3.5" />
+            </span>
+          )}
+          <CalendarDays className="h-4 w-4 shrink-0 text-gray-500" />
+        </span>
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-30 mt-2 w-[min(40rem,calc(100vw-3rem))] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+          <div className="mb-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setView((current) => shiftMonth(current.year, current.month, -1))}
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div className="grid flex-1 grid-cols-2 gap-4 text-center">
+              <span className="text-center text-base font-semibold tracking-tight text-slate-800">
+                {MONTH_NAMES[view.month]} {view.year}
+              </span>
+              <span className="text-center text-base font-semibold tracking-tight text-slate-800">
+                {MONTH_NAMES[right.month]} {right.year}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setView((current) => shiftMonth(current.year, current.month, 1))}
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="relative grid grid-cols-2 gap-4">
+            <RangePickerMonth
+              year={view.year}
+              month={view.month}
+              start={start}
+              end={end}
+              hover={hover}
+              minDate={null}
+              phase={phase}
+              onDayClick={handleDayClick}
+              onDayHover={setHover}
+            />
+            <div className="absolute left-1/2 top-9 hidden h-[calc(100%-2.25rem)] w-px -translate-x-1/2 bg-slate-100 sm:block" />
+            <RangePickerMonth
+              year={right.year}
+              month={right.month}
+              start={start}
+              end={end}
+              hover={hover}
+              minDate={null}
+              phase={phase}
+              onDayClick={handleDayClick}
+              onDayHover={setHover}
+            />
+          </div>
+          {phase === "end" && (
+            <p className="mt-3 text-center text-xs text-slate-400">
+              End date-ee songono uu
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SingleDatePicker({
+  value,
+  onChange,
+  placeholder = "yyyy.mm.dd",
+  minDate,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  minDate?: string;
+}) {
+  const selected = isoToLocal(value);
+  const min = isoToLocal(minDate ?? "");
+  const initial = selected ?? min ?? new Date();
+  const [open, setOpen] = useState(false);
+  const [view, setView] = useState({
+    year: initial.getFullYear(),
+    month: initial.getMonth(),
+  });
+  const ref = useRef<HTMLDivElement>(null);
+  const right = shiftMonth(view.year, view.month, 1);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => {
+          if (!open) {
+            const base = selected ?? min ?? new Date();
+            setView({ year: base.getFullYear(), month: base.getMonth() });
+          }
+          setOpen((current) => !current);
+        }}
+        className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm transition hover:border-gray-300 focus:outline-none"
+      >
+        <span className={value ? "text-gray-900" : "text-gray-400"}>
+          {value ? formatPickerDate(value) : placeholder}
+        </span>
+        <span className="flex items-center gap-2">
+          {value && (
+            <span
+              onClick={(event) => {
+                event.stopPropagation();
+                onChange("");
+              }}
+              className="rounded p-0.5 text-gray-300 transition hover:text-gray-500"
+            >
+              <X className="h-3.5 w-3.5" />
+            </span>
+          )}
+          <CalendarDays className="h-4 w-4 shrink-0 text-gray-500" />
+        </span>
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-30 mt-2 w-[min(40rem,calc(100vw-3rem))] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+          <div className="mb-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setView((current) => shiftMonth(current.year, current.month, -1))}
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div className="grid flex-1 grid-cols-2 gap-4 text-center">
+              <span className="text-center text-base font-semibold tracking-tight text-slate-800">
+                {MONTH_NAMES[view.month]} {view.year}
+              </span>
+              <span className="text-center text-base font-semibold tracking-tight text-slate-800">
+                {MONTH_NAMES[right.month]} {right.year}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setView((current) => shiftMonth(current.year, current.month, 1))}
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="relative grid grid-cols-2 gap-4">
+            <RangePickerMonth
+              year={view.year}
+              month={view.month}
+              start={selected}
+              end={selected}
+              hover={null}
+              minDate={min}
+              phase="idle"
+              onDayClick={(date) => {
+                onChange(dateToIso(date));
+                setOpen(false);
+              }}
+              onDayHover={() => {}}
+            />
+            <div className="absolute left-1/2 top-9 hidden h-[calc(100%-2.25rem)] w-px -translate-x-1/2 bg-slate-100 sm:block" />
+            <RangePickerMonth
+              year={right.year}
+              month={right.month}
+              start={selected}
+              end={selected}
+              hover={null}
+              minDate={min}
+              phase="idle"
+              onDayClick={(date) => {
+                onChange(dateToIso(date));
+                setOpen(false);
+              }}
+              onDayHover={() => {}}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Rule builder config ───────────────────────────────────────────────────────
 
@@ -1241,22 +1683,20 @@ export default function CreateBenefitPage() {
                       />
                     </div>
                     <div />
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-gray-600">Effective Date</label>
-                      <input
-                        type="date"
-                        value={contractMeta.effectiveDate}
-                        onChange={(e) => setContractMeta((m) => ({ ...m, effectiveDate: e.target.value }))}
-                        className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-gray-400 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-gray-600">Expiry Date</label>
-                      <input
-                        type="date"
-                        value={contractMeta.expiryDate}
-                        onChange={(e) => setContractMeta((m) => ({ ...m, expiryDate: e.target.value }))}
-                        className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-gray-400 focus:outline-none"
+                    <div className="sm:col-span-2">
+                      <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                        Effective / Expiry Date
+                      </label>
+                      <DateRangePicker
+                        startDate={contractMeta.effectiveDate}
+                        endDate={contractMeta.expiryDate}
+                        onChange={(effectiveDate, expiryDate) =>
+                          setContractMeta((m) => ({
+                            ...m,
+                            effectiveDate,
+                            expiryDate,
+                          }))
+                        }
                       />
                     </div>
                     <div className="sm:col-span-2">
