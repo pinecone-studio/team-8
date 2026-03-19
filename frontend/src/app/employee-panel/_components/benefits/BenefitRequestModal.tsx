@@ -468,6 +468,15 @@ export default function BenefitRequestModal({ benefitId, onClose, onSuccess }: P
                 </dl>
               </div>
 
+              <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+                <p className="text-sm font-medium text-blue-900">What happens next?</p>
+                <p className="mt-1 text-xs leading-5 text-blue-700">
+                  After this request is submitted and HR approves it, you will continue to
+                  <span className="font-semibold"> Step 4: Payment</span>, then finish with
+                  <span className="font-semibold"> Step 5: Submit Payment</span> so HR can verify your transfer before activation.
+                </p>
+              </div>
+
               {submitMessage && (
                 <div className="mt-4 rounded-lg border border-red-100 bg-red-50/80 px-3 py-2 text-xs text-red-700">
                   {submitMessage}

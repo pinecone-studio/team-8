@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowRight, CheckCircle2, Clock, DollarSign, ExternalLink, FileText, Lock, MapPin, ShieldCheck, Users, XCircle } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
+import { ArrowRight, Building2, CheckCircle2, Clock, Copy, CreditCard, DollarSign, ExternalLink, FileText, Lock, MapPin, ShieldCheck, Users, X, XCircle } from "lucide-react";
 import StatusBadge from "../../_components/benefits/StatusBadge";
 import Sidebar from "../../_components/SideBar";
 import BenefitRequestModal from "../../_components/benefits/BenefitRequestModal";
@@ -16,6 +17,20 @@ import {
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 import { getContractProxyUrl } from "@/lib/contracts";
+
+const PAYMENT_ACCOUNT_DETAILS = {
+  bankName: "PineQuest Corporate Account",
+  accountNumber: "0000 0000 0000",
+  accountHolder: "PineQuest LLC",
+} as const;
+
+function getApiBase(): string {
+  const base =
+    typeof process !== "undefined" && process.env?.NEXT_PUBLIC_GRAPHQL_URL
+      ? process.env.NEXT_PUBLIC_GRAPHQL_URL
+      : "https://team8-api.team8pinequest.workers.dev/";
+  return base.replace(/\/$/, "");
+}
 
 function formatRuleLabel(value: string) {
   return value
@@ -50,13 +65,181 @@ function ApprovalPolicyBadge({ policy }: { policy: string | null | undefined }) 
   );
 }
 
+function formatMoney(amount: number): string {
+  return `${amount.toLocaleString()}₮`;
+}
+
+function PaymentDetailsDialog({
+  open,
+  onClose,
+  requestStatus,
+  benefitName,
+  employeeName,
+  totalAmount,
+  companyPercent,
+  employeePercent,
+  onSubmitPayment,
+  submittingPayment,
+  submitError,
+}: {
+  open: boolean;
+  onClose: () => void;
+  requestStatus: string | null;
+  benefitName: string;
+  employeeName: string;
+  totalAmount: number;
+  companyPercent: number;
+  employeePercent: number;
+  onSubmitPayment?: () => Promise<void> | void;
+  submittingPayment?: boolean;
+  submitError?: string | null;
+}) {
+  if (!open) return null;
+
+  const companyPays = Math.round((totalAmount * companyPercent) / 100);
+  const employeePays = Math.round((totalAmount * employeePercent) / 100);
+  const transactionReference = `${benefitName} - ${employeeName}`;
+  const canSubmitPayment = requestStatus === "awaiting_payment";
+  const waitingForReview = requestStatus === "awaiting_payment_review";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-xl rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        <div className="pr-10">
+          <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+            <CreditCard className="h-3.5 w-3.5" />
+            Payment Details
+          </div>
+          <h2 className="mt-4 text-xl font-semibold text-gray-900">{benefitName}</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Review the payment breakdown and transfer details for this benefit.
+          </p>
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Total Amount</p>
+            <p className="mt-2 text-lg font-semibold text-gray-900">{formatMoney(totalAmount)}</p>
+          </div>
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-emerald-500">Company Pays</p>
+            <p className="mt-2 text-lg font-semibold text-emerald-700">
+              {formatMoney(companyPays)}
+            </p>
+            <p className="mt-1 text-xs text-emerald-600">{companyPercent}% covered</p>
+          </div>
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-amber-500">Your Payment</p>
+            <p className="mt-2 text-lg font-semibold text-amber-700">
+              {formatMoney(employeePays)}
+            </p>
+            <p className="mt-1 text-xs text-amber-600">{employeePercent}% to transfer</p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <Building2 className="h-4 w-4 text-gray-400" />
+            Company Bank Account
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-gray-400">Bank</p>
+              <p className="mt-1 text-sm text-gray-700">{PAYMENT_ACCOUNT_DETAILS.bankName}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-gray-400">Account Holder</p>
+              <p className="mt-1 text-sm text-gray-700">{PAYMENT_ACCOUNT_DETAILS.accountHolder}</p>
+            </div>
+            <div className="sm:col-span-2">
+              <p className="text-xs uppercase tracking-wide text-gray-400">Account Number</p>
+              <div className="mt-1 flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
+                <p className="text-sm font-medium text-gray-800">{PAYMENT_ACCOUNT_DETAILS.accountNumber}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-5">
+          <div className="flex items-center gap-2 text-sm font-semibold text-blue-800">
+            <Copy className="h-4 w-4" />
+            Transaction Reference
+          </div>
+          <p className="mt-3 rounded-xl border border-blue-100 bg-white px-3 py-2 text-sm font-medium text-blue-900">
+            {transactionReference}
+          </p>
+          <p className="mt-2 text-xs text-blue-700">
+            Use this exact reference when sending your payment so HR can match it to your benefit request.
+          </p>
+        </div>
+
+        {waitingForReview && (
+          <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4">
+            <p className="text-sm font-semibold text-amber-900">Payment submitted</p>
+            <p className="mt-1 text-xs text-amber-700">
+              HR is now checking your transfer. Your benefit will become active only after they approve the payment.
+            </p>
+          </div>
+        )}
+
+        {submitError && (
+          <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
+
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-11 items-center justify-center rounded-xl border border-gray-200 bg-white px-5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            onClick={onSubmitPayment}
+            disabled={!canSubmitPayment || submittingPayment || waitingForReview}
+            className={`inline-flex h-11 items-center justify-center rounded-xl px-5 text-sm font-semibold text-white transition ${
+              waitingForReview
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+            }`}
+          >
+            {waitingForReview ? "Төлбөр илгээгдсэн" : submittingPayment ? "Submitting..." : "Төлбөр төлсөн — Submit"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function getActiveStep(status: string): string {
   switch (status) {
     case "awaiting_contract_acceptance": return "Contract";
     case "awaiting_hr_review": return "HR Review";
     case "awaiting_finance_review": return "Finance Review";
     case "hr_approved": return "Finance Review";
-    case "finance_approved":
+    case "finance_approved": return "Payment";
+    case "awaiting_payment":
+    case "awaiting_payment_review": return "Payment";
     case "approved": return "Approved";
     default: return "Submitted";
   }
@@ -65,10 +248,12 @@ function getActiveStep(status: string): string {
 function ApprovalFlow({
   policy,
   requiresContract,
+  hasPayment,
   requestStatus,
 }: {
   policy: string | null | undefined;
   requiresContract: boolean;
+  hasPayment: boolean;
   requestStatus?: string | null;
 }) {
   const p = (policy ?? "hr").toLowerCase();
@@ -76,6 +261,7 @@ function ApprovalFlow({
   if (requiresContract) steps.push("Contract");
   if (p === "hr" || p === "dual") steps.push("HR Review");
   if (p === "finance" || p === "dual") steps.push("Finance Review");
+  if (hasPayment) steps.push("Payment");
   steps.push("Approved");
 
   const activeStep = requestStatus ? getActiveStep(requestStatus) : null;
@@ -126,8 +312,10 @@ function NextStepsBox({
   approvalPolicy,
   requiresContract,
   flowType,
+  requestStatus,
   awaitingContract,
   onRequestBenefit,
+  onOpenPayment,
 }: {
   status: string;
   benefitId: string;
@@ -135,8 +323,10 @@ function NextStepsBox({
   approvalPolicy?: string | null;
   requiresContract: boolean;
   flowType?: BenefitFlowType | null;
+  requestStatus?: string | null;
   awaitingContract?: boolean;
   onRequestBenefit?: () => void;
+  onOpenPayment?: () => void;
 }) {
   const p = (approvalPolicy ?? "hr").toLowerCase();
   const isSelfService = flowType === BenefitFlowType.SelfService;
@@ -237,6 +427,43 @@ function NextStepsBox({
   }
 
   if (status === "PENDING") {
+    if (requestStatus === "awaiting_payment" && onOpenPayment) {
+      return (
+        <div className="space-y-3">
+          <div className="flex items-start gap-2.5 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
+            <CreditCard className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-medium">Payment required</p>
+              <p className="mt-0.5 text-blue-700">
+                HR approved your request. Please pay your portion now, then mark it as paid so HR can verify it.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenPayment}
+            className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98]"
+          >
+            Open Payment Details
+          </button>
+        </div>
+      );
+    }
+
+    if (requestStatus === "awaiting_payment_review") {
+      return (
+        <div className="flex items-start gap-2.5 rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-700">
+          <Clock className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="font-medium">Waiting for payment verification</p>
+            <p className="mt-0.5 text-amber-600">
+              You submitted your payment. HR will check the transfer and activate the benefit after verification.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     const waiting =
       p === "hr" ? "HR team" : p === "finance" ? "Finance team" : "HR and Finance teams";
     return (
@@ -258,11 +485,15 @@ function NextStepsBox({
 export default function BenefitDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const { getToken } = useAuth();
   const id = params.id as string;
   const [requestModalOpen, setRequestModalOpen] = useState(false);
-  const { loading: employeeLoading } = useCurrentEmployee();
-  const { data, error, loading } = useGetMyBenefitsFullQuery();
-  const { data: requestsData } = useGetBenefitRequestsQuery();
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [submittingPayment, setSubmittingPayment] = useState(false);
+  const [paymentSubmitError, setPaymentSubmitError] = useState<string | null>(null);
+  const { employee, loading: employeeLoading } = useCurrentEmployee();
+  const { data, error, loading, refetch: refetchBenefits } = useGetMyBenefitsFullQuery();
+  const { data: requestsData, refetch: refetchRequests } = useGetBenefitRequestsQuery();
   const { data: contractsData } = useGetContractsForBenefitQuery({ variables: { benefitId: id } });
 
   const benefitEligibility = data?.myBenefits.find((item: { benefitId: string }) => item.benefitId === id);
@@ -307,6 +538,39 @@ export default function BenefitDetailPage() {
   const benefit = benefitEligibility.benefit;
   const vendor = benefit.vendorName ?? "Internal Benefit";
   const policy = benefit.approvalPolicy ?? "hr";
+  const hasPayment = benefit.flowType === BenefitFlowType.Contract && benefit.amount != null;
+  const latestRequestStatus = latestRequest?.status?.toLowerCase() ?? null;
+  const shouldShowPaymentDialogTrigger =
+    benefit.flowType === BenefitFlowType.Contract &&
+    hasPayment &&
+    (latestRequestStatus === "awaiting_payment" || latestRequestStatus === "awaiting_payment_review");
+
+  const handleSubmitPayment = async () => {
+    if (!latestRequest?.id) return;
+    setSubmittingPayment(true);
+    setPaymentSubmitError(null);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${getApiBase()}/api/benefit-requests/payment-submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ requestId: latestRequest.id }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({ error: "Failed to submit payment confirmation." }));
+        throw new Error((json as { error?: string }).error ?? "Failed to submit payment confirmation.");
+      }
+      await Promise.all([refetchRequests(), refetchBenefits()]);
+      setPaymentDialogOpen(false);
+    } catch (err) {
+      setPaymentSubmitError(err instanceof Error ? err.message : "Failed to submit payment confirmation.");
+    } finally {
+      setSubmittingPayment(false);
+    }
+  };
   const isSelfService = benefit.flowType === "self_service";
 
   return (
@@ -462,6 +726,7 @@ export default function BenefitDetailPage() {
                   <ApprovalFlow
                     policy={policy}
                     requiresContract={benefit.requiresContract}
+                    hasPayment={hasPayment}
                     requestStatus={latestRequest?.status}
                   />
                 </div>
@@ -557,31 +822,46 @@ export default function BenefitDetailPage() {
                     )}
                   </div>
                 )}
-              {/* Right: action panel */}
-              <div className="rounded-2xl border border-gray-200 bg-white p-6 self-start">
-                <h2 className="text-base font-semibold text-gray-900">Next Steps</h2>
-                <div className="mt-4">
-                  <NextStepsBox
-                    status={benefitEligibility.status}
-                    benefitId={benefitEligibility.benefitId}
-                    failedRuleError={benefitEligibility.failedRule?.errorMessage}
-                    approvalPolicy={policy}
-                    requiresContract={benefit.requiresContract}
-                    flowType={benefit.flowType}
-                    awaitingContract={awaitingContract}
-                    onRequestBenefit={() => setRequestModalOpen(true)}
-                  />
-                </div>
-                {benefit.requiresContract &&
-                  benefitEligibility.status === "ELIGIBLE" &&
-                  !isSelfService && (
-                    <div className="mt-5 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3">
-                      <div className="flex items-start gap-2">
-                        <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
-                        <p className="text-xs text-amber-700">
-                          A vendor contract must be reviewed and accepted before your request can proceed to HR review.
-                        </p>
-                      </div>
+
+                <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                  <h2 className="text-base font-semibold text-gray-900">Next Steps</h2>
+                  <div className="mt-4">
+                    <NextStepsBox
+                      status={benefitEligibility.status}
+                      benefitId={benefitEligibility.benefitId}
+                      failedRuleError={benefitEligibility.failedRule?.errorMessage}
+                      approvalPolicy={policy}
+                      requiresContract={benefit.requiresContract}
+                      flowType={benefit.flowType}
+                      requestStatus={latestRequestStatus}
+                      awaitingContract={awaitingContract}
+                      onRequestBenefit={() => setRequestModalOpen(true)}
+                      onOpenPayment={() => {
+                        setPaymentSubmitError(null);
+                        setPaymentDialogOpen(true);
+                      }}
+                    />
+                  </div>
+                  {shouldShowPaymentDialogTrigger && (
+                    <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                      <p className="text-sm font-semibold text-blue-900">
+                        {latestRequestStatus === "awaiting_payment_review" ? "Payment Submitted" : "Payment Ready"}
+                      </p>
+                      <p className="mt-1 text-xs text-blue-700">
+                        {latestRequestStatus === "awaiting_payment_review"
+                          ? "HR is checking your payment now. You can still reopen the details if you need them."
+                          : "Your request passed approval. Pay your share now, then mark it as paid so HR can verify it."}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPaymentSubmitError(null);
+                          setPaymentDialogOpen(true);
+                        }}
+                        className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 text-sm font-semibold text-white transition hover:bg-blue-700"
+                      >
+                        {latestRequestStatus === "awaiting_payment_review" ? "Төлбөрийн мэдээлэл харах" : "Төлбөр төлөх"}
+                      </button>
                     </div>
                   )}
                 </div>
@@ -598,6 +878,21 @@ export default function BenefitDetailPage() {
             setRequestModalOpen(false);
             router.push("/employee-panel/requests?submitted=true");
           }}
+        />
+      )}
+      {benefit.amount != null && (
+        <PaymentDetailsDialog
+          open={paymentDialogOpen}
+          onClose={() => setPaymentDialogOpen(false)}
+          requestStatus={latestRequestStatus}
+          benefitName={benefit.name}
+          employeeName={employee?.name ?? "Employee"}
+          totalAmount={benefit.amount}
+          companyPercent={benefit.subsidyPercent}
+          employeePercent={benefit.employeePercent}
+          onSubmitPayment={handleSubmitPayment}
+          submittingPayment={submittingPayment}
+          submitError={paymentSubmitError}
         />
       )}
     </div>

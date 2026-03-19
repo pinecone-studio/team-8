@@ -65,8 +65,20 @@ export const updateBenefit = async (
   if ("amount" in input) updates.amount = input.amount ?? null;
   if ("location" in input) updates.location = input.location ?? null;
   if ("imageUrl" in input) updates.imageUrl = input.imageUrl ?? null;
+
+
+  const effectiveAmount =
+    "amount" in input ? input.amount ?? null : existing.amount;
+  const effectiveSubsidyPercent =
+    input.subsidyPercent != null ? input.subsidyPercent : existing.subsidyPercent;
   if (effectiveFlowType === "screen_time" && effectiveRequiresContract) {
     throw new Error("Screen time benefits cannot require a contract.");
+  }
+  if (effectiveFlowType === "contract" && (!effectiveAmount || effectiveAmount <= 0)) {
+    throw new Error("Contract-based benefits must include a valid total price.");
+  }
+  if (effectiveFlowType === "contract" && effectiveSubsidyPercent >= 100) {
+    throw new Error("Contract-based benefits must leave an employee payment share. Set company subsidy below 100%.");
   }
 
   const [row] = await db

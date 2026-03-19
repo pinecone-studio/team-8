@@ -12,7 +12,10 @@ import {
 import {
   useGetAuditLogsQuery,
   useGetEmployeesQuery,
+  useGetAdminBenefitsQuery,
+  useGetAllBenefitRequestsQuery,
 } from "@/graphql/generated/graphql";
+import { getContractProxyUrl } from "@/lib/contracts";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
 import { UserAvatar } from "@clerk/nextjs";
@@ -506,6 +509,52 @@ function JsonDiffBlock({
   );
 }
 
+function ContractPreview({ url, expanded, onExpand, onClose, title }: {
+  url: string | null;
+  expanded: boolean;
+  onExpand: () => void;
+  onClose: () => void;
+  title: string;
+}) {
+  if (!url) return <p className="text-xs text-slate-400">Гэрээний баримт бичиг олдсонгүй.</p>;
+  return (
+    <>
+      <div className="relative cursor-zoom-in group" onClick={onExpand}>
+        <iframe
+          src={url}
+          className="h-56 w-full rounded-lg border border-slate-200 pointer-events-none"
+          title={title}
+        />
+        <div className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/10 transition flex items-center justify-center">
+          <span className="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 shadow">
+            Томруулах
+          </span>
+        </div>
+      </div>
+      {expanded && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-6"
+          onClick={onClose}
+        >
+          <div
+            className="relative w-full max-w-4xl h-[85vh] rounded-2xl overflow-hidden bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-3 top-3 z-10 rounded-lg bg-white/90 p-1.5 text-slate-500 shadow hover:bg-white hover:text-slate-700 transition"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <iframe src={url} className="h-full w-full" title={title} />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 type AuditLog = {
   id: string;
   actorEmployeeId?: string | null;
@@ -525,13 +574,30 @@ type AuditLog = {
   createdAt: string;
 };
 
-function DetailPanel({ log, onClose }: { log: AuditLog; onClose: () => void }) {
+type EmployeeInfo = { name?: string | null; role?: string | null; department?: string | null; email?: string | null };
+type BenefitInfo = { name?: string | null; vendorName?: string | null };
+
+function DetailPanel({ log, actorEmployee, targetEmployee, benefit, signedContractViewUrl, onClose }: {
+  log: AuditLog;
+  actorEmployee: EmployeeInfo | null;
+  targetEmployee: EmployeeInfo | null;
+  benefit: BenefitInfo | null;
+  signedContractViewUrl: string | null;
+  onClose: () => void;
+}) {
   const before = useMemo(() => tryParseJson(log.beforeJson), [log.beforeJson]);
   const after = useMemo(() => tryParseJson(log.afterJson), [log.afterJson]);
   const meta = useMemo(
     () => tryParseJson(log.metadataJson),
     [log.metadataJson],
   );
+
+  const [signedExpanded, setSignedExpanded] = useState(false);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
 
   const hasInvolvedParties =
     log.actorEmployeeId ||
@@ -542,14 +608,16 @@ function DetailPanel({ log, onClose }: { log: AuditLog; onClose: () => void }) {
   const hasChanges = !!(before || after);
 
   return (
-    <>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+      aria-modal="true"
+      role="dialog"
+    >
       <div
-        className="fixed inset-0 z-40 bg-black/20"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      <div className="fixed inset-y-0 right-0 z-50 flex w-[460px] flex-col border-l border-slate-200 bg-white shadow-2xl">
+        className="flex w-full max-w-xl flex-col rounded-2xl bg-white shadow-xl max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* ── Header ───────────────────────────────────────────── */}
         <div className="shrink-0 border-b border-slate-100 px-6 py-4">
           <div className="flex items-start justify-between gap-3">
@@ -576,40 +644,89 @@ function DetailPanel({ log, onClose }: { log: AuditLog; onClose: () => void }) {
 
         {/* ── Scrollable body ───────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto">
-          {/* Actor + Entity */}
+          {/* Actor Employee Info */}
           <div className="px-6 py-5">
-            <SectionLabel icon={null}>Event</SectionLabel>
+            <SectionLabel icon={null}>Шалгасан ажилтан</SectionLabel>
             <div className="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-100 bg-slate-50">
               <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-xs text-slate-400">Actor role</span>
+                <span className="text-xs text-slate-400">Нэр</span>
                 <span className="text-xs font-semibold text-slate-700">
-                  {formatRole(log.actorRole)}
+                  {actorEmployee?.name ?? log.actorEmployeeId ?? "System"}
                 </span>
               </div>
-              <div className="flex items-start justify-between gap-4 px-4 py-3">
-                <span className="shrink-0 text-xs text-slate-400">Entity</span>
-                <div className="text-right">
-                  <span className="text-xs font-semibold text-slate-700">
-                    {log.entityType}
-                  </span>
-                  <p className="mt-0.5 break-all font-mono text-[11px] text-slate-400">
-                    {log.entityId}
-                  </p>
-                </div>
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-xs text-slate-400">Албан тушаал</span>
+                <span className="text-xs font-semibold text-slate-700">
+                  {actorEmployee?.role ? formatRole(actorEmployee.role) : formatRole(log.actorRole)}
+                </span>
               </div>
+              {actorEmployee?.department && (
+                <div className="flex items-center justify-between px-4 py-3">
+                  <span className="text-xs text-slate-400">Хэлтэс</span>
+                  <span className="text-xs font-semibold text-slate-700">
+                    {actorEmployee.department}
+                  </span>
+                </div>
+              )}
+              {actorEmployee?.email && (
+                <div className="flex items-center justify-between px-4 py-3">
+                  <span className="text-xs text-slate-400">И-мэйл</span>
+                  <span className="text-xs font-semibold text-slate-700">
+                    {actorEmployee.email}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Involved parties */}
-          {hasInvolvedParties && (
+          {/* Target employee + benefit */}
+          {(targetEmployee || benefit || log.targetEmployeeId || log.benefitId) && (
             <div className="border-t border-slate-100 px-6 py-5">
-              <SectionLabel icon={null}>Involved Parties</SectionLabel>
+              <SectionLabel icon={null}>Хүсэлт гаргасан ажилтан</SectionLabel>
               <div className="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-100 bg-slate-50">
-                <MonoId label="Actor ID" value={log.actorEmployeeId} />
-                <MonoId label="Target Employee" value={log.targetEmployeeId} />
-                <MonoId label="Benefit" value={log.benefitId} />
-                <MonoId label="Request" value={log.requestId} />
-                <MonoId label="Contract" value={log.contractId} />
+                {(targetEmployee?.name || log.targetEmployeeId) && (
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-xs text-slate-400">Нэр</span>
+                    <span className="text-xs font-semibold text-slate-700">
+                      {targetEmployee?.name ?? log.targetEmployeeId}
+                    </span>
+                  </div>
+                )}
+                {targetEmployee?.role && (
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-xs text-slate-400">Албан тушаал</span>
+                    <span className="text-xs font-semibold text-slate-700">
+                      {formatRole(targetEmployee.role)}
+                    </span>
+                  </div>
+                )}
+                {targetEmployee?.department && (
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-xs text-slate-400">Хэлтэс</span>
+                    <span className="text-xs font-semibold text-slate-700">
+                      {targetEmployee.department}
+                    </span>
+                  </div>
+                )}
+                {targetEmployee?.email && (
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-xs text-slate-400">И-мэйл</span>
+                    <span className="text-xs font-semibold text-slate-700">
+                      {targetEmployee.email}
+                    </span>
+                  </div>
+                )}
+                {(benefit?.name || log.benefitId) && (
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-xs text-slate-400">Benefit</span>
+                    <span className="text-xs font-semibold text-slate-700">
+                      {benefit?.name ?? log.benefitId}
+                      {benefit?.vendorName && (
+                        <span className="ml-1 text-slate-400">– {benefit.vendorName}</span>
+                      )}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -624,45 +741,26 @@ function DetailPanel({ log, onClose }: { log: AuditLog; onClose: () => void }) {
             </div>
           )}
 
-          {/* Before / After diff */}
-          {hasChanges && (
+
+          {/* Ажилтны гарын үсэгтэй гэрээ */}
+          {signedContractViewUrl && (
             <div className="border-t border-slate-100 px-6 py-5">
-              <SectionLabel icon={null}>Changes</SectionLabel>
-              <div className="mt-3 space-y-3">
-                <JsonDiffBlock label="Before" value={before} tone="red" />
-                <JsonDiffBlock label="After" value={after} tone="green" />
+              <SectionLabel icon={null}>Гэрээ</SectionLabel>
+              <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 space-y-3">
+                <ContractPreview
+                  url={getContractProxyUrl(signedContractViewUrl)}
+                  expanded={signedExpanded}
+                  onExpand={() => setSignedExpanded(true)}
+                  onClose={() => setSignedExpanded(false)}
+                  title="Ажилтны гарын үсэгтэй гэрээ"
+                />
               </div>
             </div>
           )}
 
-          {/* Metadata */}
-          {!!meta && (
-            <div className="border-t border-slate-100 px-6 py-5">
-              <SectionLabel icon={null}>Metadata</SectionLabel>
-              <JsonDiffBlock label="Data" value={meta} tone="slate" />
-            </div>
-          )}
-
-          {/* Footer — IP + Log ID */}
-          <div className="border-t border-slate-100 px-6 py-5">
-            <div className="space-y-2">
-              {log.ipAddress && (
-                <MetaRow
-                  label="IP Address"
-                  value={<span className="font-mono">{log.ipAddress}</span>}
-                />
-              )}
-              <MetaRow
-                label="Log ID"
-                value={
-                  <span className="font-mono text-slate-400">{log.id}</span>
-                }
-              />
-            </div>
-          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -764,11 +862,24 @@ export default function AuditLogs() {
     skip: !isHr,
   });
   const { data: employeesData } = useGetEmployeesQuery({ skip: !isHr });
+  const { data: benefitsData } = useGetAdminBenefitsQuery({ skip: !isHr });
+  const { data: allRequestsData } = useGetAllBenefitRequestsQuery({
+    variables: { status: null, queue: null },
+    skip: !isHr,
+  });
 
   const fullLogs = useMemo(() => (data?.auditLogs ?? []) as AuditLog[], [data]);
   const employeesById = useMemo(
     () => new Map((employeesData?.getEmployees ?? []).map((e) => [e.id, e])),
     [employeesData],
+  );
+  const benefitsById = useMemo(
+    () => new Map((benefitsData?.adminBenefits ?? []).map((b) => [b.id, b])),
+    [benefitsData],
+  );
+  const requestsById = useMemo(
+    () => new Map((allRequestsData?.allBenefitRequests ?? []).map((r) => [r.id, r])),
+    [allRequestsData],
   );
 
   const actionTypeOptions = useMemo(() => {
@@ -898,7 +1009,14 @@ export default function AuditLogs() {
   return (
     <>
       {selectedLog && (
-        <DetailPanel log={selectedLog} onClose={() => setSelectedLog(null)} />
+        <DetailPanel
+          log={selectedLog}
+          actorEmployee={selectedLog.actorEmployeeId ? (employeesById.get(selectedLog.actorEmployeeId) ?? null) : null}
+          targetEmployee={selectedLog.targetEmployeeId ? (employeesById.get(selectedLog.targetEmployeeId) ?? null) : null}
+          benefit={selectedLog.benefitId ? (benefitsById.get(selectedLog.benefitId) ?? null) : null}
+          signedContractViewUrl={selectedLog.requestId ? (requestsById.get(selectedLog.requestId)?.employeeSignedContract?.viewUrl ?? null) : null}
+          onClose={() => setSelectedLog(null)}
+        />
       )}
 
       <main className="flex-1 px-8 py-9">

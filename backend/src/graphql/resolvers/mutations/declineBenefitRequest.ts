@@ -15,6 +15,8 @@ const DECLINABLE_STATUSES = new Set([
   "awaiting_contract_acceptance",
   "awaiting_hr_review",
   "awaiting_finance_review",
+  "awaiting_payment",
+  "awaiting_payment_review",
   "hr_approved",
   "finance_approved",
 ]);
@@ -24,6 +26,8 @@ const HR_PHASE_STATUSES = new Set([
   "pending",
   "awaiting_contract_acceptance",
   "awaiting_hr_review",
+  "awaiting_payment",
+  "awaiting_payment_review",
   "finance_approved", // dual: finance done, HR is next
 ]);
 

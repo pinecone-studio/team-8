@@ -27,6 +27,8 @@ const STATUS_TONE: Record<string, string> = {
   awaiting_finance_review: "bg-blue-50 text-blue-700 border-blue-200",
   hr_approved: "bg-teal-50 text-teal-700 border-teal-200",
   finance_approved: "bg-teal-50 text-teal-700 border-teal-200",
+  awaiting_payment: "bg-blue-50 text-blue-700 border-blue-200",
+  awaiting_payment_review: "bg-violet-50 text-violet-700 border-violet-200",
   approved: "bg-green-50 text-green-600 border-green-200",
   rejected: "bg-red-50 text-red-600 border-red-200",
   cancelled: "bg-gray-50 text-gray-500 border-gray-200",
@@ -39,6 +41,8 @@ const STATUS_LABELS: Record<string, string> = {
   awaiting_finance_review: "Finance Review",
   hr_approved: "HR Approved",
   finance_approved: "Finance Approved",
+  awaiting_payment: "Awaiting Payment",
+  awaiting_payment_review: "Payment Review",
   approved: "Approved",
   rejected: "Rejected",
   cancelled: "Cancelled",
@@ -633,6 +637,8 @@ import { X, User, Briefcase, Calendar, ExternalLink } from "lucide-react";
 import { useGetContractsForBenefitQuery } from "@/graphql/generated/graphql";
 import { UserAvatar } from "@clerk/nextjs";
 
+type DetailTab = "approved" | "employee" | "contract";
+
 function RequestDetailModal({
   req,
   approvingId,
@@ -648,6 +654,8 @@ function RequestDetailModal({
   onApprove: () => void;
   onDecline: () => void;
 }) {
+  const [activeTab, setActiveTab] = useState<DetailTab>("approved");
+
   const { data: contractsData, loading: contractsLoading } =
     useGetContractsForBenefitQuery({
       variables: { benefitId: req.benefitId },
@@ -663,9 +671,15 @@ function RequestDetailModal({
     req.employeeSignedContractViewUrl,
   );
 
+  const detailTabs: { key: DetailTab; label: string }[] = [
+    { key: "approved", label: "Approved" },
+    { key: "employee", label: "Employee" },
+    { key: "contract", label: "Contract" },
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="flex w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-start justify-between border-b border-gray-100 px-6 py-4">
           <div>
@@ -685,201 +699,229 @@ function RequestDetailModal({
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-1 border-b border-gray-100 px-6 pt-3 pb-0">
+          {detailTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition -mb-px ${
+                activeTab === tab.key
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         {/* Body */}
         <div className="overflow-y-auto px-6 py-5 space-y-5">
-          {/* Employee Info */}
-          <section>
-            <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
-              <User className="h-3.5 w-3.5" />
-              Employee Information
-            </div>
-            <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-2.5">
-              <InfoRow label="Name" value={req.employeeName} />
-              <InfoRow label="Email" value={req.employeeEmail || "—"} />
-              <InfoRow
-                label="Department"
-                value={req.employeeDepartment || "—"}
-              />
-              <InfoRow label="Role" value={req.employeeRole || "—"} />
-              {req.employeeHireDate && (
-                <InfoRow label="Hire Date" value={req.employeeHireDate} />
-              )}
-            </div>
-          </section>
+          {/* Approved Tab */}
+          {activeTab === "approved" && (
+            <>
+              {/* Benefit Info */}
+              <section>
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  <Briefcase className="h-3.5 w-3.5" />
+                  Benefit Details
+                </div>
+                <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-2.5">
+                  <InfoRow label="Benefit" value={req.benefitName} />
+                  {req.vendorName && (
+                    <InfoRow label="Vendor" value={req.vendorName} />
+                  )}
+                  {req.subsidyPercent != null && (
+                    <InfoRow label="Subsidy" value={`${req.subsidyPercent}%`} />
+                  )}
+                  <InfoRow
+                    label="Approval Policy"
+                    value={
+                      (POLICY_STYLE[req.approvalPolicy] ?? POLICY_STYLE.hr).hint
+                    }
+                  />
+                  <InfoRow
+                    label="Contract Required"
+                    value={req.requiresContract ? "Yes" : "No"}
+                  />
+                </div>
+              </section>
 
-          {/* Benefit Info */}
-          <section>
-            <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
-              <Briefcase className="h-3.5 w-3.5" />
-              Benefit Details
-            </div>
-            <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-2.5">
-              <InfoRow label="Benefit" value={req.benefitName} />
-              {req.vendorName && (
-                <InfoRow label="Vendor" value={req.vendorName} />
-              )}
-              {req.subsidyPercent != null && (
-                <InfoRow label="Subsidy" value={`${req.subsidyPercent}%`} />
-              )}
-              <InfoRow
-                label="Approval Policy"
-                value={
-                  (POLICY_STYLE[req.approvalPolicy] ?? POLICY_STYLE.hr).hint
-                }
-              />
-              <InfoRow
-                label="Contract Required"
-                value={req.requiresContract ? "Yes" : "No"}
-              />
-            </div>
-          </section>
+              {/* Request Info */}
+              <section>
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Request Information
+                </div>
+                <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-2.5">
+                  <InfoRow
+                    label="Status"
+                    value={
+                      <span
+                        className={`inline-flex rounded border px-2 py-0.5 text-xs font-medium ${STATUS_TONE[req.status] ?? "bg-gray-100 text-gray-500 border-gray-200"}`}
+                      >
+                        {STATUS_LABELS[req.status] ?? req.status}
+                      </span>
+                    }
+                  />
+                  <InfoRow label="Submitted On" value={req.requestDate} />
+                  {req.requestedAmount != null && (
+                    <InfoRow
+                      label="Requested Amount"
+                      value={`${req.requestedAmount.toLocaleString()}${req.repaymentMonths ? ` / ${req.repaymentMonths} months` : ""}`}
+                    />
+                  )}
+                  {req.employeeApprovedAt && (
+                    <InfoRow
+                      label="Benefit Start Date"
+                      value={req.employeeApprovedAt.split("T")[0]}
+                    />
+                  )}
+                  {req.reviewedBy && (
+                    <InfoRow label="Reviewed By" value={req.reviewedBy} />
+                  )}
+                  <InfoRow label="Last Updated" value={req.updatedAt} />
+                </div>
+              </section>
+            </>
+          )}
 
-          {/* Request Info */}
-          <section>
-            <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
-              <Calendar className="h-3.5 w-3.5" />
-              Request Information
-            </div>
-            <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-2.5">
-              <InfoRow
-                label="Status"
-                value={
-                  <span
-                    className={`inline-flex rounded border px-2 py-0.5 text-xs font-medium ${STATUS_TONE[req.status] ?? "bg-gray-100 text-gray-500 border-gray-200"}`}
-                  >
-                    {STATUS_LABELS[req.status] ?? req.status}
-                  </span>
-                }
-              />
-              <InfoRow label="Submitted On" value={req.requestDate} />
-              {req.requestedAmount != null && (
-                <InfoRow
-                  label="Requested Amount"
-                  value={`${req.requestedAmount.toLocaleString()}${req.repaymentMonths ? ` / ${req.repaymentMonths} months` : ""}`}
-                />
-              )}
-              {req.employeeApprovedAt && (
-                <InfoRow
-                  label="Benefit Start Date"
-                  value={req.employeeApprovedAt.split("T")[0]}
-                />
-              )}
-              {req.reviewedBy && (
-                <InfoRow label="Reviewed By" value={req.reviewedBy} />
-              )}
-              <InfoRow label="Last Updated" value={req.updatedAt} />
-            </div>
-          </section>
-
-          {/* HR Contract Document */}
-          {req.requiresContract && (
+          {/* Employee Tab */}
+          {activeTab === "employee" && (
             <section>
               <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                <FileText className="h-3.5 w-3.5" />
-                HR Contract
+                <User className="h-3.5 w-3.5" />
+                Employee Information
               </div>
-              <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 space-y-3">
-                {req.contractVersionAccepted && (
-                  <div className="flex items-center gap-2 text-xs text-gray-600">
-                    <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                    <span>
-                      Employee accepted version{" "}
-                      <strong>{req.contractVersionAccepted}</strong>
-                    </span>
-                    {req.contractAcceptedAt && (
-                      <span className="text-gray-400">
-                        on {req.contractAcceptedAt.split("T")[0]}
-                      </span>
-                    )}
-                  </div>
-                )}
-                {contractsLoading && (
-                  <p className="text-xs text-gray-400">Loading contract…</p>
-                )}
-                {!contractsLoading && contractUrl ? (
-                  <>
-                    <a
-                      href={contractUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      Open Contract Document
-                    </a>
-                    <iframe
-                      src={contractUrl}
-                      className="mt-2 h-56 w-full rounded-lg border border-gray-200"
-                      title="Contract Document"
-                    />
-                  </>
-                ) : (
-                  !contractsLoading && (
-                    <p className="text-xs text-gray-400">
-                      No contract document available.
-                    </p>
-                  )
+              <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-2.5">
+                <InfoRow label="Name" value={req.employeeName} />
+                <InfoRow label="Email" value={req.employeeEmail || "—"} />
+                <InfoRow
+                  label="Department"
+                  value={req.employeeDepartment || "—"}
+                />
+                <InfoRow label="Role" value={req.employeeRole || "—"} />
+                {req.employeeHireDate && (
+                  <InfoRow label="Hire Date" value={req.employeeHireDate} />
                 )}
               </div>
             </section>
           )}
 
-          {req.requiresContract && (
-            <section>
-              <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                <FileText className="h-3.5 w-3.5" />
-                Employee Signed Copy
-              </div>
-              <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 space-y-3">
-                {employeeSignedContractUrl ? (
-                  <>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
-                      <span>
-                        Uploaded
-                        {req.employeeSignedContractUploadedAt
-                          ? ` on ${req.employeeSignedContractUploadedAt.split("T")[0]}`
-                          : ""}
-                      </span>
-                      {req.employeeSignedContractFileName && (
-                        <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-gray-500">
-                          {req.employeeSignedContractFileName}
-                        </span>
+          {/* Contract Tab */}
+          {activeTab === "contract" && (
+            <>
+              {/* HR Contract Document */}
+              <section>
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  <FileText className="h-3.5 w-3.5" />
+                  HR Contract
+                </div>
+                <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 space-y-3">
+                  {!req.requiresContract ? (
+                    <p className="text-xs text-gray-400">This benefit does not require a contract.</p>
+                  ) : (
+                    <>
+                      {req.contractVersionAccepted && (
+                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                          <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                          <span>
+                            Employee accepted version{" "}
+                            <strong>{req.contractVersionAccepted}</strong>
+                          </span>
+                          {req.contractAcceptedAt && (
+                            <span className="text-gray-400">
+                              on {req.contractAcceptedAt.split("T")[0]}
+                            </span>
+                          )}
+                        </div>
                       )}
-                    </div>
-                    <a
-                      href={employeeSignedContractUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      Open Signed Copy
-                    </a>
-                    <iframe
-                      src={employeeSignedContractUrl}
-                      className="mt-2 h-56 w-full rounded-lg border border-gray-200"
-                      title="Employee Signed Contract"
-                    />
-                  </>
-                ) : (
-                  <p className="text-xs text-gray-400">
-                    No employee-uploaded signed copy has been attached to this request yet.
-                  </p>
-                )}
-              </div>
-            </section>
+                      {contractsLoading && (
+                        <p className="text-xs text-gray-400">Loading contract…</p>
+                      )}
+                      {!contractsLoading && contractUrl ? (
+                        <>
+                          <a
+                            href={contractUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            Open Contract Document
+                          </a>
+                          <iframe
+                            src={contractUrl}
+                            className="mt-2 h-56 w-full rounded-lg border border-gray-200"
+                            title="Contract Document"
+                          />
+                        </>
+                      ) : (
+                        !contractsLoading && (
+                          <p className="text-xs text-gray-400">
+                            No contract document available.
+                          </p>
+                        )
+                      )}
+                    </>
+                  )}
+                </div>
+              </section>
+
+              {/* Employee Signed Copy */}
+              <section>
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  <FileText className="h-3.5 w-3.5" />
+                  Employee Signed Copy
+                </div>
+                <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 space-y-3">
+                  {!req.requiresContract ? (
+                    <p className="text-xs text-gray-400">This benefit does not require a signed copy.</p>
+                  ) : employeeSignedContractUrl ? (
+                    <>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                        <span>
+                          Uploaded
+                          {req.employeeSignedContractUploadedAt
+                            ? ` on ${req.employeeSignedContractUploadedAt.split("T")[0]}`
+                            : ""}
+                        </span>
+                        {req.employeeSignedContractFileName && (
+                          <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-gray-500">
+                            {req.employeeSignedContractFileName}
+                          </span>
+                        )}
+                      </div>
+                      <a
+                        href={employeeSignedContractUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Open Signed Copy
+                      </a>
+                      <iframe
+                        src={employeeSignedContractUrl}
+                        className="mt-2 h-56 w-full rounded-lg border border-gray-200"
+                        title="Employee Signed Contract"
+                      />
+                    </>
+                  ) : (
+                    <p className="text-xs text-gray-400">
+                      No employee-uploaded signed copy has been attached to this request yet.
+                    </p>
+                  )}
+                </div>
+              </section>
+            </>
           )}
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-6 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-          >
-            Close
-          </button>
           <button
             type="button"
             onClick={onDecline}
