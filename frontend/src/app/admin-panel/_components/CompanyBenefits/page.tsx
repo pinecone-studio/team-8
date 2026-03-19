@@ -56,7 +56,7 @@ function BenefitTableRowSkeleton() {
     </tr>
   );
 }
-import { isAdminEmployee, isHrAdmin } from "../_lib/access";
+import { isAdminEmployee, isHrAdmin } from "../../_lib/access";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 
 const APPROVAL_POLICY_LABELS: Record<string, string> = {
@@ -337,6 +337,27 @@ export default function CompanyBenefits() {
                             <ArrowRight className="h-3.5 w-3.5" />
                             View
                           </Link>
+                          {canCreate && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleToggleActive(b.id, !b.isActive)
+                              }
+                              disabled={updating || updatingId !== null}
+                              className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-xs font-medium transition disabled:opacity-50 ${
+                                b.isActive
+                                  ? "border-gray-200 text-gray-600 hover:bg-gray-50"
+                                  : "border-green-200 text-green-700 hover:bg-green-50"
+                              }`}
+                              title={
+                                b.isActive
+                                  ? "Deactivate benefit"
+                                  : "Activate benefit"
+                              }
+                            >
+                              {b.isActive ? "Deactivate" : "Activate"}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

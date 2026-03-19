@@ -1,24 +1,20 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import {
-  Calendar,
-  Clock3,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ExternalLink,
-  ImageUp,
-  ShieldAlert,
-  Sparkles,
+  Trophy,
   UploadCloud,
-  XCircle,
 } from "lucide-react";
 import Sidebar from "../../../_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
 import {
   BenefitFlowType,
-  BenefitEligibilityStatus,
   useGetMyBenefitsFullQuery,
   useGetScreenTimeLeaderboardQuery,
   useGetMyScreenTimeMonthQuery,
@@ -50,38 +46,243 @@ function formatMinutes(totalMinutes: number | null | undefined): string {
   return `${hours}h ${minutes}m`;
 }
 
-function averageRounded(values: number[]): number | null {
-  if (!values.length) return null;
-  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+// Frontend-only month label formatter
+function formatMonthLabel(monthKey: string): string {
+  const [year, mon] = monthKey.split("-").map(Number);
+  return new Date(year, mon - 1, 1).toLocaleString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
 }
 
-function resolveCurrentAverageFromDueSlots(input: {
-  dueSlotDates: string[];
-  submissions: Array<{
-    slotDate: string;
-    avgDailyMinutes?: number | null;
-    reviewStatus: string;
-  }>;
-}): number | null {
-  if (!input.dueSlotDates.length) return null;
+// Frontend-only month shifter — no backend involvement
+function shiftMonth(monthKey: string, delta: number): string {
+  const [year, mon] = monthKey.split("-").map(Number);
+  const d = new Date(year, mon - 1 + delta, 1);
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+  }).format(d);
+}
 
-  const approvedBySlot = new Map(
-    input.submissions
-      .filter((submission) => ["approved", "auto_approved"].includes(submission.reviewStatus))
-      .map((submission) => [submission.slotDate, submission]),
+// Temporary frontend mock data for leaderboard preview
+const MOCK_LEADERBOARD = [
+  { id: "1", rank: 1, name: "Тэмүүлэн",   avgDailyTime: "52m"    },
+  { id: "2", rank: 2, name: "Номин",       avgDailyTime: "1h 03m" },
+  { id: "3", rank: 3, name: "Билгүүн",    avgDailyTime: "1h 11m" },
+  { id: "4", rank: 4, name: "Уянга",       avgDailyTime: "1h 18m" },
+  { id: "5", rank: 5, name: "Мөнхзул",    avgDailyTime: "1h 26m" },
+  { id: "6", rank: 6, name: "Оргил",       avgDailyTime: "1h 34m" },
+  { id: "7", rank: 7, name: "Ану",         avgDailyTime: "1h 41m" },
+  { id: "8", rank: 8, name: "Цэцгээ",     avgDailyTime: "1h 49m" },
+] as const;
+
+// Temporary mock for current user position
+const MOCK_MY_POSITION = { rank: 12, avgDailyTime: "2h 08m" } as const;
+
+// ── LeaderboardRow ────────────────────────────────────────────────────────────
+
+type LeaderboardRowProps = {
+  rank: number | null | undefined;
+  name: string;
+  secondaryLabel: string;
+  avgDailyTime: string;
+  isProvisional: boolean;
+  isCurrentEmployee: boolean;
+};
+
+const RANK_STYLES: Record<number, { badge: string; row: string }> = {
+  1: { badge: "bg-amber-100 text-amber-700 ring-amber-200", row: "border-amber-100 bg-amber-50/40" },
+  2: { badge: "bg-gray-200 text-gray-600 ring-gray-300",   row: "border-gray-200 bg-gray-50/60" },
+  3: { badge: "bg-orange-100 text-orange-600 ring-orange-200", row: "border-orange-100 bg-orange-50/30" },
+};
+
+function LeaderboardRow({
+  rank,
+  name,
+  secondaryLabel,
+  avgDailyTime,
+  isProvisional,
+  isCurrentEmployee,
+}: LeaderboardRowProps) {
+  const rankNum = rank ?? 0;
+  const podium = RANK_STYLES[rankNum];
+
+  const badgeClass = podium
+    ? `${podium.badge} ring-1`
+    : isCurrentEmployee
+    ? "bg-fuchsia-100 text-fuchsia-700 ring-1 ring-fuchsia-200"
+    : "bg-white text-gray-600 ring-1 ring-gray-200";
+
+  const rowClass = podium
+    ? `${podium.row} border`
+    : isCurrentEmployee
+    ? "border border-fuchsia-200 bg-fuchsia-50/30"
+    : "border border-gray-100 bg-white";
+
+  return (
+    <div className={`flex items-center gap-3 rounded-xl px-4 py-3 transition hover:shadow-sm ${rowClass}`}>
+      <span
+        className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${badgeClass}`}
+        aria-label={`Rank ${rankNum || "unranked"}`}
+      >
+        {rankNum ? `${rankNum}` : "—"}
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <p className="truncate text-sm font-semibold text-gray-900">{name}</p>
+          {isCurrentEmployee && (
+            <span className="rounded-full bg-fuchsia-100 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-700">
+              You
+            </span>
+          )}
+          {isProvisional && (
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+              Provisional
+            </span>
+          )}
+        </div>
+        {secondaryLabel ? (
+          <p className="mt-0.5 text-xs text-gray-400">{secondaryLabel}</p>
+        ) : null}
+      </div>
+
+      <div className="shrink-0 text-right">
+        <p className="text-sm font-semibold text-gray-900">{avgDailyTime}</p>
+      </div>
+    </div>
   );
-
-  const dueMinutes: number[] = [];
-  for (const slotDate of input.dueSlotDates) {
-    const submission = approvedBySlot.get(slotDate);
-    if (!submission || typeof submission.avgDailyMinutes !== "number") {
-      return null;
-    }
-    dueMinutes.push(submission.avgDailyMinutes);
-  }
-
-  return averageRounded(dueMinutes);
 }
+
+// ── Presentational types ──────────────────────────────────────────────────────
+
+type SlotStatus = "submitted" | "missing" | "upcoming" | "active";
+
+type MondaySlotCardProps = {
+  slotDate: string;
+  status: SlotStatus;
+  avgDailyTime: string;
+  upliftPercent: number;
+  viewUrl?: string | null;
+  fileName?: string | null;
+  isUploadEligible: boolean;
+  onUploadClick: () => void;
+};
+
+// Frontend-only date parser — no backend involvement
+function parseDateParts(isoDate: string): { month: string; day: string; weekday: string } {
+  const [year, mon, day] = isoDate.split("-").map(Number);
+  const d = new Date(year, mon - 1, day);
+  return {
+    month: d.toLocaleString("en-US", { month: "short" }),
+    day: String(day).padStart(2, "0"),
+    weekday: d.toLocaleString("en-US", { weekday: "short" }),
+  };
+}
+
+// ── MondaySlotCard ────────────────────────────────────────────────────────────
+
+function MondaySlotCard({
+  slotDate,
+  status,
+  avgDailyTime,
+  upliftPercent,
+  viewUrl,
+  fileName,
+  isUploadEligible,
+  onUploadClick,
+}: MondaySlotCardProps) {
+  const isSubmitted = status === "submitted";
+  const isMissing = status === "missing";
+  const isActive = status === "active";
+
+  const { month, day, weekday } = parseDateParts(slotDate);
+
+  const cardClass = isSubmitted
+    ? "border-emerald-200 bg-emerald-50/30"
+    : isActive
+    ? "border-fuchsia-200 bg-fuchsia-50/30"
+    : "border-neutral-100 bg-white";
+
+  const dateBoxClass = "border border-gray-200 bg-white text-gray-900";
+
+  const upliftClass = isSubmitted || isActive
+    ? "bg-emerald-50 text-emerald-700"
+    : "bg-gray-100 text-gray-500";
+
+  return (
+    <div
+      className={`flex flex-col gap-4 rounded-2xl border px-5 py-4 transition hover:shadow-sm sm:flex-row sm:items-center sm:gap-5 ${cardClass}`}
+    >
+      {/* LEFT: stacked date box */}
+      <div
+        className={`flex w-14 shrink-0 flex-col items-center rounded-xl py-2 text-center ${dateBoxClass}`}
+      >
+        <span className="text-[10px] font-semibold uppercase tracking-wide opacity-70">
+          {month}
+        </span>
+        <span className="text-2xl font-bold leading-tight">{day}</span>
+        <span className="text-[10px] font-medium opacity-60">{weekday}</span>
+      </div>
+
+      {/* CENTER: avg time + uplift */}
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-gray-800">
+          Avg daily time:{" "}
+          <span className="text-gray-900">{avgDailyTime}</span>
+        </p>
+        <span
+          className={`mt-2 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${upliftClass}`}
+        >
+          +{upliftPercent}% uplift
+        </span>
+      </div>
+
+      {/* RIGHT: action area */}
+      <div className="flex shrink-0 flex-col items-end gap-2">
+        {isSubmitted ? (
+          <>
+            <span className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Uploaded
+            </span>
+            {viewUrl && fileName && (
+              <a
+                href={getContractProxyUrl(viewUrl) ?? viewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Open screenshot
+              </a>
+            )}
+          </>
+        ) : isUploadEligible ? (
+          <button
+            type="button"
+            onClick={onUploadClick}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-fuchsia-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-fuchsia-700"
+          >
+            <UploadCloud className="h-3.5 w-3.5" />
+            Upload screenshot
+          </button>
+        ) : isMissing ? (
+          <span className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-500">
+            Not uploaded
+          </span>
+        ) : (
+          <span className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-400">
+            Upcoming
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function EmployeeScreenTimePage() {
   const params = useParams();
@@ -110,23 +311,12 @@ export default function EmployeeScreenTimePage() {
   const benefitEligibility = benefitsData?.myBenefits.find((item) => item.benefitId === benefitId);
   const benefit = benefitEligibility?.benefit;
   const month = data?.myScreenTimeMonth.month;
-  const program = data?.myScreenTimeMonth.program;
   const leaderboard = leaderboardData?.screenTimeLeaderboard ?? [];
   const submissionBySlot = useMemo(
     () => new Map((month?.submissions ?? []).map((submission) => [submission.slotDate, submission])),
     [month?.submissions],
   );
   const currentEmployeeRank = leaderboard.find((row) => row.employeeId === month?.employeeId) ?? null;
-  const currentAverageDisplay = useMemo(
-    () =>
-      month
-        ? resolveCurrentAverageFromDueSlots({
-            dueSlotDates: month.dueSlotDates,
-            submissions: month.submissions,
-          }) ?? month.monthlyAvgDailyMinutes
-        : null,
-    [month],
-  );
 
   async function handleUpload(file: File) {
     setError(null);
@@ -187,363 +377,198 @@ export default function EmployeeScreenTimePage() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
       <div className="flex flex-1 flex-col items-center">
-        <main className="w-full max-w-6xl px-8 py-8">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+        <main className="w-full max-w-7xl px-8 py-8">
+
+          {/* Hidden file input — slot card upload buttons trigger this */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/heic,image/heif"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void handleUpload(file);
+              event.target.value = "";
+            }}
+          />
+
+          {/* ── Page header ── */}
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <Link
-                href="/employee-panel/screen-time"
-                className="text-sm text-gray-500 transition hover:text-gray-800"
-              >
-                ← Back to screen time
-              </Link>
-              <h1 className="mt-3 text-2xl font-semibold text-gray-900">
-                {benefit.name}
-              </h1>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                Upload a 7-day average phone screen-time screenshot every Monday of the month. Missing any required Monday means no salary uplift for that month.
+              <h1 className="text-2xl font-semibold text-gray-900">{benefit.name}</h1>
+              <p className="mt-1 max-w-xl text-sm text-gray-500">
+                Use the OS-level Screen Time / Digital Wellbeing weekly average view. If any required Monday is missed, the month receives 0% uplift.
               </p>
             </div>
 
-            <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 shadow-sm">
-              <Calendar className="h-4 w-4" />
-              <span>Month</span>
-              <input
-                type="month"
-                value={monthKey}
-                onChange={(event) => setMonthKey(event.target.value)}
-                className="rounded-lg border border-gray-200 px-2 py-1 text-sm text-gray-700 focus:border-gray-400 focus:outline-none"
-              />
-            </label>
+            {/* Arrow-based month navigator */}
+            <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-white px-2 py-1.5 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setMonthKey((k) => shiftMonth(k, -1))}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100"
+                aria-label="Previous month"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="min-w-[110px] text-center text-sm font-medium text-gray-700">
+                {formatMonthLabel(monthKey)}
+              </span>
+              <button
+                type="button"
+                onClick={() => setMonthKey((k) => shiftMonth(k, 1))}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100"
+                aria-label="Next month"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
-          <div className="mt-6 grid gap-6 xl:grid-cols-[2fr_1fr]">
-            <div className="space-y-6">
-              <section className="rounded-2xl border border-gray-100 bg-white p-6">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-base font-semibold text-gray-900">Current Month Status</h2>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Required Monday slots: {month?.requiredSlotDates.join(", ") || "—"}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
-                      month?.status === "eligible"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : month?.status === "ineligible_missing_slots"
-                          ? "bg-red-100 text-red-700"
-                          : month?.status === "not_qualified"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {month?.status?.replaceAll("_", " ") || "unknown"}
-                  </span>
-                </div>
+          {error && (
+            <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              {success}
+            </div>
+          )}
 
-                <div className="mt-5 grid gap-4 md:grid-cols-3">
-                  <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                      Submitted Slots
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold text-gray-900">
-                      {month?.submittedSlotCount ?? 0}/{month?.requiredSlotCount ?? 0}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                      Monthly Avg Daily Time
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold text-gray-900">
-                      {formatMinutes(currentAverageDisplay)}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                      Salary Uplift
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold text-emerald-700">
-                      +{month?.awardedSalaryUpliftPercent ?? 0}%
-                    </p>
-                  </div>
-                </div>
+          <div className="mt-6 grid gap-8 xl:grid-cols-[2fr_1.1fr]">
 
-                {data?.myScreenTimeMonth.failedRuleMessage && (
-                  <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {data.myScreenTimeMonth.failedRuleMessage}
+            {/* ── Weekly Monday Slots ── */}
+            <section className="rounded-2xl border border-gray-100 bg-white p-6">
+              <h2 className="text-base font-semibold text-gray-900">Weekly Monday Slots</h2>
+
+              <div className="mt-5 grid gap-3">
+                {month?.requiredSlotDates.map((slotDate) => {
+                  const submission = submissionBySlot.get(slotDate);
+                  const isDue = month.dueSlotDates.includes(slotDate);
+                  const isActiveSlot = data?.myScreenTimeMonth.activeSlotDate === slotDate;
+
+                  const status: SlotStatus = submission
+                    ? "submitted"
+                    : isActiveSlot
+                    ? "active"
+                    : isDue
+                    ? "missing"
+                    : "upcoming";
+
+                  return (
+                    <MondaySlotCard
+                      key={slotDate}
+                      slotDate={slotDate}
+                      status={status}
+                      avgDailyTime={formatMinutes(submission?.avgDailyMinutes)}
+                      upliftPercent={month.awardedSalaryUpliftPercent ?? 0}
+                      viewUrl={submission?.viewUrl}
+                      fileName={submission?.fileName}
+                      isUploadEligible={isActiveSlot && (data?.myScreenTimeMonth.isUploadOpenToday ?? false) && !uploading}
+                      onUploadClick={() => fileInputRef.current?.click()}
+                    />
+                  );
+                })}
+
+                {!month?.requiredSlotDates.length && (
+                  <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-6 py-8 text-center text-sm text-gray-500">
+                    No Monday slots found for this month.
                   </div>
                 )}
+              </div>
+            </section>
 
-                {month?.missingDueSlotDates?.length ? (
-                  <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    Missing required Monday uploads: {month.missingDueSlotDates.join(", ")}.
-                    This month currently has no uplift eligibility.
+            {/* ── Leaderboard ── */}
+            <section className="self-start rounded-2xl border border-gray-100 bg-white p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
+                    <Trophy className="h-4 w-4" />
                   </div>
+                  <div>
+                    <h2 className="text-base font-semibold text-gray-900">Leaderboard</h2>
+                    <p className="mt-0.5 text-xs text-gray-400">
+                      Top 8 · lowest avg for {formatMonthLabel(monthKey)}
+                    </p>
+                  </div>
+                </div>
+                {currentEmployeeRank?.rank ? (
+                  <span className="rounded-full bg-fuchsia-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-fuchsia-700">
+                    Your rank #{currentEmployeeRank.rank}
+                  </span>
                 ) : null}
-              </section>
+              </div>
 
-              <section className="rounded-2xl border border-gray-100 bg-white p-6">
-                <h2 className="text-base font-semibold text-gray-900">Weekly Monday Slots</h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  Only screenshots captured on the month&apos;s Monday slots count toward the uplift.
-                </p>
+              {leaderboardLoading ? (
+                <div className="mt-5 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+                  Loading leaderboard…
+                </div>
+              ) : (
+                <>
+                  <div className="mt-5 space-y-2">
+                    {(leaderboard.length > 0
+                      ? leaderboard.slice(0, 5).map((row) => ({
+                          id: row.employeeId,
+                          rank: row.rank,
+                          name: row.employeeName,
+                          secondaryLabel: `${row.approvedSlotCount}/${row.dueSlotCount} slots`,
+                          avgDailyTime: formatMinutes(row.avgDailyMinutes),
+                          isProvisional: row.isProvisional ?? false,
+                          isCurrentEmployee: row.employeeId === month?.employeeId,
+                        }))
+                      : MOCK_LEADERBOARD.slice(0, 5).map((row) => ({
+                          id: row.id,
+                          rank: row.rank,
+                          name: row.name,
+                          secondaryLabel: "",
+                          avgDailyTime: row.avgDailyTime,
+                          isProvisional: false,
+                          isCurrentEmployee: false,
+                        }))
+                    ).map((row) => (
+                      <LeaderboardRow
+                        key={row.id}
+                        rank={row.rank}
+                        name={row.name}
+                        secondaryLabel={row.secondaryLabel}
+                        avgDailyTime={row.avgDailyTime}
+                        isProvisional={row.isProvisional}
+                        isCurrentEmployee={row.isCurrentEmployee}
+                      />
+                    ))}
+                  </div>
 
-                <div className="mt-5 grid gap-3">
-                  {month?.requiredSlotDates.map((slotDate) => {
-                    const submission = submissionBySlot.get(slotDate);
-                    const isDue = month.dueSlotDates.includes(slotDate);
-                    const isActive = data?.myScreenTimeMonth.activeSlotDate === slotDate;
-
+                  {/* Your position */}
+                  {(() => {
+                    const myRank = currentEmployeeRank?.rank ?? MOCK_MY_POSITION.rank;
+                    const myTime = currentEmployeeRank
+                      ? formatMinutes(currentEmployeeRank.avgDailyMinutes)
+                      : MOCK_MY_POSITION.avgDailyTime;
                     return (
-                      <div
-                        key={slotDate}
-                        className={`rounded-2xl border p-4 ${
-                          isActive
-                            ? "border-fuchsia-200 bg-fuchsia-50"
-                            : submission
-                              ? "border-emerald-100 bg-emerald-50"
-                              : isDue
-                                ? "border-red-100 bg-red-50"
-                                : "border-gray-100 bg-gray-50"
-                        }`}
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-gray-900">{slotDate}</p>
-                            <p className="mt-1 text-xs text-gray-500">
-                              {submission
-                                ? `Extracted average: ${formatMinutes(submission.avgDailyMinutes)}`
-                                : isDue
-                                  ? "Required Monday slot is missing."
-                                  : "Upcoming Monday slot."}
-                            </p>
+                      <div className="mt-1 flex items-center gap-3 rounded-xl border border-gray-300 bg-white px-4 py-3">
+                        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-700 ring-1 ring-gray-300">
+                          {myRank}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-semibold text-gray-900">You</p>
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500">
+                              Your rank
+                            </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {submission ? (
-                              <span
-                                className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
-                                  submission.reviewStatus === "rejected"
-                                    ? "bg-red-100 text-red-700"
-                                    : "bg-emerald-100 text-emerald-700"
-                                }`}
-                              >
-                                {submission.reviewStatus.replaceAll("_", " ")}
-                              </span>
-                            ) : isDue ? (
-                              <XCircle className="h-5 w-5 text-red-500" />
-                            ) : (
-                              <Clock3 className="h-5 w-5 text-gray-300" />
-                            )}
-
-                            {submission?.viewUrl && submission.fileName && (
-                              <a
-                                href={getContractProxyUrl(submission.viewUrl) ?? submission.viewUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
-                              >
-                                <ExternalLink className="h-3.5 w-3.5" />
-                                Open screenshot
-                              </a>
-                            )}
-                          </div>
+                          <p className="text-xs text-gray-400">#{myRank} in {formatMonthLabel(monthKey)}</p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-sm font-semibold text-gray-900">{myTime}</p>
                         </div>
                       </div>
                     );
-                  })}
-                </div>
-              </section>
+                  })()}
+                </>
+              )}
+            </section>
 
-              <section className="rounded-2xl border border-gray-100 bg-white p-6">
-                <h2 className="text-base font-semibold text-gray-900">Salary Uplift Bands</h2>
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  {program?.tiers.map((tier) => (
-                    <div key={tier.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                      <p className="text-sm font-semibold text-gray-900">{tier.label}</p>
-                      <p className="mt-2 text-xs uppercase tracking-wide text-gray-400">Up to</p>
-                      <p className="mt-1 text-2xl font-semibold text-gray-900">
-                        {formatMinutes(tier.maxDailyMinutes)}
-                      </p>
-                      <p className="mt-3 text-sm font-medium text-emerald-700">
-                        +{tier.salaryUpliftPercent}% salary uplift
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
-
-            <div className="space-y-6">
-              <section className="rounded-2xl border border-gray-100 bg-white p-6">
-                <h2 className="text-base font-semibold text-gray-900">Monday Upload</h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  Upload the phone OS screenshot that shows the last 7 days average.
-                </p>
-
-                {error && (
-                  <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {error}
-                  </div>
-                )}
-                {success && (
-                  <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                    {success}
-                  </div>
-                )}
-
-                <div className="mt-5 rounded-2xl border border-dashed border-fuchsia-200 bg-fuchsia-50 p-5 text-center">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/heic,image/heif"
-                    className="hidden"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) void handleUpload(file);
-                      event.target.value = "";
-                    }}
-                  />
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white text-fuchsia-600 shadow-sm">
-                    <ImageUp className="h-7 w-7" />
-                  </div>
-                  <p className="mt-3 text-sm font-semibold text-gray-900">
-                    {data?.myScreenTimeMonth.isUploadOpenToday
-                      ? `Today's slot is open: ${data.myScreenTimeMonth.activeSlotDate}`
-                      : "Upload opens only on the current month's Monday slots"}
-                  </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Gemini extracts the average daily screen time automatically and the system trusts the returned result.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={!data?.myScreenTimeMonth.isUploadOpenToday || uploading}
-                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-fuchsia-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-fuchsia-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-                  >
-                    {uploading ? (
-                      <>
-                        <Clock3 className="h-4 w-4 animate-spin" />
-                        Uploading…
-                      </>
-                    ) : (
-                      <>
-                        <UploadCloud className="h-4 w-4" />
-                        Upload Monday screenshot
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-700">
-                  Use the OS-level Screen Time / Digital Wellbeing weekly average view. If any required Monday is missed, the month receives 0% uplift.
-                </div>
-
-                <div className="mt-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-xs text-gray-500">
-                  Tracker date: {data?.myScreenTimeMonth.todayLocalDate || "—"}
-                </div>
-              </section>
-
-              <section className="rounded-2xl border border-gray-100 bg-white p-6">
-                <h2 className="text-base font-semibold text-gray-900">Submission Notes</h2>
-                <div className="mt-4 space-y-3">
-                  {month?.submissions.length ? (
-                    month.submissions.map((submission) => (
-                      <div key={submission.id} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
-                        <div className="flex items-start gap-2">
-                          {submission.reviewStatus === "rejected" ? (
-                            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
-                          ) : (
-                            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-500" />
-                          )}
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{submission.slotDate}</p>
-                            <p className="mt-0.5 text-xs text-gray-500">
-                              {submission.reviewNote || "Accepted automatically from Gemini extraction."}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-gray-500">
-                      Submission notes will appear here after you start uploading Monday screenshots.
-                    </p>
-                  )}
-                </div>
-              </section>
-
-              <section className="rounded-2xl border border-gray-100 bg-white p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-base font-semibold text-gray-900">Leaderboard</h2>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Showing the top 5 employees with the lowest monthly average for {monthKey}.
-                    </p>
-                  </div>
-                  {currentEmployeeRank?.rank ? (
-                    <span className="rounded-full bg-fuchsia-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-fuchsia-700">
-                      Your rank #{currentEmployeeRank.rank}
-                    </span>
-                  ) : null}
-                </div>
-
-                {leaderboardLoading ? (
-                  <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-500">
-                    Loading leaderboard…
-                  </div>
-                ) : leaderboard.length === 0 ? (
-                  <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-500">
-                    No ranked results yet for this month.
-                  </div>
-                ) : (
-                  <div className="mt-4 space-y-3">
-                    {leaderboard.map((row) => {
-                      const isCurrentEmployee = row.employeeId === month?.employeeId;
-                      return (
-                        <div
-                          key={row.employeeId}
-                          className={`rounded-xl border px-4 py-3 ${
-                            isCurrentEmployee
-                              ? "border-fuchsia-200 bg-fuchsia-50"
-                              : "border-gray-100 bg-gray-50"
-                          }`}
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="inline-flex min-w-9 items-center justify-center rounded-full bg-white px-2 py-1 text-xs font-semibold text-gray-700 ring-1 ring-gray-200">
-                                  {row.rank ? `#${row.rank}` : "—"}
-                                </span>
-                                <p className="text-sm font-semibold text-gray-900">
-                                  {row.employeeName}
-                                  {isCurrentEmployee ? " (You)" : ""}
-                                </p>
-                              </div>
-                              <p className="mt-1 text-xs text-gray-500">
-                                {row.approvedSlotCount}/{row.dueSlotCount} completed Monday slots so far
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm font-semibold text-gray-900">
-                                {formatMinutes(row.avgDailyMinutes)}
-                              </p>
-                              <p className="mt-1 text-xs font-medium text-emerald-700">
-                                +{row.awardedSalaryUpliftPercent}% uplift
-                              </p>
-                              {row.isProvisional ? (
-                                <p className="mt-1 text-[11px] font-medium text-fuchsia-700">
-                                  Provisional
-                                </p>
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-            </div>
           </div>
         </main>
       </div>

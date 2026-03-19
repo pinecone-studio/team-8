@@ -361,6 +361,7 @@ export type Mutation = {
   proposeRuleChange: RuleProposal;
   rejectRuleProposal: RuleProposal;
   requestBenefit: BenefitRequest;
+  seedScreenTimeSubmissions: Scalars['Int']['output'];
   syncOkrStatus: OkrSyncResult;
   updateBenefit: Benefit;
   updateEligibilityRule: EligibilityRule;
@@ -456,6 +457,12 @@ export type MutationRejectRuleProposalArgs = {
 
 export type MutationRequestBenefitArgs = {
   input: RequestBenefitInput;
+};
+
+
+export type MutationSeedScreenTimeSubmissionsArgs = {
+  benefitId: Scalars['String']['input'];
+  monthKey?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -1295,6 +1302,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   proposeRuleChange?: Resolver<ResolversTypes['RuleProposal'], ParentType, ContextType, RequireFields<MutationProposeRuleChangeArgs, 'input'>>;
   rejectRuleProposal?: Resolver<ResolversTypes['RuleProposal'], ParentType, ContextType, RequireFields<MutationRejectRuleProposalArgs, 'id' | 'reason'>>;
   requestBenefit?: Resolver<ResolversTypes['BenefitRequest'], ParentType, ContextType, RequireFields<MutationRequestBenefitArgs, 'input'>>;
+  seedScreenTimeSubmissions?: Resolver<ResolversTypes['Int'], ParentType, ContextType, RequireFields<MutationSeedScreenTimeSubmissionsArgs, 'benefitId'>>;
   syncOkrStatus?: Resolver<ResolversTypes['OkrSyncResult'], ParentType, ContextType, RequireFields<MutationSyncOkrStatusArgs, 'rows'>>;
   updateBenefit?: Resolver<ResolversTypes['Benefit'], ParentType, ContextType, RequireFields<MutationUpdateBenefitArgs, 'id' | 'input'>>;
   updateEligibilityRule?: Resolver<ResolversTypes['EligibilityRule'], ParentType, ContextType, RequireFields<MutationUpdateEligibilityRuleArgs, 'id' | 'input'>>;
