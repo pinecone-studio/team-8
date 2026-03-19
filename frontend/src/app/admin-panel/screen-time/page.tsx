@@ -81,7 +81,7 @@ export default function AdminScreenTimePage() {
       <Sidebar />
       <div className="flex flex-1 flex-col items-center">
         <main className="w-full max-w-6xl px-8 py-8">
-          <div className="rounded-3xl border border-fuchsia-100 bg-gradient-to-br from-fuchsia-50 via-white to-sky-50 p-8">
+          <div className="rounded-3xl border border-fuchsia-100 bg-white p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-fuchsia-600 text-white">
