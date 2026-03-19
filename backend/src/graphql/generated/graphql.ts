@@ -182,6 +182,7 @@ export type CreateBenefitInput = {
   approvalPolicy?: InputMaybe<Scalars['String']['input']>;
   category: Scalars['String']['input'];
   description?: InputMaybe<Scalars['String']['input']>;
+  flowType?: InputMaybe<BenefitFlowType>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   location?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
@@ -625,6 +626,7 @@ export type UpdateBenefitInput = {
   approvalPolicy?: InputMaybe<Scalars['String']['input']>;
   category?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
+  flowType?: InputMaybe<BenefitFlowType>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
   location?: InputMaybe<Scalars['String']['input']>;
@@ -1169,4 +1171,3 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   RuleEvaluation?: RuleEvaluationResolvers<ContextType>;
   RuleProposal?: RuleProposalResolvers<ContextType>;
 }>;
-

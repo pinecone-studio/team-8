@@ -14,6 +14,7 @@ export const benefits = sqliteTable("benefits", {
   activeContractId: text("active_contract_id"),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   approvalPolicy: text("approval_policy").notNull().default("hr"), // hr | finance | dual
+  flowType: text("flow_type").notNull().default("normal"), // contract | normal | down_payment | self_service
   amount: integer("amount"), // total benefit price
   location: text("location"), // optional location info
   imageUrl: text("image_url"), // optional benefit image

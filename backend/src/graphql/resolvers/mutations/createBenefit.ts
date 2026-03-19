@@ -17,6 +17,7 @@ export const createBenefit = async (
       vendorName?: string | null;
       requiresContract?: boolean | null;
       approvalPolicy?: string | null;
+      flowType?: "contract" | "normal" | "down_payment" | "self_service" | null;
       amount?: number | null;
       location?: string | null;
       imageUrl?: string | null;
@@ -35,6 +36,9 @@ export const createBenefit = async (
       vendorName: input.vendorName ?? null,
       requiresContract: input.requiresContract ?? false,
       approvalPolicy: input.approvalPolicy ?? "hr",
+      flowType:
+        input.flowType ??
+        (input.requiresContract ? "contract" : "normal"),
       amount: input.amount ?? null,
       location: input.location ?? null,
       imageUrl: input.imageUrl ?? null,

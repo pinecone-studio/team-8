@@ -62,6 +62,12 @@ export const requestBenefit = async (
     throw new Error("This benefit is no longer available.");
   }
 
+  if (benefitFromDb.flowType === "self_service") {
+    throw new Error(
+      "This benefit updates automatically based on your eligibility. No request is needed.",
+    );
+  }
+
   const eligibilities = await getBenefitsForEmployee(db, employee.id);
   const eligibility = eligibilities.find((item) => item.benefitId === benefitId);
 

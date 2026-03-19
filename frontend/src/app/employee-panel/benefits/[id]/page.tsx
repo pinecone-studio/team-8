@@ -120,6 +120,7 @@ function NextStepsBox({
   failedRuleError,
   approvalPolicy,
   requiresContract,
+  isSelfService,
   awaitingContract,
   onRequestBenefit,
 }: {
@@ -128,6 +129,7 @@ function NextStepsBox({
   failedRuleError?: string | null;
   approvalPolicy?: string | null;
   requiresContract: boolean;
+  isSelfService?: boolean;
   awaitingContract?: boolean;
   onRequestBenefit?: () => void;
 }) {
@@ -208,7 +210,11 @@ function NextStepsBox({
         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
         <div>
           <p className="font-medium">Benefit is active</p>
-          <p className="mt-0.5 text-green-600">You are currently enrolled in this benefit.</p>
+          <p className="mt-0.5 text-green-600">
+            {isSelfService
+              ? "You meet the requirements, so this benefit is visible automatically."
+              : "You are currently enrolled in this benefit."}
+          </p>
         </div>
       </div>
     );
@@ -285,6 +291,7 @@ export default function BenefitDetailPage() {
   const benefit = benefitEligibility.benefit;
   const vendor = benefit.vendorName ?? "Internal Benefit";
   const policy = benefit.approvalPolicy ?? "hr";
+  const isSelfService = benefit.flowType === "self_service";
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -350,13 +357,17 @@ export default function BenefitDetailPage() {
                 ) : benefitEligibility.status === "ACTIVE" ? (
                   <div className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
                     <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                    <p className="text-sm font-medium text-emerald-800">You are currently enrolled in this benefit.</p>
+                    <p className="text-sm font-medium text-emerald-800">
+                      {isSelfService
+                        ? "This benefit is active for you automatically."
+                        : "You are currently enrolled in this benefit."}
+                    </p>
                   </div>
                 ) : null}
               </div>
 
               {/* Request button */}
-              {benefitEligibility.status === "ELIGIBLE" && (
+              {benefitEligibility.status === "ELIGIBLE" && !isSelfService && (
                 <button
                   type="button"
                   onClick={() => setRequestModalOpen(true)}
@@ -530,11 +541,14 @@ export default function BenefitDetailPage() {
                     failedRuleError={benefitEligibility.failedRule?.errorMessage}
                     approvalPolicy={policy}
                     requiresContract={benefit.requiresContract}
+                    isSelfService={isSelfService}
                     awaitingContract={awaitingContract}
                     onRequestBenefit={() => setRequestModalOpen(true)}
                   />
                 </div>
-                {benefit.requiresContract && benefitEligibility.status === "ELIGIBLE" && (
+                {benefit.requiresContract &&
+                  benefitEligibility.status === "ELIGIBLE" &&
+                  !isSelfService && (
                   <div className="mt-5 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3">
                     <div className="flex items-start gap-2">
                       <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />

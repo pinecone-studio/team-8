@@ -150,6 +150,7 @@ export const benefitTypeDefs = gql`
     vendorName: String
     requiresContract: Boolean
     approvalPolicy: String
+    flowType: BenefitFlowType
     amount: Int
     location: String
     imageUrl: String
@@ -164,6 +165,7 @@ export const benefitTypeDefs = gql`
     requiresContract: Boolean
     isActive: Boolean
     approvalPolicy: String
+    flowType: BenefitFlowType
     amount: Int
     location: String
     imageUrl: String

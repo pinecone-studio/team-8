@@ -7,7 +7,7 @@ type GraphqlBenefit = {
   category: string;
   description: string | null;
   employeePercent: number;
-  flowType: "contract" | "normal";
+  flowType: GraphqlFlowType;
   id: string;
   isActive: boolean;
   name: string;
@@ -36,6 +36,12 @@ type FailedRule = {
 
 type BenefitStatus = "ACTIVE" | "ELIGIBLE" | "LOCKED" | "PENDING";
 
+type GraphqlFlowType =
+  | "contract"
+  | "normal"
+  | "down_payment"
+  | "self_service";
+
 type BenefitEligibilityResult = {
   benefit: GraphqlBenefit;
   benefitId: string;
@@ -57,12 +63,27 @@ const IN_FLIGHT_REQUEST_STATUSES = new Set([
   "finance_approved",
 ]);
 
+function normalizeFlowType(
+  flowType: string | null | undefined,
+  requiresContract: boolean,
+): GraphqlFlowType {
+  if (
+    flowType === "contract" ||
+    flowType === "normal" ||
+    flowType === "down_payment" ||
+    flowType === "self_service"
+  ) {
+    return flowType;
+  }
+  return requiresContract ? "contract" : "normal";
+}
+
 export function mapBenefitRecordToGraphql(benefit: Benefit): GraphqlBenefit {
   return {
     category: benefit.category,
     description: benefit.description ?? null,
     employeePercent: 100 - benefit.subsidyPercent,
-    flowType: benefit.requiresContract ? "contract" : "normal",
+    flowType: normalizeFlowType(benefit.flowType, benefit.requiresContract),
     id: benefit.id,
     isActive: benefit.isActive,
     name: benefit.name,
@@ -283,6 +304,7 @@ function buildComputedEligibility(input: {
 
   const ruleEvaluation = rules.map((rule) => evaluateRule(rule, employee));
   const failedRuleEvaluation = ruleEvaluation.find((rule) => !rule.passed);
+  const isSelfService = benefit.flowType === "self_service";
 
   return {
     benefit: mapBenefitRecordToGraphql(benefit),
@@ -296,7 +318,9 @@ function buildComputedEligibility(input: {
     ruleEvaluation,
     status: failedRuleEvaluation
       ? "LOCKED"
-      : normalizeStatus("ELIGIBLE", requestStatus),
+      : isSelfService
+        ? "ACTIVE"
+        : normalizeStatus("ELIGIBLE", requestStatus),
   };
 }
 
@@ -340,6 +364,7 @@ function buildStoredEligibility(input: {
   const fallbackFailedRule = rules.find(
     (rule) => rule.ruleType === failedRuleEvaluation?.ruleType
   );
+  const isSelfService = benefit.flowType === "self_service";
 
   // Legacy snapshot rows may carry status='active' from the old approval-based model.
   // At this point isEnrolled is false (checked above), so a stored 'active' must NOT
@@ -354,9 +379,17 @@ function buildStoredEligibility(input: {
   } else if (storedEligibility.status?.toUpperCase() === "ACTIVE") {
     // Legacy snapshot: re-evaluate live rules to determine true eligibility
     const liveEval = rules.map((rule) => evaluateRule(rule, employee));
-    storedStatus = liveEval.some((r) => !r.passed) ? "LOCKED" : "ELIGIBLE";
+    storedStatus = liveEval.some((r) => !r.passed)
+      ? "LOCKED"
+      : isSelfService
+        ? "ACTIVE"
+        : "ELIGIBLE";
   } else {
     storedStatus = normalizeStatus(storedEligibility.status, undefined);
+  }
+
+  if (isSelfService && !failedRuleEvaluation) {
+    storedStatus = "ACTIVE";
   }
 
   return {
