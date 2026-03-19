@@ -8,8 +8,8 @@
     "build": "npm run codegen && next build",
     "start": "next start",
     "lint": "eslint .",
-    "codegen": "graphql-codegen --config codegen.ts",
-    "codegen:watch": "graphql-codegen --config codegen.ts --watch",
+    "codegen": "node ../node_modules/@graphql-codegen/cli/cjs/bin.js --config codegen.ts",
+    "codegen:watch": "node ../node_modules/@graphql-codegen/cli/cjs/bin.js --config codegen.ts --watch",
     "preview": "npm run clean:artifacts && npm run codegen && opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "npm run clean:artifacts && npm run codegen && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
