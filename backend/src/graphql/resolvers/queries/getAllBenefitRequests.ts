@@ -65,8 +65,8 @@ export const getAllBenefitRequests = async (
   }
 
   if (queue === "finance") {
-    if (!isFinance) {
-      throw new Error("Finance queue requires Finance admin access.");
+    if (!isFinance && !isHr) {
+      throw new Error("Finance queue requires Finance or HR admin access.");
     }
     return db
       .select()

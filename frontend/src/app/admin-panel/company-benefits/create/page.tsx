@@ -94,7 +94,7 @@ const BENEFIT_TYPES: {
     border: "border-blue-200",
     bg: "bg-blue-50",
     examples: ["Down Payment Assistance"],
-    requiresContract: true,
+    requiresContract: false,
     approvalPolicy: "dual",
     flowType: BenefitFlowType.DownPayment,
   },
@@ -706,8 +706,8 @@ export default function CreateBenefitPage() {
         }
       }
 
-      // Upload contract if selected (contract type only)
-      if (benefitId && contractFile && selectedType === "contract") {
+      // Upload contract if selected (contract or finance type)
+      if (benefitId && contractFile && (selectedType === "contract" || selectedType === "finance")) {
         const today = new Date().toISOString().split("T")[0];
         const ctData = new FormData();
         ctData.append("benefitId", benefitId);
@@ -1618,8 +1618,8 @@ export default function CreateBenefitPage() {
                 )}
               </div>
 
-              {/* Step 4: Contract Upload (contract type only) */}
-              {selectedType === "contract" && (
+              {/* Step 4: Contract Upload (contract or finance type) */}
+              {(selectedType === "contract" || selectedType === "finance") && (
                 <div className="rounded-2xl border border-gray-100 bg-white p-6">
                   <div className="mb-1 flex items-center gap-2">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">
@@ -1692,7 +1692,7 @@ export default function CreateBenefitPage() {
                         <FileText className="h-3.5 w-3.5" />
                         Contract PDF
                       </label>
-                      <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-gray-200 p-4 transition hover:border-violet-300 hover:bg-violet-50">
+                      <label className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-gray-200 p-4 transition ${selectedType === "finance" ? "hover:border-blue-300 hover:bg-blue-50" : "hover:border-violet-300 hover:bg-violet-50"}`}>
                         <Upload className="h-5 w-5 shrink-0 text-gray-300" />
                         <div>
                           <p className="text-sm font-medium text-gray-600">

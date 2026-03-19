@@ -128,7 +128,7 @@ export default function PendingRequestsPage() {
   });
   const { data: financeCountData } = useGetAllBenefitRequestsQuery({
     variables: { queue: "finance", status: null },
-    skip: !isFinance,
+    skip: !isFinance && !isHr,
   });
 
   const hrCount = hrCountData?.allBenefitRequests?.length ?? 0;
@@ -273,7 +273,7 @@ export default function PendingRequestsPage() {
       description: "Requests awaiting HR review",
     });
   }
-  if (isFinance) {
+  if (isFinance || isHr) {
     tabs.push({
       key: "finance",
       label: "Finance Queue",

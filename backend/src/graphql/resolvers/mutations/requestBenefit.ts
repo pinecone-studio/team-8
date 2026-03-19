@@ -9,15 +9,17 @@ import { writeAuditLog } from "../helpers/audit";
 
 /** Derive initial request status from benefit's approvalPolicy.
  *  Contract benefits ALWAYS enter awaiting_contract_acceptance first.
- *  Contract acceptance is ONLY recorded via confirmBenefitRequest. */
+ *  Contract acceptance is ONLY recorded via confirmBenefitRequest.
+ *  DownPayment (finance) benefits always go to finance review first. */
 function deriveInitialStatus(
   approvalPolicy: string,
   requiresContract: boolean,
+  flowType?: string | null,
 ): string {
   if (requiresContract) {
     return "awaiting_contract_acceptance";
   }
-  if (approvalPolicy === "finance") {
+  if (flowType === "down_payment" || approvalPolicy === "finance") {
     return "awaiting_finance_review";
   }
   // hr or dual → HR reviews first
@@ -105,12 +107,12 @@ export const requestBenefit = async (
   }
 
   const approvalPolicy = benefitFromDb.approvalPolicy ?? "hr";
-  const initialStatus = deriveInitialStatus(approvalPolicy, benefitFromDb.requiresContract);
+  const initialStatus = deriveInitialStatus(approvalPolicy, benefitFromDb.requiresContract, benefitFromDb.flowType);
 
   let resolvedEmployeeContractKey: string | null = null;
   let attachedEmployeeSignedContractId: string | null = null;
 
-  if (benefitFromDb.requiresContract) {
+  if (benefitFromDb.requiresContract && benefitFromDb.flowType !== "down_payment") {
     if (!employeeSignedContractId && !employeeContractKey) {
       throw new Error(
         "Please upload your signed contract before submitting this request.",
