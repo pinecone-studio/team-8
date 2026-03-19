@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ApolloWrapper } from "@/lib/apollo-provider";
 import { CurrentEmployeeProvider } from "@/lib/current-employee-provider";
+import { ThemeProvider } from "@/app/_components/ThemeProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,9 +20,11 @@ export default async function RootLayout({ children, params }: LayoutProps) {
     <html lang="en" className="font-sans">
       <body>
         <ClerkProvider>
-          <ApolloWrapper>
-            <CurrentEmployeeProvider>{children}</CurrentEmployeeProvider>
-          </ApolloWrapper>
+          <ThemeProvider>
+            <ApolloWrapper>
+              <CurrentEmployeeProvider>{children}</CurrentEmployeeProvider>
+            </ApolloWrapper>
+          </ThemeProvider>
         </ClerkProvider>
       </body>
     </html>
