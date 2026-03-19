@@ -3,7 +3,14 @@
 import { useState, useCallback } from "react";
 import { gql, useQuery } from "@apollo/client";
 import { useAuth } from "@clerk/nextjs";
-import { AlertTriangle, CheckCircle2, Clock, ExternalLink, Upload, X } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
+  Upload,
+  X,
+} from "lucide-react";
 import PageLoading from "@/app/_components/PageLoading";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
@@ -65,7 +72,9 @@ function getUploadUrl(): string {
 
 const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
 
-function getExpiryStatus(contract: ContractRow): "active" | "expiring_soon" | "expired" | "inactive" {
+function getExpiryStatus(
+  contract: ContractRow,
+): "active" | "expiring_soon" | "expired" | "inactive" {
   if (!contract.isActive) return "inactive";
   const expiryMs = new Date(contract.expiryDate).getTime();
   const now = Date.now();
@@ -75,7 +84,9 @@ function getExpiryStatus(contract: ContractRow): "active" | "expiring_soon" | "e
 }
 
 function daysUntil(dateStr: string): number {
-  return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  return Math.ceil(
+    (new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+  );
 }
 
 function ExpiryBadge({ contract }: { contract: ContractRow }) {
@@ -108,9 +119,12 @@ function ExpiryBadge({ contract }: { contract: ContractRow }) {
 
 function rowStyle(contract: ContractRow) {
   const status = getExpiryStatus(contract);
-  if (status === "expired") return "border-red-100 bg-red-50/30 hover:bg-red-50/60";
-  if (status === "expiring_soon") return "border-amber-100 bg-amber-50/30 hover:bg-amber-50/60";
-  if (status === "active") return "border-emerald-100 bg-emerald-50/40 hover:bg-emerald-50/70";
+  if (status === "expired")
+    return "border-red-100 bg-red-50/30 hover:bg-red-50/60";
+  if (status === "expiring_soon")
+    return "border-amber-100 bg-amber-50/30 hover:bg-amber-50/60";
+  if (status === "active")
+    return "border-emerald-100 bg-emerald-50/40 hover:bg-emerald-50/70";
   return "border-slate-200 hover:bg-slate-50/60";
 }
 
@@ -130,24 +144,56 @@ export default function VendorContracts() {
   });
   const [file, setFile] = useState<File | null>(null);
 
-  const { data, loading, error, refetch } = useQuery<{ contracts: ContractRow[] }>(GET_CONTRACTS, { skip: !isHr });
-  const { data: benefitsData, loading: benefitsLoading } = useQuery<{ benefits: Benefit[] }>(GET_BENEFITS, { skip: !isHr });
+  const { data, loading, error, refetch } = useQuery<{
+    contracts: ContractRow[];
+  }>(GET_CONTRACTS, { skip: !isHr });
+  const { data: benefitsData, loading: benefitsLoading } = useQuery<{
+    benefits: Benefit[];
+  }>(GET_BENEFITS, { skip: !isHr });
   const contracts = data?.contracts ?? [];
   const allBenefits = benefitsData?.benefits ?? [];
 
   const openModal = useCallback(() => {
     setModalOpen(true);
     setUploadError(null);
-    setForm({ benefitId: "", version: "", effectiveDate: "", expiryDate: "", vendorName: "" });
+    setForm({
+      benefitId: "",
+      version: "",
+      effectiveDate: "",
+      expiryDate: "",
+      vendorName: "",
+    });
     setFile(null);
   }, []);
+
+  const fillDemo = useCallback(() => {
+    const today = new Date();
+    const nextYear = new Date();
+    nextYear.setDate(today.getDate() + 365);
+    const format = (d: Date) => d.toISOString().slice(0, 10);
+    const firstBenefit = allBenefits[0];
+    setForm({
+      benefitId: firstBenefit?.id ?? "",
+      version: "1.0",
+      effectiveDate: format(today),
+      expiryDate: format(nextYear),
+      vendorName: firstBenefit?.vendorName ?? "Pulse Fitness",
+    });
+    setUploadError(null);
+  }, [allBenefits]);
 
   const closeModal = useCallback(() => {
     if (!uploading) setModalOpen(false);
   }, [uploading]);
 
   const handleUpload = useCallback(async () => {
-    if (!form.benefitId || !form.version || !form.effectiveDate || !form.expiryDate || !file?.size) {
+    if (
+      !form.benefitId ||
+      !form.version ||
+      !form.effectiveDate ||
+      !form.expiryDate ||
+      !file?.size
+    ) {
       setUploadError("Please fill all required fields and select a PDF file.");
       return;
     }
@@ -186,17 +232,23 @@ export default function VendorContracts() {
     return (
       <main className="flex-1 px-8 py-9">
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-6 py-8 text-center max-w-md">
-          <p className="text-sm font-semibold text-amber-800">HR access required</p>
-          <p className="mt-1 text-xs text-amber-700">Vendor Contracts are restricted to HR administrators.</p>
+          <p className="text-sm font-semibold text-amber-800">
+            HR access required
+          </p>
+          <p className="mt-1 text-xs text-amber-700">
+            Vendor Contracts are restricted to HR administrators.
+          </p>
         </div>
       </main>
     );
   }
 
   // Compute missing contracts: requiresContract benefits with no active contract
-  const activeContractBenefitIds = new Set(contracts.filter((c) => c.isActive).map((c) => c.benefitId));
+  const activeContractBenefitIds = new Set(
+    contracts.filter((c) => c.isActive).map((c) => c.benefitId),
+  );
   const missingContractBenefits = allBenefits.filter(
-    (b) => b.requiresContract && !activeContractBenefitIds.has(b.id)
+    (b) => b.requiresContract && !activeContractBenefitIds.has(b.id),
   );
 
   return (
@@ -229,14 +281,21 @@ export default function VendorContracts() {
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
               <div>
                 <p className="text-sm font-semibold text-amber-800">
-                  {missingContractBenefits.length} benefit{missingContractBenefits.length > 1 ? "s" : ""} missing active contracts
+                  {missingContractBenefits.length} benefit
+                  {missingContractBenefits.length > 1 ? "s" : ""} missing active
+                  contracts
                 </p>
                 <p className="mt-0.5 text-xs text-amber-700">
-                  These benefits require a vendor contract but have none active. Employee requests will be blocked until a contract is uploaded.
+                  These benefits require a vendor contract but have none active.
+                  Employee requests will be blocked until a contract is
+                  uploaded.
                 </p>
                 <ul className="mt-2 space-y-0.5">
                   {missingContractBenefits.map((b) => (
-                    <li key={b.id} className="text-xs font-medium text-amber-800">
+                    <li
+                      key={b.id}
+                      className="text-xs font-medium text-amber-800"
+                    >
                       · {b.name}
                     </li>
                   ))}
@@ -254,68 +313,106 @@ export default function VendorContracts() {
             aria-modal="true"
             onClick={closeModal}
           >
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">Upload New Contract</h2>
-                <button type="button" onClick={closeModal} className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 active:scale-95 active:bg-slate-200" aria-label="Close">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Upload New Contract
+                </h2>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 active:scale-95 active:bg-slate-200"
+                  aria-label="Close"
+                >
                   <X className="h-5 w-5" />
                 </button>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Benefit *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Benefit *
+                  </label>
                   <select
                     value={form.benefitId}
-                    onChange={(e) => setForm((f) => ({ ...f, benefitId: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, benefitId: e.target.value }))
+                    }
                     disabled={benefitsLoading}
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:opacity-70"
                   >
-                    <option value="">{benefitsLoading ? "Loading benefits..." : "Select benefit"}</option>
+                    <option value="">
+                      {benefitsLoading
+                        ? "Loading benefits..."
+                        : "Select benefit"}
+                    </option>
                     {allBenefits.map((b) => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Version *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Version *
+                  </label>
                   <input
                     type="text"
                     value={form.version}
-                    onChange={(e) => setForm((f) => ({ ...f, version: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, version: e.target.value }))
+                    }
                     placeholder="e.g. 1.0"
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Effective date *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Effective date *
+                  </label>
                   <input
                     type="date"
                     value={form.effectiveDate}
-                    onChange={(e) => setForm((f) => ({ ...f, effectiveDate: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, effectiveDate: e.target.value }))
+                    }
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Expiry date *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Expiry date *
+                  </label>
                   <input
                     type="date"
                     value={form.expiryDate}
-                    onChange={(e) => setForm((f) => ({ ...f, expiryDate: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, expiryDate: e.target.value }))
+                    }
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Vendor name</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Vendor name
+                  </label>
                   <input
                     type="text"
                     value={form.vendorName}
-                    onChange={(e) => setForm((f) => ({ ...f, vendorName: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, vendorName: e.target.value }))
+                    }
                     placeholder="Vendor"
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">PDF file *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    PDF file *
+                  </label>
                   <input
                     type="file"
                     accept=".pdf,application/pdf"
@@ -323,13 +420,36 @@ export default function VendorContracts() {
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                   />
                 </div>
-                {uploadError && <p className="text-sm text-rose-600">{uploadError}</p>}
+                {uploadError && (
+                  <p className="text-sm text-rose-600">{uploadError}</p>
+                )}
               </div>
-              <div className="mt-6 flex justify-end gap-2">
-                <button type="button" onClick={closeModal} disabled={uploading} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 active:scale-[0.98] active:bg-slate-100 disabled:opacity-50">Cancel</button>
-                <button type="button" onClick={handleUpload} disabled={uploading} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 active:scale-[0.98] active:bg-blue-800 disabled:opacity-50">
-                  {uploading ? "Uploading…" : "Upload"}
+              <div className="mt-6 flex justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={fillDemo}
+                  className="rounded-xl border border-slate-200 bg-yellow-400 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 active:scale-[0.98] active:bg-slate-100"
+                >
+                  Fill demo
                 </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    disabled={uploading}
+                    className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 active:scale-[0.98] active:bg-slate-100 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUpload}
+                    disabled={uploading}
+                    className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 active:scale-[0.98] active:bg-blue-800 disabled:opacity-50"
+                  >
+                    {uploading ? "Uploading…" : "Upload"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -353,7 +473,11 @@ export default function VendorContracts() {
                 {loading ? (
                   <tr>
                     <td colSpan={7} className="px-5 py-8">
-                      <PageLoading inline message="Loading contracts..." className="text-slate-500" />
+                      <PageLoading
+                        inline
+                        message="Loading contracts..."
+                        className="text-slate-500"
+                      />
                     </td>
                   </tr>
                 ) : error ? (
@@ -364,7 +488,10 @@ export default function VendorContracts() {
                   </tr>
                 ) : contracts.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-6 text-sm text-slate-500">
+                    <td
+                      colSpan={7}
+                      className="px-5 py-6 text-sm text-slate-500"
+                    >
                       No contracts found.
                     </td>
                   </tr>
@@ -386,11 +513,13 @@ export default function VendorContracts() {
                         {row.vendorName}
                       </td>
                       <td className="px-5 py-4">
-                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                          row.isActive
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-slate-100 text-slate-500"
-                        }`}>
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                            row.isActive
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-slate-100 text-slate-500"
+                          }`}
+                        >
                           v{row.version}
                         </span>
                       </td>
@@ -406,7 +535,9 @@ export default function VendorContracts() {
                       <td className="px-5 py-4">
                         {row.viewUrl ? (
                           <a
-                            href={getContractProxyUrl(row.viewUrl) ?? row.viewUrl}
+                            href={
+                              getContractProxyUrl(row.viewUrl) ?? row.viewUrl
+                            }
                             target="_blank"
                             rel="noreferrer"
                             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition active:scale-95 ${
@@ -419,7 +550,9 @@ export default function VendorContracts() {
                             View
                           </a>
                         ) : (
-                          <span className="text-xs text-slate-400">No preview</span>
+                          <span className="text-xs text-slate-400">
+                            No preview
+                          </span>
                         )}
                       </td>
                     </tr>

@@ -97,7 +97,10 @@ function EmployeePicker({
   // Close filter menu on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setRoleMenuOpen(false);
       }
     };
@@ -120,7 +123,12 @@ function EmployeePicker({
     variables: {
       search: hasSearch ? debouncedSearch : undefined,
       department: hasDept ? deptFilter : undefined,
-      limit: !hasSearch && !hasDept && !hasRole ? 100 : hasRole && !hasSearch && !hasDept ? 100 : 30,
+      limit:
+        !hasSearch && !hasDept && !hasRole
+          ? 100
+          : hasRole && !hasSearch && !hasDept
+            ? 100
+            : 30,
     },
     fetchPolicy: "cache-and-network",
   });
@@ -134,18 +142,25 @@ function EmployeePicker({
   ).sort((a, b) => a.localeCompare(b));
 
   const results = (data?.getEmployees ?? []).filter((emp) =>
-    roleFilter ? (emp.role ?? "").toLowerCase() === roleFilter.toLowerCase() : true,
+    roleFilter
+      ? (emp.role ?? "").toLowerCase() === roleFilter.toLowerCase()
+      : true,
   );
 
   // Group results by department for structured display
-  const grouped = results.reduce<Record<string, EmployeeOption[]>>((acc, emp) => {
-    const key = emp.department ?? "Other";
-    (acc[key] ??= []).push(emp);
-    return acc;
-  }, {});
+  const grouped = results.reduce<Record<string, EmployeeOption[]>>(
+    (acc, emp) => {
+      const key = emp.department ?? "Other";
+      (acc[key] ??= []).push(emp);
+      return acc;
+    },
+    {},
+  );
   const groupKeys = Object.keys(grouped).sort();
   const resultCountLabel =
-    results.length === 1 ? "1 employee found" : `${results.length} employees found`;
+    results.length === 1
+      ? "1 employee found"
+      : `${results.length} employees found`;
 
   function formatStatus(s: string | null | undefined) {
     if (!s) return "";
@@ -170,6 +185,13 @@ function EmployeePicker({
     setRoleMenuOpen(false);
   };
 
+  const fillDemoSearch = () => {
+    setSearchInput("Anu");
+    setDeptFilter("");
+    setRoleFilter("");
+    setRoleMenuOpen(false);
+  };
+
   // ── Search state ──────────────────────────────────────────────────────────
   return (
     <div className="max-w-5xl" ref={containerRef}>
@@ -182,10 +204,14 @@ function EmployeePicker({
               className="h-11 w-11 shrink-0"
             />
             <div className="min-w-0 flex-1">
-              <p className="text-xl font-semibold text-slate-900">{selectedEmployee.name}</p>
+              <p className="text-xl font-semibold text-slate-900">
+                {selectedEmployee.name}
+              </p>
               <p className="text-base text-slate-600">
                 {selectedEmployee.email ?? "No email"}
-                {selectedEmployee.department ? ` · ${selectedEmployee.department}` : ""}
+                {selectedEmployee.department
+                  ? ` · ${selectedEmployee.department}`
+                  : ""}
               </p>
             </div>
             <button
@@ -211,6 +237,13 @@ function EmployeePicker({
                 className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
               />
             </div>
+            <button
+              type="button"
+              onClick={fillDemoSearch}
+              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm bg-yellow-400 font-medium text-slate-600 shadow-sm transition hover:bg-slate-50"
+            >
+              Fill demo
+            </button>
 
             <div className="relative">
               <button
@@ -233,11 +266,15 @@ function EmployeePicker({
                       setRoleMenuOpen(false);
                     }}
                     className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm transition hover:bg-slate-50 ${
-                      !roleFilter ? "bg-slate-50 text-slate-900" : "text-slate-700"
+                      !roleFilter
+                        ? "bg-slate-50 text-slate-900"
+                        : "text-slate-700"
                     }`}
                   >
                     <span className="font-medium">All Positions</span>
-                    {!roleFilter && <span className="text-xs text-slate-400">Selected</span>}
+                    {!roleFilter && (
+                      <span className="text-xs text-slate-400">Selected</span>
+                    )}
                   </button>
                   <div className="max-h-72 overflow-y-auto py-1">
                     {roleOptions.map((role) => (
@@ -249,11 +286,19 @@ function EmployeePicker({
                           setRoleMenuOpen(false);
                         }}
                         className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm transition hover:bg-slate-50 ${
-                          roleFilter === role ? "bg-slate-50 text-slate-900" : "text-slate-700"
+                          roleFilter === role
+                            ? "bg-slate-50 text-slate-900"
+                            : "text-slate-700"
                         }`}
                       >
-                        <span className="truncate font-medium">{formatRoleLabel(role)}</span>
-                        {roleFilter === role && <span className="text-xs text-slate-400">Selected</span>}
+                        <span className="truncate font-medium">
+                          {formatRoleLabel(role)}
+                        </span>
+                        {roleFilter === role && (
+                          <span className="text-xs text-slate-400">
+                            Selected
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -261,56 +306,75 @@ function EmployeePicker({
               )}
             </div>
 
-            {benefitOptions && onBenefitFilterChange && onBenefitMenuToggle && benefitsFilterRef && (
-              <div className="relative" ref={benefitsFilterRef}>
-                <button
-                  type="button"
-                  onClick={onBenefitMenuToggle}
-                  className="inline-flex min-w-[280px] items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50"
-                >
-                  <span className="truncate">{benefitFilter || "All Benefits"}</span>
-                  <ChevronDown
-                    className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200 ${benefitMenuOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
+            {benefitOptions &&
+              onBenefitFilterChange &&
+              onBenefitMenuToggle &&
+              benefitsFilterRef && (
+                <div className="relative" ref={benefitsFilterRef}>
+                  <button
+                    type="button"
+                    onClick={onBenefitMenuToggle}
+                    className="inline-flex min-w-[280px] items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50"
+                  >
+                    <span className="truncate">
+                      {benefitFilter || "All Benefits"}
+                    </span>
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200 ${benefitMenuOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
 
-                {benefitMenuOpen && (
-                  <div className="absolute left-0 top-full z-30 mt-1.5 w-[420px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-                    <button
-                      type="button"
-                      onClick={() => onBenefitFilterChange("")}
-                      className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition hover:bg-slate-50 ${
-                        !benefitFilter ? "bg-slate-50 text-slate-900" : "text-slate-700"
-                      }`}
-                    >
-                      <span className="font-medium">All Benefits</span>
-                      {!benefitFilter && <span className="text-xs text-slate-400">Selected</span>}
-                    </button>
-                    {benefitOptions.length > 0 ? (
-                      <div className="max-h-80 overflow-y-auto py-1">
-                        {benefitOptions.map((benefitName) => (
-                          <button
-                            key={benefitName}
-                            type="button"
-                            onClick={() => onBenefitFilterChange(benefitName)}
-                            className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition hover:bg-slate-50 ${
-                              benefitFilter === benefitName ? "bg-slate-50 text-slate-900" : "text-slate-700"
-                            }`}
-                          >
-                            <span className="truncate font-medium">{benefitName}</span>
-                            {benefitFilter === benefitName && (
-                              <span className="text-xs text-slate-400">Selected</span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="px-4 py-4 text-sm text-slate-400">Select an employee first</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+                  {benefitMenuOpen && (
+                    <div className="absolute left-0 top-full z-30 mt-1.5 w-[420px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                      <button
+                        type="button"
+                        onClick={() => onBenefitFilterChange("")}
+                        className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition hover:bg-slate-50 ${
+                          !benefitFilter
+                            ? "bg-slate-50 text-slate-900"
+                            : "text-slate-700"
+                        }`}
+                      >
+                        <span className="font-medium">All Benefits</span>
+                        {!benefitFilter && (
+                          <span className="text-xs text-slate-400">
+                            Selected
+                          </span>
+                        )}
+                      </button>
+                      {benefitOptions.length > 0 ? (
+                        <div className="max-h-80 overflow-y-auto py-1">
+                          {benefitOptions.map((benefitName) => (
+                            <button
+                              key={benefitName}
+                              type="button"
+                              onClick={() => onBenefitFilterChange(benefitName)}
+                              className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition hover:bg-slate-50 ${
+                                benefitFilter === benefitName
+                                  ? "bg-slate-50 text-slate-900"
+                                  : "text-slate-700"
+                              }`}
+                            >
+                              <span className="truncate font-medium">
+                                {benefitName}
+                              </span>
+                              {benefitFilter === benefitName && (
+                                <span className="text-xs text-slate-400">
+                                  Selected
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="px-4 py-4 text-sm text-slate-400">
+                          Select an employee first
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
             {(searchInput || deptFilter || roleFilter) && (
               <button
@@ -324,7 +388,6 @@ function EmployeePicker({
             )}
           </div>
         )}
-
       </div>
 
       {!selectedEmployee && (
@@ -332,7 +395,10 @@ function EmployeePicker({
           {loading ? (
             <div className="px-2 py-2 space-y-1">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 border-b border-slate-100 px-2 py-2.5 last:border-b-0">
+                <div
+                  key={i}
+                  className="flex items-center gap-3 border-b border-slate-100 px-2 py-2.5 last:border-b-0"
+                >
                   <div className="h-7 w-7 rounded-full bg-slate-200/80 animate-pulse shrink-0" />
                   <div className="flex-1 space-y-1.5">
                     <div className="h-3 w-1/2 rounded-full bg-slate-200/80 animate-pulse" />
@@ -346,9 +412,12 @@ function EmployeePicker({
             </div>
           ) : results.length === 0 ? (
             <div className="px-6 py-7 text-center">
-              <p className="text-base font-semibold text-slate-800">No matching employee found</p>
+              <p className="text-base font-semibold text-slate-800">
+                No matching employee found
+              </p>
               <p className="mt-1 text-sm text-slate-500">
-                Try a different name or clear the active department or position filter and search again.
+                Try a different name or clear the active department or position
+                filter and search again.
               </p>
             </div>
           ) : (
@@ -407,17 +476,24 @@ function EmployeePicker({
                                 className="h-8 w-8 shrink-0"
                               />
                               <div className="flex min-w-0 flex-col">
-                                <span className="truncate font-medium text-slate-900">{emp.name}</span>
+                                <span className="truncate font-medium text-slate-900">
+                                  {emp.name}
+                                </span>
                                 <span className="truncate text-xs text-slate-400">
                                   {emp.email ?? "No email"}
                                 </span>
                               </div>
                             </div>
                           </td>
-                          <td className="px-5 py-3 text-slate-700">{formatRoleLabel(emp.role)}</td>
-                          <td className="px-5 py-3 text-slate-700">{emp.department ?? "—"}</td>
+                          <td className="px-5 py-3 text-slate-700">
+                            {formatRoleLabel(emp.role)}
+                          </td>
+                          <td className="px-5 py-3 text-slate-700">
+                            {emp.department ?? "—"}
+                          </td>
                           <td className="px-5 py-3">
-                            {emp.employmentStatus && emp.employmentStatus !== "active" ? (
+                            {emp.employmentStatus &&
+                            emp.employmentStatus !== "active" ? (
                               <span className="inline-flex rounded px-2 py-0.5 text-xs font-medium text-orange-700 bg-orange-50">
                                 {formatStatus(emp.employmentStatus)}
                               </span>
@@ -448,15 +524,20 @@ interface OverrideFormState {
   benefitName: string;
 }
 
-type ContractAcceptanceItem = GetContractAcceptancesQuery["contractAcceptances"][number];
+type ContractAcceptanceItem =
+  GetContractAcceptancesQuery["contractAcceptances"][number];
 
 function getMatchedContract(
   contractsData: ReturnType<typeof useGetContractsForBenefitQuery>["data"],
   contractAcceptance: ContractAcceptanceItem | undefined,
 ) {
   return (
-    contractsData?.contracts.find((contract) => contract.id === contractAcceptance?.contractId) ??
-    contractsData?.contracts.find((contract) => contract.version === contractAcceptance?.contractVersion) ??
+    contractsData?.contracts.find(
+      (contract) => contract.id === contractAcceptance?.contractId,
+    ) ??
+    contractsData?.contracts.find(
+      (contract) => contract.version === contractAcceptance?.contractVersion,
+    ) ??
     contractsData?.contracts.find((contract) => contract.isActive) ??
     null
   );
@@ -470,12 +551,16 @@ function SignedContractDetails({
   contractAcceptance: ContractAcceptanceItem | undefined;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
-  const { data: contractsData, loading: contractsLoading } = useGetContractsForBenefitQuery({
-    variables: { benefitId },
-    skip: false,
-  });
+  const { data: contractsData, loading: contractsLoading } =
+    useGetContractsForBenefitQuery({
+      variables: { benefitId },
+      skip: false,
+    });
 
-  const matchingContract = getMatchedContract(contractsData, contractAcceptance);
+  const matchingContract = getMatchedContract(
+    contractsData,
+    contractAcceptance,
+  );
   const contractUrl = getContractProxyUrl(matchingContract?.viewUrl);
 
   if (!contractAcceptance) {
@@ -502,7 +587,9 @@ function SignedContractDetails({
             Review contract
           </button>
         ) : (
-          <span className="text-xs text-amber-600">Contract preview unavailable</span>
+          <span className="text-xs text-amber-600">
+            Contract preview unavailable
+          </span>
         )}
       </span>
 
@@ -517,7 +604,9 @@ function SignedContractDetails({
           >
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
               <div>
-                <p className="text-sm font-semibold text-slate-900">Signed Benefit Contract</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  Signed Benefit Contract
+                </p>
                 <p className="text-xs text-slate-400">
                   {contractAcceptance.contractVersion
                     ? `Version ${contractAcceptance.contractVersion}`
@@ -569,7 +658,10 @@ function ContractExpiryDetails({
     variables: { benefitId },
     skip: !requiresContract,
   });
-  const matchingContract = getMatchedContract(contractsData, contractAcceptance);
+  const matchingContract = getMatchedContract(
+    contractsData,
+    contractAcceptance,
+  );
   const expiryLabel = formatDateLabel(matchingContract?.expiryDate);
 
   if (!failedRuleMessage && !expiryLabel) {
@@ -585,7 +677,9 @@ function ContractExpiryDetails({
         </span>
       )}
       {expiryLabel && (
-        <span className="text-xs font-medium text-slate-500">Contract ends {expiryLabel}</span>
+        <span className="text-xs font-medium text-slate-500">
+          Contract ends {expiryLabel}
+        </span>
       )}
     </div>
   );
@@ -598,10 +692,12 @@ export default function EligibilityInspector() {
   const isHr = isHrAdmin(me);
   const canOverride = isHr;
 
-  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeOption | null>(null);
+  const [selectedEmployee, setSelectedEmployee] =
+    useState<EmployeeOption | null>(null);
   const selectedEmployeeId = selectedEmployee?.id ?? "";
 
-  const [overrideTarget, setOverrideTarget] = useState<OverrideFormState | null>(null);
+  const [overrideTarget, setOverrideTarget] =
+    useState<OverrideFormState | null>(null);
   const [overrideStatus, setOverrideStatus] = useState("eligible");
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideExpiresAt, setOverrideExpiresAt] = useState("");
@@ -631,20 +727,24 @@ export default function EligibilityInspector() {
     prevEligibilityData?.getEmployeeBenefits?.length ??
     6;
 
-  const [overrideEligibility, { loading: overriding }] = useOverrideEligibilityMutation({
-    refetchQueries: [
-      { query: GetEmployeeBenefitsDocument, variables: { employeeId: selectedEmployeeId } },
-    ],
-    onCompleted: () => {
-      setOverrideTarget(null);
-      setOverrideReason("");
-      setOverrideExpiresAt("");
-      setOverrideError(null);
-      setOverrideSuccess(true);
-      setTimeout(() => setOverrideSuccess(false), 4000);
-    },
-    onError: (err) => setOverrideError(err.message),
-  });
+  const [overrideEligibility, { loading: overriding }] =
+    useOverrideEligibilityMutation({
+      refetchQueries: [
+        {
+          query: GetEmployeeBenefitsDocument,
+          variables: { employeeId: selectedEmployeeId },
+        },
+      ],
+      onCompleted: () => {
+        setOverrideTarget(null);
+        setOverrideReason("");
+        setOverrideExpiresAt("");
+        setOverrideError(null);
+        setOverrideSuccess(true);
+        setTimeout(() => setOverrideSuccess(false), 4000);
+      },
+      onError: (err) => setOverrideError(err.message),
+    });
 
   const departments = departmentsData?.getDepartments ?? [];
   const eligibilities = eligibilityData?.getEmployeeBenefits ?? [];
@@ -661,15 +761,19 @@ export default function EligibilityInspector() {
     return a.benefit.name.localeCompare(b.benefit.name);
   });
   const benefitOptions = Array.from(
-    new Set((adminBenefitsData?.adminBenefits ?? []).map((benefit) => benefit.name).filter(Boolean)),
+    new Set(
+      (adminBenefitsData?.adminBenefits ?? [])
+        .map((benefit) => benefit.name)
+        .filter(Boolean),
+    ),
   ).sort((a, b) => a.localeCompare(b));
   const filteredEligibilities = benefitFilter
     ? sortedEligibilities.filter((row) => row.benefit.name === benefitFilter)
     : sortedEligibilities;
   const selectedEmployeeImageUrl = selectedEmployee?.avatarUrl ?? null;
-  const latestContractAcceptanceByBenefit = (contractAcceptancesData?.contractAcceptances ?? []).reduce<
-    Record<string, ContractAcceptanceItem>
-  >((acc, acceptance) => {
+  const latestContractAcceptanceByBenefit = (
+    contractAcceptancesData?.contractAcceptances ?? []
+  ).reduce<Record<string, ContractAcceptanceItem>>((acc, acceptance) => {
     const existing = acc[acceptance.benefitId];
     const existingTime = existing ? new Date(existing.acceptedAt).getTime() : 0;
     const nextTime = new Date(acceptance.acceptedAt).getTime();
@@ -715,7 +819,10 @@ export default function EligibilityInspector() {
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
-      if (benefitsFilterRef.current && !benefitsFilterRef.current.contains(event.target as Node)) {
+      if (
+        benefitsFilterRef.current &&
+        !benefitsFilterRef.current.contains(event.target as Node)
+      ) {
         setBenefitMenuOpen(false);
       }
     };
@@ -759,7 +866,9 @@ export default function EligibilityInspector() {
     return (
       <main className="flex-1 px-8 py-9">
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-6 py-8 text-center max-w-md">
-          <p className="text-sm font-semibold text-amber-800">HR access required</p>
+          <p className="text-sm font-semibold text-amber-800">
+            HR access required
+          </p>
           <p className="mt-1 text-xs text-amber-700">
             The Eligibility Inspector is restricted to HR administrators.
           </p>
@@ -788,6 +897,17 @@ export default function EligibilityInspector() {
     });
   };
 
+  const fillOverrideDemo = () => {
+    const nextMonth = new Date();
+    nextMonth.setDate(nextMonth.getDate() + 30);
+    setOverrideStatus("eligible");
+    setOverrideReason(
+      "HR approved temporary eligibility based on project needs.",
+    );
+    setOverrideExpiresAt(nextMonth.toISOString().slice(0, 10));
+    setOverrideError(null);
+  };
+
   return (
     <main className="flex-1 px-8 py-9">
       <section className="mx-auto max-w-7xl">
@@ -796,13 +916,16 @@ export default function EligibilityInspector() {
             Employee Eligibility Inspector
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-            Review an employee&apos;s benefit eligibility from a clean search and department filter panel.
+            Review an employee&apos;s benefit eligibility from a clean search
+            and department filter panel.
           </p>
         </div>
 
         {/* Employee picker */}
         <div className="mb-6">
-          <label className="mb-3 block text-sm font-semibold text-slate-700">Find employee</label>
+          <label className="mb-3 block text-sm font-semibold text-slate-700">
+            Find employee
+          </label>
           <EmployeePicker
             selectedEmployee={selectedEmployee}
             selectedEmployeeImageUrl={selectedEmployeeImageUrl}
@@ -833,7 +956,9 @@ export default function EligibilityInspector() {
         {/* Employee profile */}
         {selectedEmployee && (
           <div className="mb-5 rounded-[28px] border border-slate-200 bg-white px-8 py-5">
-            <h2 className="text-xl font-semibold text-slate-900">Employee Profile</h2>
+            <h2 className="text-xl font-semibold text-slate-900">
+              Employee Profile
+            </h2>
             {(() => {
               const nameValue = (
                 <div className="flex items-center gap-2">
@@ -846,19 +971,27 @@ export default function EligibilityInspector() {
                 </div>
               );
               return (
-            <div className="mt-5 grid gap-x-8 gap-y-5 md:grid-cols-2 xl:grid-cols-4">
-              {[
-                { label: "Name",       value: nameValue },
-                { label: "Role",       value: selectedEmployee.role ?? "—" },
-                { label: "Department", value: selectedEmployee.department ?? "—" },
-                { label: "Status",     value: selectedEmployee.employmentStatus ?? "—" },
-              ].map((item) => (
-                <div key={item.label}>
-                  <p className="text-sm text-slate-400">{item.label}</p>
-                  <div className="mt-1 text-base font-semibold text-slate-900">{item.value}</div>
+                <div className="mt-5 grid gap-x-8 gap-y-5 md:grid-cols-2 xl:grid-cols-4">
+                  {[
+                    { label: "Name", value: nameValue },
+                    { label: "Role", value: selectedEmployee.role ?? "—" },
+                    {
+                      label: "Department",
+                      value: selectedEmployee.department ?? "—",
+                    },
+                    {
+                      label: "Status",
+                      value: selectedEmployee.employmentStatus ?? "—",
+                    },
+                  ].map((item) => (
+                    <div key={item.label}>
+                      <p className="text-sm text-slate-400">{item.label}</p>
+                      <div className="mt-1 text-base font-semibold text-slate-900">
+                        {item.value}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
               );
             })()}
           </div>
@@ -871,26 +1004,30 @@ export default function EligibilityInspector() {
             className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm animate-in fade-in duration-300"
           >
             <div className="border-b border-slate-200/70 px-5 py-4">
-              <h2 className="text-base font-semibold text-gray-900">Benefits Eligibility</h2>
+              <h2 className="text-base font-semibold text-gray-900">
+                Benefits Eligibility
+              </h2>
             </div>
 
             <div className="overflow-x-auto">
               {eligibilityLoading ? (
                 <div className="px-5 py-4">
-                  {Array.from({ length: eligibilitySkeletonCount }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-4 border-b border-slate-100 py-4 last:border-b-0"
-                    >
-                      <div className="h-4 w-52 animate-pulse rounded-full bg-slate-200/80" />
-                      <div className="h-6 w-24 animate-pulse rounded-full bg-slate-200/80" />
-                      <div className="h-4 w-16 animate-pulse rounded-full bg-slate-200/80" />
-                      <div className="h-4 flex-1 animate-pulse rounded-full bg-slate-200/80" />
-                      {canOverride && (
-                        <div className="h-9 w-20 animate-pulse rounded-xl bg-slate-200/80" />
-                      )}
-                    </div>
-                  ))}
+                  {Array.from({ length: eligibilitySkeletonCount }).map(
+                    (_, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-4 border-b border-slate-100 py-4 last:border-b-0"
+                      >
+                        <div className="h-4 w-52 animate-pulse rounded-full bg-slate-200/80" />
+                        <div className="h-6 w-24 animate-pulse rounded-full bg-slate-200/80" />
+                        <div className="h-4 w-16 animate-pulse rounded-full bg-slate-200/80" />
+                        <div className="h-4 flex-1 animate-pulse rounded-full bg-slate-200/80" />
+                        {canOverride && (
+                          <div className="h-9 w-20 animate-pulse rounded-xl bg-slate-200/80" />
+                        )}
+                      </div>
+                    ),
+                  )}
                 </div>
               ) : filteredEligibilities.length === 0 ? (
                 <div className="px-5 py-6 text-sm text-slate-400">
@@ -904,19 +1041,31 @@ export default function EligibilityInspector() {
                       <th className="px-5 py-4">Status</th>
                       <th className="px-5 py-4">Contract Status</th>
                       <th className="px-5 py-4">Contract Expiry</th>
-                      {canOverride && <th className="px-5 py-4 text-right">Action</th>}
+                      {canOverride && (
+                        <th className="px-5 py-4 text-right">Action</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
                     {filteredEligibilities.map((row) => {
-                      const statusDisplay = getEligibilityStatusDisplay(row.status);
+                      const statusDisplay = getEligibilityStatusDisplay(
+                        row.status,
+                      );
                       const hasOverride = !!row.overrideStatus;
-                      const contractAcceptance = latestContractAcceptanceByBenefit[row.benefitId];
+                      const contractAcceptance =
+                        latestContractAcceptanceByBenefit[row.benefitId];
                       return (
-                        <tr key={row.benefitId} className="border-b border-slate-100 last:border-b-0">
-                          <td className="px-5 py-4 text-[15px] font-medium text-slate-900">{row.benefit.name}</td>
+                        <tr
+                          key={row.benefitId}
+                          className="border-b border-slate-100 last:border-b-0"
+                        >
+                          <td className="px-5 py-4 text-[15px] font-medium text-slate-900">
+                            {row.benefit.name}
+                          </td>
                           <td className="px-5 py-4">
-                            <span className={`inline-flex items-center gap-2 text-sm font-semibold ${statusDisplay.className}`}>
+                            <span
+                              className={`inline-flex items-center gap-2 text-sm font-semibold ${statusDisplay.className}`}
+                            >
                               {statusDisplay.icon}
                               {statusDisplay.label}
                             </span>
@@ -930,7 +1079,8 @@ export default function EligibilityInspector() {
                                   </span>
                                   {row.overrideExpiresAt && (
                                     <span className="text-xs text-slate-400">
-                                      Expires {formatDateLabel(row.overrideExpiresAt)}
+                                      Expires{" "}
+                                      {formatDateLabel(row.overrideExpiresAt)}
                                     </span>
                                   )}
                                 </span>
@@ -986,17 +1136,23 @@ export default function EligibilityInspector() {
             aria-modal="true"
             onClick={() => setOverrideTarget(null)}
           >
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
               <h3 className="text-base font-semibold text-slate-900">
                 Override Eligibility — {overrideTarget.benefitName}
               </h3>
               <p className="mt-1 text-sm text-slate-500">
-                This override will take effect immediately and be recorded in the audit log.
+                This override will take effect immediately and be recorded in
+                the audit log.
               </p>
 
               <div className="mt-5 space-y-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Override Status</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">
+                    Override Status
+                  </label>
                   <select
                     value={overrideStatus}
                     onChange={(e) => setOverrideStatus(e.target.value)}
@@ -1033,10 +1189,19 @@ export default function EligibilityInspector() {
                   />
                 </div>
 
-                {overrideError && <p className="text-sm text-red-600">{overrideError}</p>}
+                {overrideError && (
+                  <p className="text-sm text-red-600">{overrideError}</p>
+                )}
               </div>
 
               <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={fillOverrideDemo}
+                  className="rounded-xl border border-slate-200 bg-yellow-400 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+                >
+                  Fill demo
+                </button>
                 <button
                   type="button"
                   onClick={() => {

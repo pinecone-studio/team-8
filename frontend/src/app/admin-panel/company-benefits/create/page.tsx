@@ -265,10 +265,30 @@ function getWorkflowPreviewSteps(
 ): WorkflowStep[] {
   if (type === "normal" && options?.hasPricing) {
     return [
-      { icon: <Send className="h-4 w-4" />, label: "Employee Request", desc: "Employee submits a benefit request", color: "bg-slate-100 text-slate-600" },
-      { icon: <UserCheck className="h-4 w-4" />, label: "HR Review", desc: "HR admin reviews the request", color: "bg-blue-100 text-blue-600" },
-      { icon: <CreditCard className="h-4 w-4" />, label: "Bonum Payment", desc: "Employee pays the remaining balance through Bonum", color: "bg-amber-100 text-amber-600" },
-      { icon: <CheckCircle2 className="h-4 w-4" />, label: "Approved", desc: "Benefit becomes active automatically after payment", color: "bg-emerald-100 text-emerald-600" },
+      {
+        icon: <Send className="h-4 w-4" />,
+        label: "Employee Request",
+        desc: "Employee submits a benefit request",
+        color: "bg-slate-100 text-slate-600",
+      },
+      {
+        icon: <UserCheck className="h-4 w-4" />,
+        label: "HR Review",
+        desc: "HR admin reviews the request",
+        color: "bg-blue-100 text-blue-600",
+      },
+      {
+        icon: <CreditCard className="h-4 w-4" />,
+        label: "Bonum Payment",
+        desc: "Employee pays the remaining balance through Bonum",
+        color: "bg-amber-100 text-amber-600",
+      },
+      {
+        icon: <CheckCircle2 className="h-4 w-4" />,
+        label: "Approved",
+        desc: "Benefit becomes active automatically after payment",
+        color: "bg-emerald-100 text-emerald-600",
+      },
     ];
   }
 
@@ -609,6 +629,102 @@ export default function CreateBenefitPage() {
     setScreenTimeTiers((prev) => prev.filter((tier) => tier.id !== id));
   }
 
+  function formatDateInput(date: Date) {
+    return date.toISOString().slice(0, 10);
+  }
+
+  function fillDemo(typeOverride?: BenefitTypeKey) {
+    const type = typeOverride ?? selectedType ?? "contract";
+    const today = new Date();
+    const nextYear = new Date();
+    nextYear.setDate(today.getDate() + 365);
+    const effectiveDate = formatDateInput(today);
+    const expiryDate = formatDateInput(nextYear);
+
+    setSelectedType(type);
+    setHasPricing(type === "normal");
+    setViewOnlySubsidyEnabled(type === "viewonly");
+    setForm((prev) => ({
+      ...prev,
+      name:
+        type === "finance"
+          ? "Down Payment Assistance"
+          : type === "viewonly"
+            ? "Remote Work Stipend"
+            : "Pulse Fitness — 50% Plan",
+      description:
+        type === "finance"
+          ? "Finance-backed down payment support with HR approval and repayment plan."
+          : type === "viewonly"
+            ? "Automatic stipend shown on the dashboard with no request required."
+            : "Company-subsidized gym access at Pulse Fitness. 50% covered by employer.",
+      category: type === "finance" ? "financial" : "wellness",
+      subsidyPercent: type === "finance" ? 70 : type === "viewonly" ? 0 : 50,
+      vendorName: type === "viewonly" ? "" : "Pulse Fitness",
+      amount:
+        type === "finance"
+          ? "350000"
+          : type === "normal"
+            ? "120000"
+            : type === "contract"
+              ? "240000"
+              : "",
+      location: type === "contract" ? "Ulaanbaatar, Khan-Uul" : "",
+      effectiveDate,
+      expiryDate,
+    }));
+
+    setContractMeta({
+      version: "1.0",
+      effectiveDate,
+      expiryDate,
+    });
+
+    const demoRules: RuleRow[] = [
+      {
+        id: Math.random().toString(36).slice(2),
+        fieldKey: "employment_status",
+        operator: "eq",
+        value: '"active"',
+        errorMessage: RULE_FIELDS.find(
+          (f) => f.key === "employment_status",
+        )!.defaultError("eq", '"active"'),
+      },
+      {
+        id: Math.random().toString(36).slice(2),
+        fieldKey: "okr_submitted",
+        operator: "eq",
+        value: "true",
+        errorMessage: RULE_FIELDS.find(
+          (f) => f.key === "okr_submitted",
+        )!.defaultError("eq", "true"),
+      },
+    ];
+    setRules(demoRules);
+
+    setScreenTimeTiers([
+      {
+        id: Math.random().toString(36).slice(2),
+        label: "Ultra Focus",
+        maxDailyMinutes: "60",
+        salaryUpliftPercent: "15",
+      },
+      {
+        id: Math.random().toString(36).slice(2),
+        label: "Balanced",
+        maxDailyMinutes: "120",
+        salaryUpliftPercent: "10",
+      },
+      {
+        id: Math.random().toString(36).slice(2),
+        label: "Healthy",
+        maxDailyMinutes: "180",
+        salaryUpliftPercent: "5",
+      },
+    ]);
+    setError(null);
+  }
+
   function getRulePreview(rule: RuleRow): string {
     const fieldCfg = RULE_FIELDS.find((f) => f.key === rule.fieldKey);
     if (!fieldCfg) return "";
@@ -665,11 +781,21 @@ export default function CreateBenefitPage() {
           "Contract-based benefits must leave an employee payment share. Set company subsidy below 100%.",
         );
       }
-      if (selectedType === "normal" && hasPricing && (!form.amount.trim() || Number(form.amount) <= 0)) {
+      if (
+        selectedType === "normal" &&
+        hasPricing &&
+        (!form.amount.trim() || Number(form.amount) <= 0)
+      ) {
         throw new Error("Paid normal benefits require a valid total price.");
       }
-      if (selectedType === "normal" && hasPricing && form.subsidyPercent >= 100) {
-        throw new Error("Paid normal benefits must leave an employee payment share. Set company subsidy below 100%.");
+      if (
+        selectedType === "normal" &&
+        hasPricing &&
+        form.subsidyPercent >= 100
+      ) {
+        throw new Error(
+          "Paid normal benefits must leave an employee payment share. Set company subsidy below 100%.",
+        );
       }
       const flowType = getFlowTypeForBenefitType(selectedType);
       const subsidyPercent =
@@ -854,13 +980,22 @@ export default function CreateBenefitPage() {
             <div className="flex flex-col gap-6 xl:col-span-3">
               {/* Step 1: Benefit type */}
               <div className="rounded-2xl border border-gray-100 bg-white p-6">
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">
-                    1
-                  </span>
-                  <h2 className="text-base font-semibold text-gray-900">
-                    Select Benefit Type
-                  </h2>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">
+                      1
+                    </span>
+                    <h2 className="text-base font-semibold text-gray-900">
+                      Select Benefit Type
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fillDemo()}
+                    className="rounded-xl border border-gray-200 bg-yellow-400 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
+                  >
+                    Fill demo
+                  </button>
                 </div>
                 <p className="mb-5 ml-8 text-sm text-gray-400">
                   The workflow preview updates automatically when you select a
@@ -1138,14 +1273,18 @@ export default function CreateBenefitPage() {
                       className={`mt-0.5 h-4 w-4 shrink-0 ${selectedTypeConfig.color}`}
                     />
                     <p className={`text-xs ${selectedTypeConfig.color}`}>
-                      {selectedType === "contract" && "A contract signature is required before payment is processed. HR admin must approve."}
+                      {selectedType === "contract" &&
+                        "A contract signature is required before payment is processed. HR admin must approve."}
                       {selectedType === "normal" &&
                         (hasPricing
                           ? "Employee submits a request, HR reviews it, and the benefit activates only after the employee completes their Bonum co-payment."
                           : "Employee submits a request and HR admin reviews and makes the final decision.")}
-                      {selectedType === "finance" && "Both Finance and HR approval are required. A repayment plan will be proposed."}
-                      {selectedType === "viewonly" && "Employees can only view this benefit on their dashboard. No request needed."}
-                      {selectedType === "screen_time" && "Employees upload a 7-day average screen-time screenshot on each Monday of the month. Missing any required Monday means 0% uplift for that month."}
+                      {selectedType === "finance" &&
+                        "Both Finance and HR approval are required. A repayment plan will be proposed."}
+                      {selectedType === "viewonly" &&
+                        "Employees can only view this benefit on their dashboard. No request needed."}
+                      {selectedType === "screen_time" &&
+                        "Employees upload a 7-day average screen-time screenshot on each Monday of the month. Missing any required Monday means 0% uplift for that month."}
                     </p>
                   </div>
                 )}

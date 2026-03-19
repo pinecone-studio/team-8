@@ -41,9 +41,24 @@ export default function CreateScreenTimeProgramPage() {
   );
   const [subsidyPercent, setSubsidyPercent] = useState("0");
   const [tiers, setTiers] = useState<TierRow[]>([
-    { id: "tier-1", label: "High focus", maxDailyMinutes: "60", salaryUpliftPercent: "15" },
-    { id: "tier-2", label: "Strong balance", maxDailyMinutes: "120", salaryUpliftPercent: "10" },
-    { id: "tier-3", label: "Healthy range", maxDailyMinutes: "180", salaryUpliftPercent: "5" },
+    {
+      id: "tier-1",
+      label: "High focus",
+      maxDailyMinutes: "60",
+      salaryUpliftPercent: "15",
+    },
+    {
+      id: "tier-2",
+      label: "Strong balance",
+      maxDailyMinutes: "120",
+      salaryUpliftPercent: "10",
+    },
+    {
+      id: "tier-3",
+      label: "Healthy range",
+      maxDailyMinutes: "180",
+      salaryUpliftPercent: "5",
+    },
   ]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -58,11 +73,42 @@ export default function CreateScreenTimeProgramPage() {
   }
 
   function updateTier(id: string, patch: Partial<TierRow>) {
-    setTiers((prev) => prev.map((tier) => (tier.id === id ? { ...tier, ...patch } : tier)));
+    setTiers((prev) =>
+      prev.map((tier) => (tier.id === id ? { ...tier, ...patch } : tier)),
+    );
   }
 
   function removeTier(id: string) {
     setTiers((prev) => prev.filter((tier) => tier.id !== id));
+  }
+
+  function fillDemo() {
+    setName("Focus Week Salary Uplift");
+    setDescription(
+      "Employees submit a 7-day screen-time average every Monday. Submissions are checked automatically, and the highest eligible tier applies to the month.",
+    );
+    setSubsidyPercent("0");
+    setTiers([
+      {
+        id: Math.random().toString(36).slice(2),
+        label: "Deep focus",
+        maxDailyMinutes: "45",
+        salaryUpliftPercent: "20",
+      },
+      {
+        id: Math.random().toString(36).slice(2),
+        label: "Balanced",
+        maxDailyMinutes: "90",
+        salaryUpliftPercent: "12",
+      },
+      {
+        id: Math.random().toString(36).slice(2),
+        label: "Healthy",
+        maxDailyMinutes: "150",
+        salaryUpliftPercent: "6",
+      },
+    ]);
+    setError(null);
   }
 
   async function handleSubmit() {
@@ -85,7 +131,10 @@ export default function CreateScreenTimeProgramPage() {
         setError("Each tier needs a valid max daily minutes value.");
         return;
       }
-      if (!tier.salaryUpliftPercent.trim() || Number(tier.salaryUpliftPercent) <= 0) {
+      if (
+        !tier.salaryUpliftPercent.trim() ||
+        Number(tier.salaryUpliftPercent) <= 0
+      ) {
         setError("Each tier needs a valid salary uplift percent.");
         return;
       }
@@ -180,9 +229,13 @@ export default function CreateScreenTimeProgramPage() {
                 <Smartphone className="h-6 w-6" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900">New Screen Time Program</h1>
+                <h1 className="text-2xl font-semibold text-gray-900">
+                  New Screen Time Program
+                </h1>
                 <p className="mt-1 text-sm text-gray-600">
-                  Create the feature once here, then manage Monday submissions and automatic month-end salary uplift results from the dedicated admin screen time section.
+                  Create the feature once here, then manage Monday submissions
+                  and automatic month-end salary uplift results from the
+                  dedicated admin screen time section.
                 </p>
               </div>
             </div>
@@ -196,7 +249,18 @@ export default function CreateScreenTimeProgramPage() {
 
           <div className="mt-8 grid gap-6 xl:grid-cols-[1.2fr_1fr]">
             <section className="rounded-2xl border border-gray-100 bg-white p-6">
-              <h2 className="text-base font-semibold text-gray-900">Program details</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-base font-semibold text-gray-900">
+                  Program details
+                </h2>
+                <button
+                  type="button"
+                  onClick={fillDemo}
+                  className="rounded-xl border border-gray-200 bg-yellow-400 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
+                >
+                  Fill demo
+                </button>
+              </div>
               <div className="mt-5 grid gap-4">
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-gray-400">
@@ -231,7 +295,9 @@ export default function CreateScreenTimeProgramPage() {
                       min={0}
                       max={100}
                       value={subsidyPercent}
-                      onChange={(event) => setSubsidyPercent(event.target.value)}
+                      onChange={(event) =>
+                        setSubsidyPercent(event.target.value)
+                      }
                       className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                     />
                   </label>
@@ -240,12 +306,22 @@ export default function CreateScreenTimeProgramPage() {
             </section>
 
             <section className="rounded-2xl border border-gray-100 bg-white p-6">
-              <h2 className="text-base font-semibold text-gray-900">How it works</h2>
+              <h2 className="text-base font-semibold text-gray-900">
+                How it works
+              </h2>
               <div className="mt-4 space-y-3 text-sm text-gray-600">
-                <p>1. Employees upload one screenshot on each Monday of the month.</p>
+                <p>
+                  1. Employees upload one screenshot on each Monday of the
+                  month.
+                </p>
                 <p>2. Gemini extracts the 7-day daily average automatically.</p>
-                <p>3. Missing any required Monday means 0% uplift for that month.</p>
-                <p>4. The system calculates the monthly salary uplift automatically from the accepted Monday slots.</p>
+                <p>
+                  3. Missing any required Monday means 0% uplift for that month.
+                </p>
+                <p>
+                  4. The system calculates the monthly salary uplift
+                  automatically from the accepted Monday slots.
+                </p>
               </div>
             </section>
           </div>
@@ -253,9 +329,12 @@ export default function CreateScreenTimeProgramPage() {
           <section className="mt-6 rounded-2xl border border-gray-100 bg-white p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-base font-semibold text-gray-900">Salary uplift tiers</h2>
+                <h2 className="text-base font-semibold text-gray-900">
+                  Salary uplift tiers
+                </h2>
                 <p className="mt-1 text-sm text-gray-500">
-                  The first band whose max daily minutes includes the employee&apos;s monthly average wins.
+                  The first band whose max daily minutes includes the
+                  employee&apos;s monthly average wins.
                 </p>
               </div>
               <button
@@ -276,7 +355,9 @@ export default function CreateScreenTimeProgramPage() {
                 >
                   <input
                     value={tier.label}
-                    onChange={(event) => updateTier(tier.id, { label: event.target.value })}
+                    onChange={(event) =>
+                      updateTier(tier.id, { label: event.target.value })
+                    }
                     placeholder="Tier label"
                     className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                   />
@@ -285,7 +366,9 @@ export default function CreateScreenTimeProgramPage() {
                     min={1}
                     value={tier.maxDailyMinutes}
                     onChange={(event) =>
-                      updateTier(tier.id, { maxDailyMinutes: event.target.value })
+                      updateTier(tier.id, {
+                        maxDailyMinutes: event.target.value,
+                      })
                     }
                     placeholder="Max daily minutes"
                     className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
@@ -296,7 +379,9 @@ export default function CreateScreenTimeProgramPage() {
                     max={100}
                     value={tier.salaryUpliftPercent}
                     onChange={(event) =>
-                      updateTier(tier.id, { salaryUpliftPercent: event.target.value })
+                      updateTier(tier.id, {
+                        salaryUpliftPercent: event.target.value,
+                      })
                     }
                     placeholder="Salary uplift %"
                     className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
