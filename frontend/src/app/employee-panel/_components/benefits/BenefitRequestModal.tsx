@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   X,
   ExternalLink,
@@ -85,6 +85,17 @@ export default function BenefitRequestModal({
     requiresContract && !contractsLoading && !hasReviewableContract;
 
   const isWorking = submitting || confirming || uploading;
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
 
   // ── Employee contract upload ─────────────────────────────────────────────
   const handleFileUpload = async (file: File) => {
@@ -291,8 +302,11 @@ export default function BenefitRequestModal({
       >
         <button
           type="button"
-          onClick={onClose}
-          className="absolute right-4 top-4 rounded-full p-2 text-gray-400 transition hover:bg-white hover:text-gray-600 hover:shadow-sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          className="absolute right-4 top-4 z-20 rounded-full border border-white/80 bg-white/95 p-2 text-gray-400 shadow-sm transition hover:bg-white hover:text-gray-600 hover:shadow-md"
           aria-label="Close"
         >
           <X className="h-5 w-5" />
