@@ -69,6 +69,8 @@ export const updateBenefit = async (
 
   const effectiveAmount =
     "amount" in input ? input.amount ?? null : existing.amount;
+  const effectiveSubsidyPercent =
+    input.subsidyPercent != null ? input.subsidyPercent : existing.subsidyPercent;
   if (effectiveFlowType === "screen_time" && effectiveRequiresContract) {
     throw new Error("Screen time benefits cannot require a contract.");
   }
