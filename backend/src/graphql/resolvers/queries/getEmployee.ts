@@ -2,11 +2,12 @@ import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
 import type { GraphQLContext } from "../../context";
 import { isAdminEmployee, requireAuth } from "../../../auth";
+import { syncEmployeeProfile } from "../../../clerk/sync-employee-profiles";
 
 export const getEmployee = async (
   _: unknown,
   { id }: { id: string },
-  { db, currentEmployee }: GraphQLContext,
+  { db, env, currentEmployee }: GraphQLContext,
 ) => {
   const me = requireAuth(currentEmployee);
   const isAdmin = isAdminEmployee(me);
@@ -17,5 +18,5 @@ export const getEmployee = async (
     .select()
     .from(schema.employees)
     .where(eq(schema.employees.id, id));
-  return results[0] ?? null;
+  return syncEmployeeProfile(db, env, results[0] ?? null);
 };

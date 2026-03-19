@@ -244,6 +244,7 @@ export type EligibilityRule = {
 
 export type Employee = {
   __typename?: 'Employee';
+  avatarUrl?: Maybe<Scalars['String']['output']>;
   benefits: Array<BenefitEligibility>;
   createdAt: Scalars['DateTime']['output'];
   department: Scalars['String']['output'];
@@ -1112,21 +1113,21 @@ export type GetEmployeesQueryVariables = Exact<{
 }>;
 
 
-export type GetEmployeesQuery = { __typename?: 'Query', getEmployees: Array<{ __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, createdAt: any, updatedAt: any }> };
+export type GetEmployeesQuery = { __typename?: 'Query', getEmployees: Array<{ __typename?: 'Employee', id: string, avatarUrl?: string | null, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, createdAt: any, updatedAt: any }> };
 
 export type GetEmployeeQueryVariables = Exact<{
   id: Scalars['String']['input'];
 }>;
 
 
-export type GetEmployeeQuery = { __typename?: 'Query', getEmployee?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
+export type GetEmployeeQuery = { __typename?: 'Query', getEmployee?: { __typename?: 'Employee', id: string, avatarUrl?: string | null, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
 
 export type GetEmployeeByEmailQueryVariables = Exact<{
   email: Scalars['String']['input'];
 }>;
 
 
-export type GetEmployeeByEmailQuery = { __typename?: 'Query', getEmployeeByEmail?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
+export type GetEmployeeByEmailQuery = { __typename?: 'Query', getEmployeeByEmail?: { __typename?: 'Employee', id: string, avatarUrl?: string | null, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
 
 export type GetMySettingsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -3207,6 +3208,7 @@ export const GetEmployeesDocument = gql`
     query GetEmployees($search: String, $department: String, $limit: Int) {
   getEmployees(search: $search, department: $department, limit: $limit) {
     id
+    avatarUrl
     name
     nameEng
     email
@@ -3264,6 +3266,7 @@ export const GetEmployeeDocument = gql`
     query GetEmployee($id: String!) {
   getEmployee(id: $id) {
     id
+    avatarUrl
     name
     nameEng
     email
@@ -3320,6 +3323,7 @@ export const GetEmployeeByEmailDocument = gql`
     query GetEmployeeByEmail($email: String!) {
   getEmployeeByEmail(email: $email) {
     id
+    avatarUrl
     name
     nameEng
     email

@@ -4,6 +4,8 @@ import { nanoid } from "nanoid";
 export const employees = sqliteTable("employees", {
   id: text("id").primaryKey().$defaultFn(() => nanoid()),
   email: text("email").notNull().unique(),
+  clerkUserId: text("clerk_user_id"),
+  avatarUrl: text("avatar_url"),
   name: text("name").notNull(),
   nameEng: text("name_eng"),
   role: text("role").notNull(),

@@ -18,6 +18,7 @@ export const employeeTypeDefs = gql`
   type Employee {
     id: String!
     email: String!
+    avatarUrl: String
     name: String!
     nameEng: String
     role: String!

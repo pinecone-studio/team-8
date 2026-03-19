@@ -243,6 +243,7 @@ export type EligibilityRule = {
 
 export type Employee = {
   __typename?: 'Employee';
+  avatarUrl?: Maybe<Scalars['String']['output']>;
   benefits: Array<BenefitEligibility>;
   createdAt: Scalars['DateTime']['output'];
   department: Scalars['String']['output'];
@@ -1164,6 +1165,7 @@ export type EligibilityRuleResolvers<ContextType = GraphQLContext, ParentType ex
 }>;
 
 export type EmployeeResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Employee'] = ResolversParentTypes['Employee']> = ResolversObject<{
+  avatarUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   benefits?: Resolver<Array<ResolversTypes['BenefitEligibility']>, ParentType, ContextType>;
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   department?: Resolver<ResolversTypes['String'], ParentType, ContextType>;

@@ -1,10 +1,11 @@
 import type { GraphQLContext } from "../../context";
+import { syncEmployeeProfile } from "../../../clerk/sync-employee-profiles";
 
 /** Returns the currently authenticated employee derived from the request auth. */
 export const getSession = async (
   _: unknown,
   __: unknown,
-  { currentEmployee }: GraphQLContext,
+  { db, env, currentEmployee }: GraphQLContext,
 ) => {
-  return currentEmployee ?? null;
+  return syncEmployeeProfile(db, env, currentEmployee ?? null);
 };

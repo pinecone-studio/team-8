@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { schema } from "../../../db";
 import type { GraphQLContext } from "../../context";
 import { requireAdmin } from "../../../auth";
+import { syncEmployeeProfiles } from "../../../clerk/sync-employee-profiles";
 
 type GetEmployeesArgs = {
   search?: string | null;
@@ -12,7 +13,7 @@ type GetEmployeesArgs = {
 export const getEmployees = async (
   _: unknown,
   { search, department, limit }: GetEmployeesArgs,
-  { db, currentEmployee }: GraphQLContext,
+  { db, env, currentEmployee }: GraphQLContext,
 ) => {
   requireAdmin(currentEmployee);
 
@@ -29,11 +30,11 @@ export const getEmployees = async (
     );
   }
 
-  const query = db
+  const employees = await db
     .select()
     .from(schema.employees)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .limit(limit ?? 50);
 
-  return query;
+  return syncEmployeeProfiles(db, env, employees);
 };

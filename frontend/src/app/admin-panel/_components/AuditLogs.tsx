@@ -18,7 +18,7 @@ import {
 import { getContractProxyUrl } from "@/lib/contracts";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
-import { UserAvatar } from "@clerk/nextjs";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 
 const ACTION_TYPE_LABELS: Record<string, string> = {
   REQUEST_SUBMITTED: "Request Submitted",
@@ -1197,7 +1197,10 @@ export default function AuditLogs() {
                         >
                           <td className="px-5 py-3 text-slate-700">
                             <div className="flex items-center gap-3">
-                              <UserAvatar />
+                              <EmployeeAvatar
+                                name={actorName}
+                                imageUrl={actorEmployee?.avatarUrl ?? null}
+                              />
                               <div className="flex flex-col">
                                 <span className="font-medium">{actorName}</span>
                                 {actorEmployee?.email && (

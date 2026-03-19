@@ -10,8 +10,8 @@ import {
   GetEmployeeBenefitsDocument,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
-import { useUser } from "@clerk/nextjs";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 
 // ── Status badge ─────────────────────────────────────────────────────────────
 
@@ -36,6 +36,7 @@ function EligibilityBadge({ passed, label }: { passed: boolean; label: string })
 
 type EmployeeOption = {
   id: string;
+  avatarUrl?: string | null;
   name: string;
   nameEng?: string | null;
   email?: string | null;
@@ -126,9 +127,11 @@ function EmployeePicker({
     return (
       <div className="max-w-2xl">
         <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700">
-            {selectedEmployee.name.charAt(0).toUpperCase()}
-          </div>
+          <EmployeeAvatar
+            name={selectedEmployee.name}
+            imageUrl={selectedEmployee.avatarUrl}
+            className="h-8 w-8"
+          />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-blue-900">{selectedEmployee.name}</p>
             <p className="text-xs text-blue-600">
@@ -230,9 +233,11 @@ function EmployeePicker({
                     onClick={() => handleSelect(emp)}
                     className="flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-blue-50 transition"
                   >
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
-                      {emp.name.charAt(0).toUpperCase()}
-                    </div>
+                    <EmployeeAvatar
+                      name={emp.name}
+                      imageUrl={emp.avatarUrl}
+                      className="h-7 w-7"
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-slate-900 truncate">{emp.name}</p>
                       <p className="text-xs text-slate-500 truncate">{emp.email ?? ""}</p>
@@ -271,7 +276,6 @@ interface OverrideFormState {
 
 export default function EligibilityInspector() {
   const { employee: me, loading: meLoading } = useCurrentEmployee();
-  const { user, isLoaded: isUserLoaded } = useUser();
   const isHr = isHrAdmin(me);
   const canOverride = isHr;
 
@@ -329,8 +333,6 @@ export default function EligibilityInspector() {
     if (aRank !== bRank) return aRank - bRank;
     return a.benefit.name.localeCompare(b.benefit.name);
   });
-  const clerkEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? null;
-
   // ── 1. Loading skeleton (no real text, no access banner) ──────────────────
   if (meLoading) {
     return (
@@ -425,29 +427,14 @@ export default function EligibilityInspector() {
         {selectedEmployee && (
           <div className="rounded-2xl border border-slate-200 bg-white p-5 mb-6">
             <h2 className="text-sm font-semibold text-gray-900">Employee Profile</h2>
-            {/*
-              Clerk only exposes the signed-in user on the client. If the selected
-              employee matches the signed-in user, show their Clerk avatar.
-            */}
             {(() => {
-              const matchesClerkUser =
-                isUserLoaded &&
-                !!clerkEmail &&
-                selectedEmployee.email?.toLowerCase() === clerkEmail &&
-                !!user?.imageUrl;
               const nameValue = (
                 <div className="flex items-center gap-2">
-                  {matchesClerkUser ? (
-                    <img
-                      src={user.imageUrl}
-                      alt={selectedEmployee.name}
-                      className="h-7 w-7 shrink-0 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
-                      {selectedEmployee.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  <EmployeeAvatar
+                    name={selectedEmployee.name}
+                    imageUrl={selectedEmployee.avatarUrl}
+                    className="h-7 w-7"
+                  />
                   <span>{selectedEmployee.name}</span>
                 </div>
               );

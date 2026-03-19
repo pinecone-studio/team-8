@@ -16,6 +16,7 @@ import {
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 import { getContractProxyUrl } from "@/lib/contracts";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -827,10 +828,21 @@ function RequestsContent() {
               </div>
             ) : (
               <>
-                <h1 className="text-xl font-semibold text-gray-900 dark:text-foreground">
-                  My Requests
-                </h1>
-                <p className="mt-1 text-sm text-gray-500">Track the status of your benefit requests</p>
+                <div className="flex items-center gap-3">
+                  <EmployeeAvatar
+                    name={employee?.name ?? "Employee"}
+                    imageUrl={employee?.avatarUrl ?? null}
+                    className="h-10 w-10"
+                  />
+                  <div>
+                    <h1 className="text-xl font-semibold text-gray-900 dark:text-foreground">
+                      My Requests
+                    </h1>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Track the status of your benefit requests
+                    </p>
+                  </div>
+                </div>
               </>
             )}
 
