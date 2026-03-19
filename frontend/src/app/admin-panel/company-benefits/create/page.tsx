@@ -797,15 +797,6 @@ export default function CreateBenefitPage() {
                   The workflow preview updates automatically when you select a
                   type
                 </p>
-                <div className="mb-5 ml-8 rounded-xl border border-fuchsia-100 bg-fuchsia-50 px-4 py-3 text-sm text-fuchsia-800">
-                  Screen Time is managed as a standalone feature now.{" "}
-                  <Link
-                    href="/admin-panel/screen-time"
-                    className="font-medium underline underline-offset-2"
-                  >
-                    Open Screen Time
-                  </Link>
-                </div>
                 <div className="grid grid-cols-2 gap-3">
                   {BENEFIT_TYPES.map((type) => (
                     <button
