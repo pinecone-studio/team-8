@@ -477,7 +477,7 @@ function ContractAcceptModal({
               Contract preview unavailable
             </p>
             <p className="text-xs text-red-600 text-center max-w-xs">
-              We couldn't load the latest active vendor contract right now.
+              We couldn&apos;t load the latest active vendor contract right now.
               You can still submit acceptance; the system will verify against the latest active HR contract.
             </p>
           </div>
