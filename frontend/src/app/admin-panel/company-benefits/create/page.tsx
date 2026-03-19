@@ -11,7 +11,7 @@ import {
   CreditCard,
   Eye,
   FileText,
-  Image,
+  ImageIcon,
   Info,
   LayoutGrid,
   MapPin,
@@ -313,6 +313,15 @@ type ScreenTimeTierRow = {
 
 const CATEGORIES = ["wellness", "equipment", "financial", "career", "flexibility", "other"];
 
+function getFlowTypeForBenefitType(
+  type: BenefitTypeKey,
+): BenefitFlowType {
+  if (type === "contract") return BenefitFlowType.Contract;
+  if (type === "finance") return BenefitFlowType.DownPayment;
+  if (type === "viewonly") return BenefitFlowType.SelfService;
+  return BenefitFlowType.Normal;
+}
+
 function getApiBaseUrl(): string {
   const base =
     (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_GRAPHQL_URL) ||
@@ -330,6 +339,7 @@ export default function CreateBenefitPage() {
 
   const [selectedType, setSelectedType] = useState<BenefitTypeKey | null>(null);
   const [hasPricing, setHasPricing] = useState(false);
+  const [viewOnlySubsidyEnabled, setViewOnlySubsidyEnabled] = useState(false);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -442,22 +452,13 @@ export default function CreateBenefitPage() {
       const typeConfig = BENEFIT_TYPES.find((t) => t.key === selectedType)!;
       const apiBaseUrl = getApiBaseUrl();
       const descriptionTrimmed = form.description.trim();
-      if (selectedType === "screen_time") {
-        if (screenTimeTiers.length === 0) {
-          throw new Error("Add at least one salary uplift tier for the screen time program.");
-        }
-        for (const tier of screenTimeTiers) {
-          if (!tier.label.trim()) {
-            throw new Error("Every screen time tier needs a label.");
-          }
-          if (!tier.maxDailyMinutes.trim() || Number(tier.maxDailyMinutes) <= 0) {
-            throw new Error("Every screen time tier needs a valid maximum daily minutes value.");
-          }
-          if (!tier.salaryUpliftPercent.trim() || Number(tier.salaryUpliftPercent) <= 0) {
-            throw new Error("Every screen time tier needs a valid uplift percentage.");
-          }
-        }
-      }
+      const flowType = getFlowTypeForBenefitType(selectedType);
+      const subsidyPercent =
+        selectedType === "viewonly"
+          ? viewOnlySubsidyEnabled
+            ? 100
+            : 0
+          : form.subsidyPercent;
       // For normal type, only include amount when the payment toggle is on
       const amountNum =
         selectedType === "normal"
@@ -469,11 +470,11 @@ export default function CreateBenefitPage() {
             name: form.name.trim(),
             ...(descriptionTrimmed ? { description: descriptionTrimmed } : {}),
             category: form.category,
-            subsidyPercent: form.subsidyPercent,
+            subsidyPercent,
             vendorName: form.vendorName.trim() || undefined,
             requiresContract: typeConfig.requiresContract,
-            flowType: typeConfig.flowType,
             approvalPolicy: typeConfig.approvalPolicy,
+            flowType,
             ...(amountNum ? { amount: amountNum } : {}),
             ...(form.location.trim() ? { location: form.location.trim() } : {}),
           },
@@ -718,7 +719,7 @@ export default function CreateBenefitPage() {
                       ))}
                     </select>
                   </div>
-                  {selectedType !== "normal" && (
+                  {selectedType !== "normal" && selectedType !== "viewonly" && (
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-gray-600">
                         Company Subsidy (%)
@@ -736,6 +737,63 @@ export default function CreateBenefitPage() {
                           Employee: {100 - form.subsidyPercent}%
                         </div>
                       </div>
+                    </div>
+                  )}
+                  {selectedType === "viewonly" && (
+                    <div className="sm:col-span-2 rounded-xl border border-orange-100 bg-orange-50 p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">
+                            Company Subsidy
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Turn this on only if the company should fund part of
+                            this automatic benefit.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setViewOnlySubsidyEnabled((enabled) => !enabled)
+                          }
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
+                            viewOnlySubsidyEnabled
+                              ? "bg-orange-500"
+                              : "bg-gray-200"
+                          }`}
+                          aria-pressed={viewOnlySubsidyEnabled}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              viewOnlySubsidyEnabled
+                                ? "translate-x-6"
+                                : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {viewOnlySubsidyEnabled ? (
+                        <div className="mt-4 rounded-xl border border-gray-200 bg-white px-3.5 py-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-sm font-medium text-gray-700">
+                              Company Subsidy
+                            </span>
+                            <span className="text-sm font-semibold text-orange-600">
+                              100%
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Enabled automatic benefits are always fully funded by
+                            the company.
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="mt-4 text-xs text-gray-500">
+                          Subsidy is disabled. This benefit will be saved with
+                          `0%` company subsidy.
+                        </p>
+                      )}
                     </div>
                   )}
                   <div className="sm:col-span-2">
@@ -870,11 +928,12 @@ export default function CreateBenefitPage() {
                       </div>
                       <div className="sm:col-span-2">
                         <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600">
-                          <Image className="h-3.5 w-3.5" />
+                          <ImageIcon className="h-3.5 w-3.5" />
                           Benefit Image <span className="text-gray-300">(optional)</span>
                         </label>
                         <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 transition hover:border-violet-300 hover:bg-violet-50">
                           {imagePreview ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img src={imagePreview} alt="Preview" className="h-24 w-auto rounded-lg object-cover" />
                           ) : (
                             <>

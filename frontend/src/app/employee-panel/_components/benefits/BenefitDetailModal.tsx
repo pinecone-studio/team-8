@@ -33,6 +33,7 @@ function StatusPill({ status }: { status: BenefitEligibilityStatus }) {
 export default function BenefitDetailModal({ benefit, onClose, onRequestBenefit }: Props) {
   const vendor = benefit.benefit.vendorName ?? "Internal Benefit";
   const b = benefit.benefit;
+  const isSelfService = b.flowType === "self_service";
   const description =
     b.description ??
     b.optionsDescription ??
@@ -132,7 +133,16 @@ export default function BenefitDetailModal({ benefit, onClose, onRequestBenefit 
 
           {/* Eligibility status */}
           <div className="mt-5">
-            {isEligible ? (
+            {benefit.status === BenefitEligibilityStatus.Active ? (
+              <div className="flex items-center gap-2.5 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                <p className="text-sm font-medium text-emerald-800">
+                  {isSelfService
+                    ? "This benefit is active for you automatically."
+                    : "You are eligible for this benefit"}
+                </p>
+              </div>
+            ) : isEligible ? (
               <div className="flex items-center gap-2.5 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
                 <p className="text-sm font-medium text-emerald-800">
@@ -165,7 +175,7 @@ export default function BenefitDetailModal({ benefit, onClose, onRequestBenefit 
 
         {/* Footer buttons */}
         <div className="flex items-center gap-3 border-t border-gray-100 bg-gray-50/50 px-6 py-4">
-          {benefit.status === BenefitEligibilityStatus.Eligible && (
+          {benefit.status === BenefitEligibilityStatus.Eligible && !isSelfService && (
             <>
               {isScreenTime ? (
                 <a

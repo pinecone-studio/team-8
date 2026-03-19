@@ -19,9 +19,15 @@ export const updateBenefit = async (
       subsidyPercent?: number | null;
       vendorName?: string | null;
       requiresContract?: boolean | null;
-      flowType?: string | null;
       isActive?: boolean | null;
       approvalPolicy?: string | null;
+      flowType?:
+        | "contract"
+        | "normal"
+        | "down_payment"
+        | "self_service"
+        | "screen_time"
+        | null;
       amount?: number | null;
       location?: string | null;
       imageUrl?: string | null;
@@ -45,17 +51,20 @@ export const updateBenefit = async (
   if (input.category != null) updates.category = input.category;
   if (input.subsidyPercent != null) updates.subsidyPercent = input.subsidyPercent;
   if ("vendorName" in input) updates.vendorName = input.vendorName ?? null;
-  if (input.requiresContract != null) updates.requiresContract = input.requiresContract;
+  const effectiveFlowType = input.flowType ?? existing.flowType ?? "normal";
+  const effectiveRequiresContract =
+    effectiveFlowType === "screen_time"
+      ? false
+      : input.requiresContract ?? existing.requiresContract;
+  if (input.requiresContract != null || effectiveFlowType === "screen_time") {
+    updates.requiresContract = effectiveRequiresContract;
+  }
   if (input.flowType != null) updates.flowType = input.flowType;
   if (input.isActive != null) updates.isActive = input.isActive;
   if (input.approvalPolicy != null) updates.approvalPolicy = input.approvalPolicy;
   if ("amount" in input) updates.amount = input.amount ?? null;
   if ("location" in input) updates.location = input.location ?? null;
   if ("imageUrl" in input) updates.imageUrl = input.imageUrl ?? null;
-
-  const effectiveFlowType = (input.flowType ?? existing.flowType) as string;
-  const effectiveRequiresContract =
-    input.requiresContract ?? existing.requiresContract;
   if (effectiveFlowType === "screen_time" && effectiveRequiresContract) {
     throw new Error("Screen time benefits cannot require a contract.");
   }

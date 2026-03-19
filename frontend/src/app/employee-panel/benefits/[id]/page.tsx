@@ -8,7 +8,12 @@ import StatusBadge from "../../_components/benefits/StatusBadge";
 import Sidebar from "../../_components/SideBar";
 import BenefitRequestModal from "../../_components/benefits/BenefitRequestModal";
 import PageLoading from "@/app/_components/PageLoading";
-import { BenefitFlowType, useGetMyBenefitsFullQuery, useGetBenefitRequestsQuery, useGetContractsForBenefitQuery } from "@/graphql/generated/graphql";
+import {
+  BenefitFlowType,
+  useGetMyBenefitsFullQuery,
+  useGetBenefitRequestsQuery,
+  useGetContractsForBenefitQuery,
+} from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 import { getContractProxyUrl } from "@/lib/contracts";
 
@@ -134,6 +139,7 @@ function NextStepsBox({
   onRequestBenefit?: () => void;
 }) {
   const p = (approvalPolicy ?? "hr").toLowerCase();
+  const isSelfService = flowType === BenefitFlowType.SelfService;
   const isScreenTime = flowType === BenefitFlowType.ScreenTime;
 
   // Pending sub-state: employee must accept a contract before review can proceed
@@ -220,7 +226,11 @@ function NextStepsBox({
         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
         <div>
           <p className="font-medium">Benefit is active</p>
-          <p className="mt-0.5 text-green-600">You are currently enrolled in this benefit.</p>
+          <p className="mt-0.5 text-green-600">
+            {isSelfService
+              ? "You meet the requirements, so this benefit is visible automatically."
+              : "You are currently enrolled in this benefit."}
+          </p>
         </div>
       </div>
     );
@@ -297,6 +307,7 @@ export default function BenefitDetailPage() {
   const benefit = benefitEligibility.benefit;
   const vendor = benefit.vendorName ?? "Internal Benefit";
   const policy = benefit.approvalPolicy ?? "hr";
+  const isSelfService = benefit.flowType === "self_service";
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -322,6 +333,7 @@ export default function BenefitDetailPage() {
               </div>
 
               {benefit.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={`${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""}/api/benefits/image?key=${encodeURIComponent(benefit.imageUrl)}`}
                   alt={benefit.name}
@@ -362,13 +374,17 @@ export default function BenefitDetailPage() {
                 ) : benefitEligibility.status === "ACTIVE" ? (
                   <div className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
                     <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                    <p className="text-sm font-medium text-emerald-800">You are currently enrolled in this benefit.</p>
+                    <p className="text-sm font-medium text-emerald-800">
+                      {isSelfService
+                        ? "This benefit is active for you automatically."
+                        : "You are currently enrolled in this benefit."}
+                    </p>
                   </div>
                 ) : null}
               </div>
 
               {/* Request button */}
-              {benefitEligibility.status === "ELIGIBLE" && (
+              {benefitEligibility.status === "ELIGIBLE" && !isSelfService && (
                 <button
                   type="button"
                   onClick={() => setRequestModalOpen(true)}
@@ -394,6 +410,7 @@ export default function BenefitDetailPage() {
                   </div>
 
                   {benefit.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={`${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""}/api/benefits/image?key=${encodeURIComponent(benefit.imageUrl)}`}
                       alt={benefit.name}
@@ -540,22 +557,24 @@ export default function BenefitDetailPage() {
                     )}
                   </div>
                 )}
-
-                <div className="rounded-2xl border border-gray-200 bg-white p-6">
-                  <h2 className="text-base font-semibold text-gray-900">Next Steps</h2>
-                  <div className="mt-4">
-                    <NextStepsBox
-                      status={benefitEligibility.status}
-                      benefitId={benefitEligibility.benefitId}
-                      failedRuleError={benefitEligibility.failedRule?.errorMessage}
-                      approvalPolicy={policy}
-                      requiresContract={benefit.requiresContract}
-                      flowType={benefit.flowType}
-                      awaitingContract={awaitingContract}
-                      onRequestBenefit={() => setRequestModalOpen(true)}
-                    />
-                  </div>
-                  {benefit.requiresContract && benefitEligibility.status === "ELIGIBLE" && (
+              {/* Right: action panel */}
+              <div className="rounded-2xl border border-gray-200 bg-white p-6 self-start">
+                <h2 className="text-base font-semibold text-gray-900">Next Steps</h2>
+                <div className="mt-4">
+                  <NextStepsBox
+                    status={benefitEligibility.status}
+                    benefitId={benefitEligibility.benefitId}
+                    failedRuleError={benefitEligibility.failedRule?.errorMessage}
+                    approvalPolicy={policy}
+                    requiresContract={benefit.requiresContract}
+                    flowType={benefit.flowType}
+                    awaitingContract={awaitingContract}
+                    onRequestBenefit={() => setRequestModalOpen(true)}
+                  />
+                </div>
+                {benefit.requiresContract &&
+                  benefitEligibility.status === "ELIGIBLE" &&
+                  !isSelfService && (
                     <div className="mt-5 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3">
                       <div className="flex items-start gap-2">
                         <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
