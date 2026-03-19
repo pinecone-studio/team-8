@@ -596,6 +596,113 @@ export default function CreateBenefitPage() {
     return fieldCfg.preview(rule.operator, rule.value);
   }
 
+  function fillDemoBenefit() {
+    if (!selectedType) {
+      setError("Please select a benefit type first.");
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const future = new Date();
+    future.setMonth(future.getMonth() + 6);
+    const futureDate = future.toISOString().slice(0, 10);
+
+    setError(null);
+
+    if (selectedType === "contract") {
+      setForm({
+        name: "Gym Membership — Pulse 50%",
+        description:
+          "Company-subsidized gym access at Pulse Fitness. 50% covered by employer.",
+        category: "wellness",
+        subsidyPercent: 50,
+        vendorName: "Pulse Fitness",
+        amount: "120000",
+        location: "Ulaanbaatar, Khan-Uul",
+        effectiveDate: "",
+        expiryDate: "",
+      });
+      setHasPricing(false);
+      setViewOnlySubsidyEnabled(false);
+      setContractMeta((m) => ({
+        ...m,
+        effectiveDate: today,
+        expiryDate: futureDate,
+      }));
+      return;
+    }
+
+    if (selectedType === "normal") {
+      setForm({
+        name: "UX Tools Stipend",
+        description:
+          "Reimburses essential design and research tools for eligible team members.",
+        category: "career",
+        subsidyPercent: 70,
+        vendorName: "",
+        amount: "200000",
+        location: "",
+        effectiveDate: today,
+        expiryDate: futureDate,
+      });
+      setHasPricing(true);
+      setViewOnlySubsidyEnabled(false);
+      return;
+    }
+
+    if (selectedType === "finance") {
+      setForm({
+        name: "Down Payment Assistance",
+        description:
+          "Company-backed support for eligible employees to secure housing.",
+        category: "financial",
+        subsidyPercent: 80,
+        vendorName: "",
+        amount: "5000000",
+        location: "",
+        effectiveDate: "",
+        expiryDate: "",
+      });
+      setHasPricing(false);
+      setViewOnlySubsidyEnabled(false);
+      return;
+    }
+
+    if (selectedType === "viewonly") {
+      setForm({
+        name: "Remote Work",
+        description:
+          "Eligible employees can work remotely based on team policy.",
+        category: "flexibility",
+        subsidyPercent: 0,
+        vendorName: "",
+        amount: "",
+        location: "",
+        effectiveDate: today,
+        expiryDate: futureDate,
+      });
+      setHasPricing(false);
+      setViewOnlySubsidyEnabled(false);
+      return;
+    }
+
+    if (selectedType === "screen_time") {
+      setForm({
+        name: "Screen Time Uplift",
+        description:
+          "Monthly salary uplift tied to healthy screen time targets.",
+        category: "wellness",
+        subsidyPercent: 0,
+        vendorName: "",
+        amount: "",
+        location: "",
+        effectiveDate: "",
+        expiryDate: "",
+      });
+      setHasPricing(false);
+      setViewOnlySubsidyEnabled(false);
+    }
+  }
+
   async function handleSubmit() {
     if (!selectedType || !form.name.trim()) {
       setError("Please select a benefit type and enter a name.");
@@ -901,13 +1008,23 @@ export default function CreateBenefitPage() {
               <div
                 className={`rounded-2xl border bg-white p-6 transition-opacity ${!selectedType ? "opacity-40 pointer-events-none" : "border-gray-100"}`}
               >
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">
-                    2
-                  </span>
-                  <h2 className="text-base font-semibold text-gray-900">
-                    Basic Information
-                  </h2>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">
+                      2
+                    </span>
+                    <h2 className="text-base font-semibold text-gray-900">
+                      Basic Information
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={fillDemoBenefit}
+                    disabled={!selectedType}
+                    className="rounded-lg px-3 bg-yellow-400 py-1.5 text-xs font-semibold text-gray-600 transition hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Demo Fill
+                  </button>
                 </div>
                 <p className="mb-5 ml-8 text-sm text-gray-400">
                   Name and configuration for this benefit
