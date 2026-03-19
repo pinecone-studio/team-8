@@ -20,6 +20,7 @@ import type { Database } from "../db";
 import type { Env } from "../graphql/context";
 import { writeAuditLog } from "../graphql/resolvers/helpers/audit";
 import { maskEmail } from "../lib/pii";
+import { buildAdminPanelUrl } from "../lib/app-url";
 
 // ---------------------------------------------------------------------------
 // Types (local — no graphql generated types needed)
@@ -105,6 +106,7 @@ async function getGmailAccessToken(env: Env): Promise<string | null> {
  */
 async function sendAlertEmail(env: Env, to: string, contracts: ExpiringContract[]): Promise<boolean> {
   if (!env.GMAIL_SENDER_EMAIL) return false;
+  const adminUrl = buildAdminPanelUrl("/admin-panel/vendor-contracts");
   const accessToken = await getGmailAccessToken(env);
   if (!accessToken) {
     console.error("[contractExpiryAlerts] Could not obtain Gmail access token — skipping email.");
@@ -125,7 +127,7 @@ async function sendAlertEmail(env: Env, to: string, contracts: ExpiringContract[
     `Hi,\n\n` +
     `${count} vendor contract${count === 1 ? "" : "s"} will expire within the next 60 days. Please review and renew as needed:\n\n` +
     rows +
-    `\n\nSign in to PineQuest EBMS › Vendor Contracts to upload new versions.\n\nPineQuest EBMS`;
+    `\n\nOpen Vendor Contracts: ${adminUrl}\n\nPineQuest EBMS`;
 
   const htmlRows = contracts
     .map(
@@ -159,7 +161,10 @@ async function sendAlertEmail(env: Env, to: string, contracts: ExpiringContract[
         <tbody>${htmlRows}</tbody>
       </table>
       <p style="margin:16px 0 0;">
-        Sign in to <strong>PineQuest EBMS › Vendor Contracts</strong> to upload new versions.
+        Open <strong>Vendor Contracts</strong> to upload new versions.
+      </p>
+      <p style="margin:12px 0 0;">
+        <a href="${escapeHtml(adminUrl)}" style="color:#2563eb;">${escapeHtml(adminUrl)}</a>
       </p>
       <p style="margin:12px 0 0;color:#6b7280;font-size:13px;">PineQuest EBMS</p>
     </div>`;

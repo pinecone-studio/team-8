@@ -21,6 +21,8 @@ import type { Benefit, Employee } from "../db";
 import type { Env } from "../graphql/context";
 import { fetchWithRetry } from "../lib/retry";
 import { truncateForLog } from "../lib/pii";
+import { buildAdminPanelUrl, buildEmployeePanelUrl } from "../lib/app-url";
+import { getEmployeeRequestStatusContent } from "../notifications/request-status-content";
 
 type EmailPayload = {
   to: string;
@@ -191,6 +193,32 @@ function shell(title: string, body: string): string {
   `;
 }
 
+function shellWithAction(title: string, body: string, actionLabel: string, actionUrl: string): string {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+      <h2 style="margin: 0 0 16px;">${escapeHtml(title)}</h2>
+      <p style="margin: 0 0 12px;">${body}</p>
+      <p style="margin: 18px 0;">
+        <a
+          href="${escapeHtml(actionUrl)}"
+          style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:10px;font-weight:600;"
+        >
+          ${escapeHtml(actionLabel)}
+        </a>
+      </p>
+      <p style="margin: 0 0 12px; font-size: 13px; color: #6b7280;">
+        Or open this link directly:<br />
+        <a href="${escapeHtml(actionUrl)}" style="color:#2563eb;">${escapeHtml(actionUrl)}</a>
+      </p>
+      <p style="margin: 16px 0 0; color: #6b7280; font-size: 14px;">PineQuest EBMS</p>
+    </div>
+  `;
+}
+
+function formatCurrencyMnt(value: number): string {
+  return `${value.toLocaleString("en-US")}₮`;
+}
+
 // ---------------------------------------------------------------------------
 // Transactional email templates
 // ---------------------------------------------------------------------------
@@ -200,23 +228,40 @@ export async function sendBenefitRequestSubmittedEmail(
   employee: Employee,
   benefit: Benefit,
   status: string,
+  options?: {
+    appBaseUrl?: string | null;
+    requestedAmount?: number | null;
+    repaymentMonths?: number | null;
+  },
 ): Promise<void> {
   const name = employeeName(employee);
+  const requestsUrl = buildEmployeePanelUrl("/employee-panel/requests", options?.appBaseUrl);
+  const contractUrl = buildEmployeePanelUrl(
+    `/employee-panel/benefits/${benefit.id}/request`,
+    options?.appBaseUrl,
+  );
+  const requestedTerms =
+    options?.requestedAmount && options?.repaymentMonths
+      ? ` Requested amount: ${formatCurrencyMnt(options.requestedAmount)} over ${options.repaymentMonths} month${options.repaymentMonths === 1 ? "" : "s"}.`
+      : "";
 
   if (status === "awaiting_contract_acceptance") {
     const subject = `PineQuest: review contract for ${benefit.name}`;
     const text =
       `Hi ${name},\n\n` +
       `Your request for ${benefit.name} requires contract review before processing can continue.\n` +
-      "Please sign in to PineQuest EBMS and review the contract in your requests/contracts area.\n\n" +
+      `Please open PineQuest EBMS and review the contract for ${benefit.name}.\n` +
+      `Open: ${contractUrl}\n\n` +
       "PineQuest EBMS";
     await sendEmail(env, {
       to: employee.email,
       subject,
       text,
-      html: shell(
+      html: shellWithAction(
         subject,
-        `${escapeHtml(name)}, your request for <strong>${escapeHtml(benefit.name)}</strong> requires contract review before processing can continue. Please sign in to PineQuest EBMS and review the contract in your requests/contracts area.`,
+        `${escapeHtml(name)}, your request for <strong>${escapeHtml(benefit.name)}</strong> requires contract review before processing can continue. Review the contract and confirm it so HR can continue.`,
+        "Open Employee Panel",
+        contractUrl,
       ),
     });
     return;
@@ -226,15 +271,18 @@ export async function sendBenefitRequestSubmittedEmail(
   const subject = `PineQuest: request submitted for ${benefit.name}`;
   const text =
     `Hi ${name},\n\n` +
-    `Your request for ${benefit.name} was submitted successfully and is now awaiting ${reviewTeam} review.\n\n` +
+    `Your request for ${benefit.name} was submitted successfully and is now awaiting ${reviewTeam} review.${requestedTerms}\n` +
+    `Open: ${requestsUrl}\n\n` +
     "PineQuest EBMS";
   await sendEmail(env, {
     to: employee.email,
     subject,
     text,
-    html: shell(
+    html: shellWithAction(
       subject,
-      `${escapeHtml(name)}, your request for <strong>${escapeHtml(benefit.name)}</strong> was submitted successfully and is now awaiting ${escapeHtml(reviewTeam)} review.`,
+      `${escapeHtml(name)}, your request for <strong>${escapeHtml(benefit.name)}</strong> was submitted successfully and is now awaiting ${escapeHtml(reviewTeam)} review.${requestedTerms ? ` ${escapeHtml(requestedTerms.trim())}` : ""}`,
+      "Open Employee Panel",
+      requestsUrl,
     ),
   });
 }
@@ -248,22 +296,36 @@ export async function sendHrNewBenefitRequestEmail(
   hrEmail: string,
   requestingEmployeeName: string,
   benefitName: string,
+  options?: {
+    appBaseUrl?: string | null;
+    reviewTeamLabel?: string;
+    requestedAmount?: number | null;
+    repaymentMonths?: number | null;
+  },
 ): Promise<void> {
-  const subject = `PineQuest: New benefit request — ${benefitName}`;
+  const reviewTeamLabel = options?.reviewTeamLabel?.trim() || "HR";
+  const adminUrl = buildAdminPanelUrl("/admin-panel/pending-requests", options?.appBaseUrl);
+  const requestedTerms =
+    options?.requestedAmount && options?.repaymentMonths
+      ? `\n• Requested terms: ${formatCurrencyMnt(options.requestedAmount)} over ${options.repaymentMonths} month${options.repaymentMonths === 1 ? "" : "s"}`
+      : "";
+  const subject = `PineQuest: New ${reviewTeamLabel} request — ${benefitName}`;
   const text =
     `Hi,\n\n` +
-    `A new benefit request has been submitted:\n\n` +
+    `A new benefit request needs ${reviewTeamLabel} review:\n\n` +
     `• Employee: ${requestingEmployeeName}\n` +
-    `• Benefit: ${benefitName}\n\n` +
-    `Sign in to PineQuest EBMS › Admin Panel to review and approve.\n\n` +
+    `• Benefit: ${benefitName}${requestedTerms}\n\n` +
+    `Open: ${adminUrl}\n\n` +
     `PineQuest EBMS`;
   await sendEmail(env, {
     to: hrEmail,
     subject,
     text,
-    html: shell(
-      "New benefit request",
-      `<strong>${escapeHtml(requestingEmployeeName)}</strong> has submitted a new request for <strong>${escapeHtml(benefitName)}</strong>. Sign in to PineQuest EBMS › Admin Panel to review and approve.`,
+    html: shellWithAction(
+      `New ${reviewTeamLabel} request`,
+      `<strong>${escapeHtml(requestingEmployeeName)}</strong> submitted a new request for <strong>${escapeHtml(benefitName)}</strong>.${requestedTerms ? ` ${escapeHtml(requestedTerms.trim())}.` : ""} Open the admin queue to review it.`,
+      "Open Admin Panel",
+      adminUrl,
     ),
   });
 }
@@ -272,22 +334,29 @@ export async function sendBenefitRequestApprovedEmail(
   env: Env,
   employee: Employee,
   benefit: Benefit,
+  options?: {
+    appBaseUrl?: string | null;
+  },
 ): Promise<void> {
   const name = employeeName(employee);
+  const myBenefitsUrl = buildEmployeePanelUrl("/employee-panel/mybenefits", options?.appBaseUrl);
   const subject = `PineQuest: approved - ${benefit.name}`;
   const text =
     `Hi ${name},\n\n` +
     `Your request for ${benefit.name} has been approved.\n` +
-    "You can now view it in PineQuest EBMS.\n\n" +
+    `You can now view it in PineQuest EBMS.\n` +
+    `Open: ${myBenefitsUrl}\n\n` +
     "PineQuest EBMS";
 
   await sendEmail(env, {
     to: employee.email,
     subject,
     text,
-    html: shell(
+    html: shellWithAction(
       subject,
       `${escapeHtml(name)}, your request for <strong>${escapeHtml(benefit.name)}</strong> has been approved. You can now view it in PineQuest EBMS.`,
+      "Open Employee Panel",
+      myBenefitsUrl,
     ),
   });
 }
@@ -297,22 +366,29 @@ export async function sendDownPaymentReadyForSignedContractEmail(
   env: Env,
   employee: Employee,
   benefit: Benefit,
+  options?: {
+    appBaseUrl?: string | null;
+  },
 ): Promise<void> {
   const name = employeeName(employee);
+  const requestsUrl = buildEmployeePanelUrl("/employee-panel/requests", options?.appBaseUrl);
   const subject = `PineQuest: sign contract for ${benefit.name}`;
   const text =
     `Hi ${name},\n\n` +
     `HR and Finance have approved your request for ${benefit.name}.\n` +
-    "Open the benefit in PineQuest EBMS, download the HR contract, sign it, and upload your signed copy to finish enrollment.\n\n" +
+    `Open the request in PineQuest EBMS, download the contract, sign it, and upload your signed copy to finish enrollment.\n` +
+    `Open: ${requestsUrl}\n\n` +
     "PineQuest EBMS";
 
   await sendEmail(env, {
     to: employee.email,
     subject,
     text,
-    html: shell(
+    html: shellWithAction(
       subject,
-      `${escapeHtml(name)}, HR and Finance have approved your request for <strong>${escapeHtml(benefit.name)}</strong>. Open the benefit in PineQuest EBMS, download the HR contract, sign it, and upload your signed copy to finish enrollment.`,
+      `${escapeHtml(name)}, HR and Finance approved your request for <strong>${escapeHtml(benefit.name)}</strong>. Download the contract, sign it, and upload your signed copy to finish enrollment.`,
+      "Open Employee Panel",
+      requestsUrl,
     ),
   });
 }
@@ -323,24 +399,34 @@ export async function sendFinanceOfferReadyEmail(
   benefit: Benefit,
   proposedAmount: number,
   proposedRepaymentMonths: number,
+  options?: {
+    appBaseUrl?: string | null;
+    proposalNote?: string | null;
+  },
 ): Promise<void> {
   const name = employeeName(employee);
+  const requestsUrl = buildEmployeePanelUrl("/employee-panel/requests", options?.appBaseUrl);
+  const proposalNote = options?.proposalNote?.trim();
   const subject = `PineQuest: finance offer ready for ${benefit.name}`;
   const text =
     `Hi ${name},\n\n` +
     `Finance has prepared an offer for your ${benefit.name} request.\n` +
-    `• Offered amount: ${proposedAmount.toLocaleString("en-US")}₮\n` +
+    `• Offered amount: ${formatCurrencyMnt(proposedAmount)}\n` +
     `• Repayment term: ${proposedRepaymentMonths} months\n\n` +
-    "Open PineQuest EBMS to review the offer, read the contract, and accept or decline it.\n\n" +
+    `${proposalNote ? `• Finance note: ${proposalNote}\n\n` : ""}` +
+    `Open PineQuest EBMS to review the offer, read the contract, and accept or decline it.\n` +
+    `Open: ${requestsUrl}\n\n` +
     "PineQuest EBMS";
 
   await sendEmail(env, {
     to: employee.email,
     subject,
     text,
-    html: shell(
+    html: shellWithAction(
       subject,
-      `${escapeHtml(name)}, Finance has prepared an offer for your <strong>${escapeHtml(benefit.name)}</strong> request. Offered amount: <strong>${proposedAmount.toLocaleString("en-US")}₮</strong>, repayment term: <strong>${proposedRepaymentMonths} months</strong>. Open PineQuest EBMS to review the offer, read the contract, and accept or decline it.`,
+      `${escapeHtml(name)}, Finance prepared an offer for your <strong>${escapeHtml(benefit.name)}</strong> request. Offered amount: <strong>${formatCurrencyMnt(proposedAmount)}</strong>, repayment term: <strong>${proposedRepaymentMonths} months</strong>.${proposalNote ? ` Finance note: <strong>${escapeHtml(proposalNote)}</strong>.` : ""} Review the offer, read the contract, and accept or decline it.`,
+      "Open Employee Panel",
+      requestsUrl,
     ),
   });
 }
@@ -350,21 +436,28 @@ export async function sendFinanceSignedContractReadyForFinalApprovalEmail(
   toEmail: string,
   employeeName: string,
   benefitName: string,
+  options?: {
+    appBaseUrl?: string | null;
+  },
 ): Promise<void> {
+  const adminUrl = buildAdminPanelUrl("/admin-panel/pending-requests", options?.appBaseUrl);
   const subject = `PineQuest: final finance approval needed — ${benefitName}`;
   const text =
     `Hi,\n\n` +
     `${employeeName} uploaded a signed contract for ${benefitName}.\n` +
-    "Open PineQuest EBMS › Admin Panel to complete the final finance approval.\n\n" +
+    `Open PineQuest EBMS to complete the final finance approval.\n` +
+    `Open: ${adminUrl}\n\n` +
     "PineQuest EBMS";
 
   await sendEmail(env, {
     to: toEmail,
     subject,
     text,
-    html: shell(
+    html: shellWithAction(
       subject,
-      `<strong>${escapeHtml(employeeName)}</strong> uploaded a signed contract for <strong>${escapeHtml(benefitName)}</strong>. Open PineQuest EBMS › Admin Panel to complete the final finance approval.`,
+      `<strong>${escapeHtml(employeeName)}</strong> uploaded a signed contract for <strong>${escapeHtml(benefitName)}</strong>. Complete the final Finance approval in the admin panel.`,
+      "Open Admin Panel",
+      adminUrl,
     ),
   });
 }
@@ -375,21 +468,28 @@ export async function sendSignedContractUploadedToAdminsEmail(
   toEmail: string,
   employeeName: string,
   benefitName: string,
+  options?: {
+    appBaseUrl?: string | null;
+  },
 ): Promise<void> {
+  const adminUrl = buildAdminPanelUrl("/admin-panel/pending-requests", options?.appBaseUrl);
   const subject = `PineQuest: Signed contract uploaded — ${benefitName}`;
   const text =
     `Hi,\n\n` +
     `${employeeName} uploaded a signed contract for ${benefitName}.\n` +
-    "Sign in to PineQuest EBMS › Admin Panel to review if needed.\n\n" +
+    `Open PineQuest EBMS to review it if needed.\n` +
+    `Open: ${adminUrl}\n\n` +
     "PineQuest EBMS";
 
   await sendEmail(env, {
     to: toEmail,
     subject,
     text,
-    html: shell(
+    html: shellWithAction(
       "Signed contract uploaded",
-      `<strong>${escapeHtml(employeeName)}</strong> uploaded a signed contract for <strong>${escapeHtml(benefitName)}</strong>. Sign in to PineQuest EBMS › Admin Panel to review if needed.`,
+      `<strong>${escapeHtml(employeeName)}</strong> uploaded a signed contract for <strong>${escapeHtml(benefitName)}</strong>. Open the admin panel to review it if needed.`,
+      "Open Admin Panel",
+      adminUrl,
     ),
   });
 }
@@ -399,22 +499,79 @@ export async function sendBenefitRequestRejectedEmail(
   employee: Employee,
   benefit: Benefit,
   reason?: string | null,
+  options?: {
+    appBaseUrl?: string | null;
+  },
 ): Promise<void> {
   const name = employeeName(employee);
+  const requestsUrl = buildEmployeePanelUrl("/employee-panel/requests", options?.appBaseUrl);
   const subject = `PineQuest: declined - ${benefit.name}`;
   const reasonText = reason?.trim() ? ` Reason: ${reason.trim()}` : "";
   const text =
     `Hi ${name},\n\n` +
-    `Your request for ${benefit.name} was declined.${reasonText}\n\n` +
+    `Your request for ${benefit.name} was declined.${reasonText}\n` +
+    `Open: ${requestsUrl}\n\n` +
     "PineQuest EBMS";
 
   await sendEmail(env, {
     to: employee.email,
     subject,
     text,
-    html: shell(
+    html: shellWithAction(
       subject,
       `${escapeHtml(name)}, your request for <strong>${escapeHtml(benefit.name)}</strong> was declined.${reason?.trim() ? ` Reason: ${escapeHtml(reason.trim())}` : ""}`,
+      "Open Employee Panel",
+      requestsUrl,
+    ),
+  });
+}
+
+export async function sendBenefitRequestStatusUpdateEmail(
+  env: Env,
+  employee: Employee,
+  benefit: Benefit,
+  input: {
+    status: string;
+    appBaseUrl?: string | null;
+    declineReason?: string | null;
+    requestedAmount?: number | null;
+    repaymentMonths?: number | null;
+    financeProposedAmount?: number | null;
+    financeProposedRepaymentMonths?: number | null;
+    financeProposalNote?: string | null;
+  },
+): Promise<void> {
+  const content = getEmployeeRequestStatusContent({
+    status: input.status,
+    benefitName: benefit.name,
+    benefitId: benefit.id,
+    declineReason: input.declineReason,
+    requestedAmount: input.requestedAmount,
+    repaymentMonths: input.repaymentMonths,
+    financeProposedAmount: input.financeProposedAmount,
+    financeProposedRepaymentMonths: input.financeProposedRepaymentMonths,
+    financeProposalNote: input.financeProposalNote,
+  });
+  if (!content) return;
+
+  const name = employeeName(employee);
+  const destinationUrl = buildEmployeePanelUrl(content.linkPath, input.appBaseUrl);
+  const subject = `PineQuest: ${content.title}`;
+  const text =
+    `Hi ${name},\n\n` +
+    `${content.body}\n` +
+    `Open: ${destinationUrl}\n\n` +
+    "PineQuest EBMS";
+
+  await sendEmail(env, {
+    to: employee.email,
+    subject,
+    text,
+    html: shellWithAction(
+      subject,
+      `${escapeHtml(name)}, ${escapeHtml(content.body)}`,
+      "Open Employee Panel",
+      destinationUrl,
     ),
   });
 }

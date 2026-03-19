@@ -48,7 +48,7 @@ const FINANCE_PHASE_STATUSES = new Set([
 export const declineBenefitRequest = async (
   _: unknown,
   { requestId, reason }: { requestId: string; reason?: string | null },
-  { db, env, currentEmployee }: GraphQLContext,
+  { db, env, currentEmployee, baseUrl }: GraphQLContext,
 ) => {
   const admin = requireAdmin(currentEmployee);
 
@@ -129,7 +129,9 @@ export const declineBenefitRequest = async (
     .where(eq(schema.employees.id, req.employeeId));
   const targetEmployee = employeeRows[0];
   if (targetEmployee && benefit) {
-    await sendBenefitRequestRejectedEmail(env, targetEmployee, benefit, reason);
+    await sendBenefitRequestRejectedEmail(env, targetEmployee, benefit, reason, {
+      appBaseUrl: baseUrl,
+    });
   }
 
   return updated;

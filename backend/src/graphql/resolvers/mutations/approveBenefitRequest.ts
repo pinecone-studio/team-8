@@ -12,6 +12,10 @@ import { writeAuditLog } from "../helpers/audit";
 import { finalizeBenefitApproval } from "../helpers/finalizeBenefitApproval";
 import { requiresEmployeePaymentForBenefit } from "../../../payments/amounts";
 import {
+  sendBenefitRequestStatusUpdateEmail,
+  sendDownPaymentReadyForSignedContractEmail,
+} from "../../../email/sendTransactionalEmail";
+import {
   AWAITING_FINAL_FINANCE_APPROVAL_STATUS,
   isFinanceBenefit,
 } from "../../../benefits/finance";
@@ -31,7 +35,7 @@ const FINANCE_REVIEWABLE = new Set([
 export const approveBenefitRequest = async (
   _: unknown,
   { requestId }: { requestId: string },
-  { db, env, currentEmployee }: GraphQLContext,
+  { db, env, currentEmployee, baseUrl }: GraphQLContext,
 ) => {
   const admin = requireAdmin(currentEmployee);
 
@@ -88,6 +92,7 @@ export const approveBenefitRequest = async (
     await finalizeBenefitApproval({
       db,
       env,
+      appBaseUrl: baseUrl,
       actor: admin,
       benefitRequest: updated,
       benefit,
@@ -183,6 +188,7 @@ export const approveBenefitRequest = async (
     await finalizeBenefitApproval({
       db,
       env,
+      appBaseUrl: baseUrl,
       actor: admin,
       benefitRequest: updated,
       benefit,
@@ -204,6 +210,42 @@ export const approveBenefitRequest = async (
       after: { status: nextStatus },
       metadata: { approvalPolicy, reviewerRole, requiresEmployeePayment },
     });
+
+    const employeeRows = await db
+      .select()
+      .from(schema.employees)
+      .where(eq(schema.employees.id, req.employeeId))
+      .limit(1);
+    const targetEmployee = employeeRows[0];
+
+    if (targetEmployee && benefit) {
+      if (nextStatus === "awaiting_employee_signed_contract") {
+        await sendDownPaymentReadyForSignedContractEmail(env, targetEmployee, benefit, {
+          appBaseUrl: baseUrl,
+        }).catch((error) =>
+          console.error(
+            "[approveBenefitRequest] Signed-contract-ready email failed:",
+            error,
+          ),
+        );
+      } else {
+        await sendBenefitRequestStatusUpdateEmail(env, targetEmployee, benefit, {
+          status: nextStatus,
+          appBaseUrl: baseUrl,
+          declineReason: updated.declineReason,
+          requestedAmount: updated.requestedAmount,
+          repaymentMonths: updated.repaymentMonths,
+          financeProposedAmount: updated.financeProposedAmount,
+          financeProposedRepaymentMonths: updated.financeProposedRepaymentMonths,
+          financeProposalNote: updated.financeProposalNote,
+        }).catch((error) =>
+          console.error(
+            "[approveBenefitRequest] Status update email failed:",
+            error,
+          ),
+        );
+      }
+    }
   }
 
   return updated;

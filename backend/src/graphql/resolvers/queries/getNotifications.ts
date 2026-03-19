@@ -4,6 +4,7 @@ import { schema } from "../../../db";
 import type { Database } from "../../../db";
 import type { GraphQLContext } from "../../context";
 import { isAdminEmployee, isHrAdmin } from "../../../auth";
+import { getEmployeeRequestStatusContent } from "../../../notifications/request-status-content";
 
 type Notification = {
   id: string;
@@ -13,60 +14,6 @@ type Notification = {
   linkPath?: string | null;
   createdAt: string;
   isRead: boolean;
-};
-
-// Status labels for employee-facing messages
-const STATUS_LABELS: Record<string, { title: string; body: string; linkPath: string }> = {
-  awaiting_contract_acceptance: {
-    title: "Contract ready to review",
-    body: "A vendor contract is ready for your acceptance before HR can process your request.",
-    linkPath: "/employee-panel/contracts",
-  },
-  awaiting_hr_review: {
-    title: "Request under HR review",
-    body: "Your benefit request has been submitted and is being reviewed by HR.",
-    linkPath: "/employee-panel/requests",
-  },
-  awaiting_finance_review: {
-    title: "Request under Finance review",
-    body: "Your benefit request is being reviewed by the Finance team.",
-    linkPath: "/employee-panel/requests",
-  },
-  awaiting_employee_decision: {
-    title: "Finance offer ready",
-    body: "Finance has prepared loan terms and a contract for your review.",
-    linkPath: "/employee-panel/requests",
-  },
-  hr_approved: {
-    title: "HR approved your request",
-    body: "HR has approved your benefit request. It is now pending Finance review.",
-    linkPath: "/employee-panel/requests",
-  },
-  awaiting_employee_signed_contract: {
-    title: "Sign and upload your contract",
-    body: "You accepted the finance offer. Upload your signed contract to continue.",
-    linkPath: "/employee-panel/requests",
-  },
-  awaiting_final_finance_approval: {
-    title: "Signed contract received",
-    body: "Your signed contract is waiting for final Finance manager approval.",
-    linkPath: "/employee-panel/mybenefits",
-  },
-  approved: {
-    title: "Benefit request approved",
-    body: "Your benefit request has been fully approved. You are now enrolled.",
-    linkPath: "/employee-panel/mybenefits",
-  },
-  rejected: {
-    title: "Benefit request declined",
-    body: "Your benefit request was declined. Check the request details for the reason.",
-    linkPath: "/employee-panel/requests",
-  },
-  cancelled: {
-    title: "Request cancelled",
-    body: "Your benefit request has been cancelled.",
-    linkPath: "/employee-panel/requests",
-  },
 };
 
 function daysUntil(dateStr: string | null | undefined): number | null {
@@ -91,6 +38,56 @@ function latestTimestamp(values: Array<string | null | undefined>, fallback: str
 
 function sortByStableKey<T>(rows: T[], getKey: (row: T) => string): T[] {
   return [...rows].sort((a, b) => getKey(a).localeCompare(getKey(b)));
+}
+
+function employeeDisplayName(
+  employee: { name: string; nameEng: string | null; email: string } | undefined,
+): string {
+  if (!employee) return "An employee";
+  return employee.nameEng?.trim() || employee.name.trim() || employee.email;
+}
+
+function formatCurrencyMnt(value: number | null | undefined): string | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  return `${Math.round(value).toLocaleString("en-US")}₮`;
+}
+
+function buildRequestSummary(params: {
+  employeeName: string;
+  benefitName: string;
+  requestedAmount?: number | null;
+  repaymentMonths?: number | null;
+}): string {
+  const { employeeName, benefitName, requestedAmount, repaymentMonths } = params;
+  const terms =
+    requestedAmount && repaymentMonths
+      ? ` requested ${formatCurrencyMnt(requestedAmount)} over ${repaymentMonths} month${repaymentMonths === 1 ? "" : "s"}`
+      : ` requested ${benefitName}`;
+  return `${employeeName}${terms.includes(benefitName) ? "" : ` for ${benefitName}`}`;
+}
+
+function describeQueueBody(params: {
+  rows: Array<{
+    benefitName: string;
+    employeeName: string;
+    requestedAmount?: number | null;
+    repaymentMonths?: number | null;
+  }>;
+  emptyBody: string;
+}): string {
+  const latest = params.rows[0];
+  if (!latest) return params.emptyBody;
+  const latestSummary = buildRequestSummary({
+    employeeName: latest.employeeName,
+    benefitName: latest.benefitName,
+    requestedAmount: latest.requestedAmount,
+    repaymentMonths: latest.repaymentMonths,
+  });
+  const remaining = params.rows.length - 1;
+  if (remaining <= 0) {
+    return `Latest: ${latestSummary}.`;
+  }
+  return `Latest: ${latestSummary}. ${remaining} more request${remaining === 1 ? "" : "s"} are still waiting.`;
 }
 
 async function getReadKeys(db: Database, employeeId: string): Promise<Set<string>> {
@@ -119,11 +116,37 @@ export const getNotifications = async (
     const requestRows = await db
       .select({
         id: schema.benefitRequests.id,
+        employeeId: schema.benefitRequests.employeeId,
+        benefitId: schema.benefitRequests.benefitId,
         status: schema.benefitRequests.status,
+        requestedAmount: schema.benefitRequests.requestedAmount,
+        repaymentMonths: schema.benefitRequests.repaymentMonths,
         updatedAt: schema.benefitRequests.updatedAt,
         createdAt: schema.benefitRequests.createdAt,
       })
       .from(schema.benefitRequests);
+
+    const [employeeRows, benefitRows] = await Promise.all([
+      db
+        .select({
+          id: schema.employees.id,
+          name: schema.employees.name,
+          nameEng: schema.employees.nameEng,
+          email: schema.employees.email,
+        })
+        .from(schema.employees),
+      db
+        .select({
+          id: schema.benefits.id,
+          name: schema.benefits.name,
+          requiresContract: schema.benefits.requiresContract,
+          isActive: schema.benefits.isActive,
+        })
+        .from(schema.benefits),
+    ]);
+
+    const employeeById = new Map(employeeRows.map((row) => [row.id, row]));
+    const benefitById = new Map(benefitRows.map((row) => [row.id, row]));
 
     const financeQueueRows = requestRows.filter((r) =>
       [
@@ -154,7 +177,21 @@ export const getNotifications = async (
         ),
         type: "queue_item",
         title: `${financeQueue} request${financeQueue > 1 ? "s" : ""} awaiting Finance review`,
-        body: "Pending requests are waiting in the Finance approval queue.",
+        body: describeQueueBody({
+          rows: financeQueueRows
+            .sort(
+              (a, b) =>
+                new Date(b.updatedAt ?? b.createdAt).getTime() -
+                new Date(a.updatedAt ?? a.createdAt).getTime(),
+            )
+            .map((row) => ({
+              employeeName: employeeDisplayName(employeeById.get(row.employeeId)),
+              benefitName: benefitById.get(row.benefitId)?.name ?? row.benefitId,
+              requestedAmount: row.requestedAmount,
+              repaymentMonths: row.repaymentMonths,
+            })),
+          emptyBody: "Pending requests are waiting in the Finance approval queue.",
+        }),
         linkPath: "/admin-panel/pending-requests",
         createdAt,
       });
@@ -192,7 +229,21 @@ export const getNotifications = async (
           ),
           type: "queue_item",
           title: `${hrQueue} request${hrQueue > 1 ? "s" : ""} awaiting HR review`,
-          body: "Pending requests are waiting in the HR approval queue.",
+          body: describeQueueBody({
+            rows: hrQueueRows
+              .sort(
+                (a, b) =>
+                  new Date(b.updatedAt ?? b.createdAt).getTime() -
+                  new Date(a.updatedAt ?? a.createdAt).getTime(),
+              )
+              .map((row) => ({
+                employeeName: employeeDisplayName(employeeById.get(row.employeeId)),
+                benefitName: benefitById.get(row.benefitId)?.name ?? row.benefitId,
+                requestedAmount: row.requestedAmount,
+                repaymentMonths: row.repaymentMonths,
+              })),
+            emptyBody: "Pending requests are waiting in the HR approval queue.",
+          }),
           linkPath: "/admin-panel/pending-requests",
           createdAt,
         });
@@ -214,27 +265,34 @@ export const getNotifications = async (
           ),
           type: "queue_item",
           title: `${contractQueue} request${contractQueue > 1 ? "s" : ""} awaiting contract acceptance`,
-          body: "Employees need to accept their vendor contracts before HR can review.",
+          body: describeQueueBody({
+            rows: contractQueueRows
+              .sort(
+                (a, b) =>
+                  new Date(b.updatedAt ?? b.createdAt).getTime() -
+                  new Date(a.updatedAt ?? a.createdAt).getTime(),
+              )
+              .map((row) => ({
+                employeeName: employeeDisplayName(employeeById.get(row.employeeId)),
+                benefitName: benefitById.get(row.benefitId)?.name ?? row.benefitId,
+              })),
+            emptyBody:
+              "Employees need to accept their vendor contracts before HR can review.",
+          }),
           linkPath: "/admin-panel/pending-requests",
           createdAt,
         });
       }
 
-      const [contractRows, benefitRows] = await Promise.all([
-        db
-          .select({
-            id: schema.contracts.id,
-            benefitId: schema.contracts.benefitId,
-            expiryDate: schema.contracts.expiryDate,
-            isActive: schema.contracts.isActive,
-            vendorName: schema.contracts.vendorName,
-          })
-          .from(schema.contracts),
-        db
-          .select({ id: schema.benefits.id, name: schema.benefits.name, requiresContract: schema.benefits.requiresContract })
-          .from(schema.benefits)
-          .where(eq(schema.benefits.isActive, true)),
-      ]);
+      const contractRows = await db
+        .select({
+          id: schema.contracts.id,
+          benefitId: schema.contracts.benefitId,
+          expiryDate: schema.contracts.expiryDate,
+          isActive: schema.contracts.isActive,
+          vendorName: schema.contracts.vendorName,
+        })
+        .from(schema.contracts);
 
       const activeContracts = contractRows.filter((c) => c.isActive);
       const now = new Date().toISOString();
@@ -245,12 +303,16 @@ export const getNotifications = async (
           const days = daysUntil(contract.expiryDate);
           if (days !== null) {
             raw.push({
-              id: `contract-expiring-${contract.id}`,
+              id: buildStateAwareId("contract-expiring", [
+                contract.id,
+                contract.expiryDate,
+                String(days),
+              ]),
               type: "contract_expiring",
               title: `Contract expiring in ${days} day${days !== 1 ? "s" : ""}`,
-              body: `${contract.vendorName} contract expires soon. Renew to avoid benefit disruption.`,
+              body: `${benefitById.get(contract.benefitId)?.name ?? "A benefit"} contract with ${contract.vendorName ?? "the vendor"} expires soon. Renew it to avoid benefit disruption.`,
               linkPath: "/admin-panel/vendor-contracts",
-              createdAt: new Date().toISOString(),
+              createdAt: contract.expiryDate,
             });
           }
         }
@@ -342,26 +404,51 @@ export const getNotifications = async (
     const requests = await db
       .select({
         id: schema.benefitRequests.id,
+        benefitId: schema.benefitRequests.benefitId,
         status: schema.benefitRequests.status,
         updatedAt: schema.benefitRequests.updatedAt,
         declineReason: schema.benefitRequests.declineReason,
+        requestedAmount: schema.benefitRequests.requestedAmount,
+        repaymentMonths: schema.benefitRequests.repaymentMonths,
+        financeProposedAmount: schema.benefitRequests.financeProposedAmount,
+        financeProposedRepaymentMonths:
+          schema.benefitRequests.financeProposedRepaymentMonths,
+        financeProposalNote: schema.benefitRequests.financeProposalNote,
       })
       .from(schema.benefitRequests)
       .where(eq(schema.benefitRequests.employeeId, currentEmployee.id));
 
+    const benefitIds = [...new Set(requests.map((req) => req.benefitId))];
+    const benefitRows = benefitIds.length
+      ? await db
+          .select({ id: schema.benefits.id, name: schema.benefits.name })
+          .from(schema.benefits)
+      : [];
+    const benefitNameById = new Map(
+      benefitRows.map((benefit) => [benefit.id, benefit.name]),
+    );
+
     for (const req of requests) {
-      const template = STATUS_LABELS[req.status];
-      if (!template) continue;
+      const benefitName = benefitNameById.get(req.benefitId) ?? "Benefit";
+      const content = getEmployeeRequestStatusContent({
+        status: req.status,
+        benefitName,
+        benefitId: req.benefitId,
+        declineReason: req.declineReason,
+        requestedAmount: req.requestedAmount,
+        repaymentMonths: req.repaymentMonths,
+        financeProposedAmount: req.financeProposedAmount,
+        financeProposedRepaymentMonths: req.financeProposedRepaymentMonths,
+        financeProposalNote: req.financeProposalNote,
+      });
+      if (!content) continue;
 
       raw.push({
         id: `req-${req.id}-${req.status}`,
         type: "request_status_change",
-        title: template.title,
-        body:
-          req.status === "rejected" && req.declineReason
-            ? `Your benefit request was declined: ${req.declineReason}`
-            : template.body,
-        linkPath: template.linkPath,
+        title: content.title,
+        body: content.body,
+        linkPath: content.linkPath,
         createdAt: req.updatedAt ?? new Date().toISOString(),
       });
     }
