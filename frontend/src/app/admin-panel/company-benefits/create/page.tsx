@@ -458,6 +458,15 @@ export default function CreateBenefitPage() {
           }
         }
       }
+      if (
+        selectedType === "contract" &&
+        (!form.amount.trim() || Number(form.amount) <= 0)
+      ) {
+        throw new Error("Contract-based benefits require a valid total price.");
+      }
+      if (selectedType === "contract" && form.subsidyPercent >= 100) {
+        throw new Error("Contract-based benefits must leave an employee payment share. Set company subsidy below 100%.");
+      }
       // For normal type, only include amount when the payment toggle is on
       const amountNum =
         selectedType === "normal"
@@ -727,7 +736,7 @@ export default function CreateBenefitPage() {
                         <input
                           type="number"
                           min={0}
-                          max={100}
+                          max={selectedType === "contract" ? 99 : 100}
                           value={form.subsidyPercent}
                           onChange={(e) => setForm((f) => ({ ...f, subsidyPercent: Number(e.target.value) || 0 }))}
                           className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-gray-400 focus:outline-none"
@@ -818,7 +827,7 @@ export default function CreateBenefitPage() {
                             placeholder="e.g. 120000"
                             className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm placeholder-gray-300 transition focus:border-emerald-400 focus:outline-none"
                           />
-                          {form.amount && (
+                        {form.amount && (
                             <p className="mt-1 text-xs text-gray-400">
                               Company: {Math.round(Number(form.amount) * form.subsidyPercent / 100).toLocaleString()}₮
                               {100 - form.subsidyPercent > 0 && (

@@ -4,10 +4,12 @@ type Props = {
   requiresContract?: boolean;
 };
 
-const allSteps = [
+const contractSteps = [
   { id: 1, label: "Contract Review" },
   { id: 2, label: "Upload Contract" },
   { id: 3, label: "Submit Request" },
+  { id: 4, label: "Payment" },
+  { id: 5, label: "Submit Payment" },
 ];
 
 export default function Stepper({ currentStep, requiresContract = true }: Props) {
@@ -17,7 +19,7 @@ export default function Stepper({ currentStep, requiresContract = true }: Props)
           { id: 1, label: "Contract Review", displayNum: 1 },
           { id: 3, label: "Submit Request", displayNum: 2 },
         ]
-      : allSteps.map((s, i) => ({ ...s, displayNum: i + 1 }));
+      : contractSteps.map((s, i) => ({ ...s, displayNum: i + 1 }));
 
   return (
     <div className="flex items-center gap-1">

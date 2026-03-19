@@ -4,7 +4,8 @@ import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Check, Eye, ExternalLink, FileCheck, X } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
+import { Building2, Check, Copy, CreditCard, Eye, ExternalLink, FileCheck, X } from "lucide-react";
 import Sidebar from "../_components/SideBar";
 import {
   useGetBenefitRequestsQuery,
@@ -23,8 +24,27 @@ const CANCELLABLE_STATUSES = new Set([
   "awaiting_contract_acceptance",
   "awaiting_hr_review",
   "awaiting_finance_review",
-  "hr_approved",
+  "awaiting_payment",
+  "awaiting_payment_review",
 ]);
+
+function getApiBase(): string {
+  const base =
+    typeof process !== "undefined" && process.env?.NEXT_PUBLIC_GRAPHQL_URL
+      ? process.env.NEXT_PUBLIC_GRAPHQL_URL
+      : "https://team8-api.team8pinequest.workers.dev/";
+  return base.replace(/\/$/, "");
+}
+
+const PAYMENT_ACCOUNT_DETAILS = {
+  bankName: "PineQuest Corporate Account",
+  accountNumber: "0000 0000 0000",
+  accountHolder: "PineQuest LLC",
+} as const;
+
+function formatMoney(amount: number): string {
+  return `${amount.toLocaleString("mn-MN")}₮`;
+}
 
 // ── Status helpers ─────────────────────────────────────────────────────────
 
@@ -52,6 +72,10 @@ function getStatusBadgeConfig(status: string): StatusBadgeConfig {
       return { label: "HR Approved", className: "bg-teal-50 text-teal-700 border border-teal-200" };
     case "finance_approved":
       return { label: "Finance Approved", className: "bg-teal-50 text-teal-700 border border-teal-200" };
+    case "awaiting_payment":
+      return { label: "Payment Required", className: "bg-blue-50 text-blue-700 border border-blue-200" };
+    case "awaiting_payment_review":
+      return { label: "Payment Review", className: "bg-indigo-50 text-indigo-700 border border-indigo-200" };
     case "awaiting_contract_acceptance":
       return { label: "Contract Pending", className: "bg-amber-50 text-amber-700 border border-amber-200" };
     case "awaiting_hr_review":
@@ -73,6 +97,8 @@ function getCardAccentClass(status: string): string {
   if (s === "approved" || s === "finance_approved") return "border-l-emerald-400";
   if (s === "rejected" || s === "declined" || s === "cancelled") return "border-l-red-300";
   if (s === "hr_approved") return "border-l-teal-400";
+  if (s === "awaiting_payment") return "border-l-blue-400";
+  if (s === "awaiting_payment_review") return "border-l-indigo-400";
   if (s === "awaiting_contract_acceptance") return "border-l-amber-400";
   return "border-l-amber-400";
 }
@@ -88,9 +114,13 @@ function getStatusTooltip(status: string): string | null {
     case "awaiting_finance_review":
       return "Your request is in the Finance review queue. The Finance team will process it — no action needed from you.";
     case "hr_approved":
-      return "HR has approved your request. Please review the payment details and confirm.";
+      return "HR has approved its review step. If Finance approval is still required, the request continues there.";
     case "finance_approved":
-      return "Finance has approved your request. It is being finalised.";
+      return "Finance approved its review step. If payment is required, you can complete the transfer next.";
+    case "awaiting_payment":
+      return "Your request is approved for payment. Open the benefit details, pay your share, then mark it as paid.";
+    case "awaiting_payment_review":
+      return "You marked the payment as sent. HR is verifying the transfer before activation.";
     case "cancelled":
       return "This request was cancelled.";
     default:
@@ -119,7 +149,7 @@ function buildTimeline(
   const stepIds: string[] = ["submitted"];
   if (rc) stepIds.push("contract");
   if (p === "hr" || p === "dual") stepIds.push("hr_review");
-  if (!hasPayment && (p === "finance" || p === "dual")) stepIds.push("finance_review");
+  if (p === "finance" || p === "dual") stepIds.push("finance_review");
   if (hasPayment) stepIds.push("payment");
   stepIds.push("done");
 
@@ -135,14 +165,18 @@ function buildTimeline(
       activeIdx = stepIds.indexOf("finance_review");
       break;
     case "hr_approved":
-      activeIdx = hasPayment
-        ? stepIds.indexOf("payment")
-        : p === "dual"
-          ? stepIds.indexOf("finance_review")
+      activeIdx = p === "dual"
+        ? stepIds.indexOf("finance_review")
+        : hasPayment
+          ? stepIds.indexOf("payment")
           : stepIds.length;
       break;
     case "finance_approved":
-      activeIdx = stepIds.length;
+      activeIdx = hasPayment ? stepIds.indexOf("payment") : stepIds.length;
+      break;
+    case "awaiting_payment":
+    case "awaiting_payment_review":
+      activeIdx = stepIds.indexOf("payment");
       break;
     case "approved":
     case "rejected":
@@ -347,6 +381,17 @@ type ContractModalState = {
   requiresContract: boolean;
 };
 
+type PaymentModalState = {
+  requestId: string;
+  benefitName: string;
+  requestStatus: string;
+  totalAmount: number;
+  companyPays: number;
+  employeePays: number;
+  companyPercent: number;
+  employeeName: string;
+};
+
 function ContractAcceptModal({
   state,
   onClose,
@@ -476,22 +521,130 @@ function ContractAcceptModal({
   );
 }
 
+function PaymentDetailsModal({
+  state,
+  onClose,
+  onSubmit,
+  submitting,
+  error,
+}: {
+  state: PaymentModalState;
+  onClose: () => void;
+  onSubmit: () => void;
+  submitting: boolean;
+  error: string | null;
+}) {
+  const waitingForReview = normalizeRequestStatus(state.requestStatus) === "awaiting_payment_review";
+  const reference = `${state.benefitName} - ${state.employeeName}`;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-xl rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+          <CreditCard className="h-3.5 w-3.5" />
+          Payment Details
+        </div>
+        <h2 className="mt-4 text-xl font-semibold text-gray-900">{state.benefitName}</h2>
+        <p className="mt-1 text-sm text-gray-500">Review the payment details for this request.</p>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-gray-400">Total</p>
+            <p className="mt-2 text-lg font-semibold text-gray-900">{formatMoney(state.totalAmount)}</p>
+          </div>
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-emerald-500">Company Pays</p>
+            <p className="mt-2 text-lg font-semibold text-emerald-700">{formatMoney(state.companyPays)}</p>
+            <p className="mt-1 text-xs text-emerald-600">{state.companyPercent}% covered</p>
+          </div>
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-amber-500">Your Payment</p>
+            <p className="mt-2 text-lg font-semibold text-amber-700">{formatMoney(state.employeePays)}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <Building2 className="h-4 w-4 text-gray-400" />
+            Company Bank Account
+          </div>
+          <div className="mt-3 space-y-2 text-sm text-gray-700">
+            <p>{PAYMENT_ACCOUNT_DETAILS.bankName}</p>
+            <p>{PAYMENT_ACCOUNT_DETAILS.accountHolder}</p>
+            <p className="font-medium">{PAYMENT_ACCOUNT_DETAILS.accountNumber}</p>
+            <p className="text-xs text-blue-700">
+              <Copy className="mr-1 inline h-3.5 w-3.5" />
+              Reference: {reference}
+            </p>
+          </div>
+        </div>
+
+        {waitingForReview && (
+          <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800">
+            HR is checking your payment now.
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-11 items-center justify-center rounded-xl border border-gray-200 bg-white px-5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={submitting || waitingForReview}
+            className={`inline-flex h-11 items-center justify-center rounded-xl px-5 text-sm font-semibold text-white transition ${
+              waitingForReview
+                ? "cursor-not-allowed bg-gray-300"
+                : "bg-blue-600 hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+            }`}
+          >
+            {waitingForReview ? "Төлбөр илгээгдсэн" : submitting ? "Submitting..." : "Төлбөр төлсөн — Submit"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────
 
 function RequestsContent() {
   const searchParams = useSearchParams();
   const submitted = searchParams.get("submitted") === "true";
-  const { loading: employeeLoading } = useCurrentEmployee();
+  const { getToken } = useAuth();
+  const { employee, loading: employeeLoading } = useCurrentEmployee();
   const {
     data: requestsData,
     loading: requestsLoading,
     previousData: requestsPreviousData,
+    refetch: refetchRequests,
   } = useGetBenefitRequestsQuery({
     fetchPolicy: submitted ? "network-only" : "cache-first",
   });
   const { data: benefitsData } = useGetBenefitsQuery();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [submittingPaymentId, setSubmittingPaymentId] = useState<string | null>(null);
   const [contractModal, setContractModal] = useState<ContractModalState | null>(null);
+  const [paymentModal, setPaymentModal] = useState<PaymentModalState | null>(null);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
     message: string;
@@ -539,6 +692,8 @@ function RequestsContent() {
     awaiting_contract_acceptance: 0,
     hr_approved: 0,
     finance_approved: 0,
+    awaiting_payment: 0,
+    awaiting_payment_review: 0,
     pending: 0,
     cancelled: 1,
     rejected: 1,
@@ -552,8 +707,7 @@ function RequestsContent() {
       const name = benefit?.name ?? req.benefitId;
       const vendor = benefit?.vendorName ?? "";
 
-      // Compute payment info only when employee has to pay something (employeePercent > 0)
-      // If company covers 100% or benefit is free, no payment section is shown
+      // Contract-based benefits always pass through the payment step.
       let paymentInfo: {
         total: string;
         companyPays: string;
@@ -561,12 +715,12 @@ function RequestsContent() {
         subsidyPercent: number;
       } | null = null;
       if (
-        benefit?.unitPrice &&
+        benefit?.flowType === "contract" &&
+        benefit?.amount &&
         benefit.subsidyPercent !== undefined &&
-        benefit.employeePercent !== undefined &&
-        benefit.employeePercent > 0
+        benefit.employeePercent !== undefined
       ) {
-        const unitPrice = benefit.unitPrice;
+        const unitPrice = benefit.amount;
         const subsidyPercent = benefit.subsidyPercent;
         const companyAmount = Math.round(unitPrice * subsidyPercent / 100);
         const employeeAmount = unitPrice - companyAmount;
@@ -595,7 +749,7 @@ function RequestsContent() {
         approvalPolicy: benefit?.approvalPolicy ?? "hr",
         requiresContract: benefit?.requiresContract ?? false,
         paymentInfo,
-        hasPayment: benefit?.amount != null,
+        hasPayment: benefit?.flowType === "contract" && benefit?.amount != null,
       };
     })
     .sort(
@@ -605,8 +759,50 @@ function RequestsContent() {
 
   const loading = employeeLoading || requestsLoading;
 
+  const submitPayment = async (requestId: string) => {
+    setSubmittingPaymentId(requestId);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${getApiBase()}/api/benefit-requests/payment-submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ requestId }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({ error: "Failed to submit payment." }));
+        throw new Error((json as { error?: string }).error ?? "Failed to submit payment.");
+      }
+      await refetchRequests();
+      setFeedback({ type: "success", message: "Payment submitted for HR verification." });
+      setTimeout(() => setFeedback(null), 5000);
+      setPaymentModal((current) =>
+        current ? { ...current, requestStatus: "awaiting_payment_review" } : current,
+      );
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to submit payment.",
+      });
+      setTimeout(() => setFeedback(null), 6000);
+    } finally {
+      setSubmittingPaymentId(null);
+    }
+  };
+
   return (
     <>
+      {paymentModal && (
+        <PaymentDetailsModal
+          state={paymentModal}
+          onClose={() => setPaymentModal(null)}
+          onSubmit={() => submitPayment(paymentModal.requestId)}
+          submitting={submittingPaymentId === paymentModal.requestId}
+          error={feedback?.type === "error" ? feedback.message : null}
+        />
+      )}
       {contractModal && (
         <ContractAcceptModal
           state={contractModal}
@@ -739,35 +935,51 @@ function RequestsContent() {
                         </div>
                       )}
 
-                      {/* Payment confirmation — action required after HR approves */}
-                      {normalizeRequestStatus(req.status) === "hr_approved" && req.hasPayment && req.paymentInfo && (
-                        <div className="mx-5 mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-600">Payment Confirmation Required</p>
+                      {/* Payment confirmation — employee must pay before activation */}
+                      {normalizeRequestStatus(req.status) === "awaiting_payment" && req.hasPayment && req.paymentInfo && (
+                        <div className="mx-5 mb-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-600">Payment Required</p>
                           <dl className="space-y-1.5 text-xs mb-3">
                             <div className="flex justify-between">
-                              <dt className="text-amber-700">Total Amount</dt>
-                              <dd className="font-semibold text-amber-900">{req.paymentInfo.total}</dd>
+                              <dt className="text-blue-700">Total Amount</dt>
+                              <dd className="font-semibold text-blue-900">{req.paymentInfo.total}</dd>
                             </div>
                             <div className="flex justify-between">
-                              <dt className="text-amber-700">Company Pays ({req.paymentInfo.subsidyPercent}%)</dt>
+                              <dt className="text-blue-700">Company Pays ({req.paymentInfo.subsidyPercent}%)</dt>
                               <dd className="font-semibold text-emerald-700">{req.paymentInfo.companyPays}</dd>
                             </div>
-                            <div className="flex justify-between border-t border-amber-100 pt-1.5">
-                              <dt className="font-medium text-amber-800">Your Payment</dt>
-                              <dd className="font-bold text-amber-900">{req.paymentInfo.employeePays}</dd>
+                            <div className="flex justify-between border-t border-blue-100 pt-1.5">
+                              <dt className="font-medium text-blue-800">Your Payment</dt>
+                              <dd className="font-bold text-blue-900">{req.paymentInfo.employeePays}</dd>
                             </div>
                           </dl>
-                          <div className="flex justify-end">
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Link
+                              href={`/employee-panel/benefits/${req.benefitId}`}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              Open Payment Dialog
+                            </Link>
                             <button
                               type="button"
-                              disabled={confirming}
-                              onClick={() => confirmContract({ variables: { requestId: req.id, contractAccepted: true } })}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-amber-700 disabled:opacity-50"
+                              disabled={submittingPaymentId === req.id}
+                              onClick={() => submitPayment(req.id)}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
                             >
                               <FileCheck className="h-3.5 w-3.5" />
-                              {confirming ? "Confirming…" : "Confirm Payment"}
+                              {submittingPaymentId === req.id ? "Submitting..." : "I Paid"}
                             </button>
                           </div>
+                        </div>
+                      )}
+
+                      {normalizeRequestStatus(req.status) === "awaiting_payment_review" && req.hasPayment && req.paymentInfo && (
+                        <div className="mx-5 mb-3 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
+                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-600">Payment Under Review</p>
+                          <p className="text-xs text-indigo-700">
+                            You already marked this payment as sent. HR is verifying the transfer before activating the benefit.
+                          </p>
                         </div>
                       )}
 
@@ -866,11 +1078,42 @@ function RequestsContent() {
                           )}
                           <Link
                             href={`/employee-panel/benefits/${req.benefitId}`}
-                            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-1.5 text-xs font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:border-gray-300 whitespace-nowrap"
-                          >
-                            <Eye className="h-3 w-3" aria-hidden="true" />
-                            View Benefit
-                          </Link>
+                            className="hidden"
+                          />
+                          {(normalizeRequestStatus(req.status) === "awaiting_payment" ||
+                            normalizeRequestStatus(req.status) === "awaiting_payment_review") &&
+                          req.paymentInfo ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const paymentInfo = req.paymentInfo!;
+                                return (
+                                setPaymentModal({
+                                  requestId: req.id,
+                                  benefitName: req.benefitLabel,
+                                  requestStatus: req.status,
+                                  totalAmount: Number(paymentInfo.total.replace(/[^\d]/g, "")),
+                                  companyPays: Number(paymentInfo.companyPays.replace(/[^\d]/g, "")),
+                                  employeePays: Number(paymentInfo.employeePays.replace(/[^\d]/g, "")),
+                                  companyPercent: paymentInfo.subsidyPercent,
+                                  employeeName: employee?.name ?? "Employee",
+                                })
+                              );
+                              }}
+                              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-1.5 text-xs font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:border-gray-300 whitespace-nowrap"
+                            >
+                              <Eye className="h-3 w-3" aria-hidden="true" />
+                              View Benefit
+                            </button>
+                          ) : (
+                            <Link
+                              href={`/employee-panel/benefits/${req.benefitId}`}
+                              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-1.5 text-xs font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:border-gray-300 whitespace-nowrap"
+                            >
+                              <Eye className="h-3 w-3" aria-hidden="true" />
+                              View Benefit
+                            </Link>
+                          )}
                         </div>
                       </div>
                     </div>
