@@ -412,6 +412,19 @@ function BenefitDetails({
     setEditing(true);
   }
 
+  function fillDemoForm() {
+    setForm({
+      name: "Pulse Fitness — 50% Plan",
+      category: "wellness",
+      subsidyPercent: 50,
+      vendorName: "Pulse Fitness",
+      requiresContract: true,
+      approvalPolicy: "hr",
+      amount: benefit?.amount ?? 120000,
+    });
+    setFeedback(null);
+  }
+
   async function handleSave(e: React.SyntheticEvent) {
     e.preventDefault();
     await updateBenefit({
@@ -596,6 +609,14 @@ function BenefitDetails({
             </div>
           </div>
           <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={fillDemoForm}
+              disabled={saving}
+              className="rounded-lg border border-gray-200 bg-yellow-400 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Fill demo
+            </button>
             <button
               type="submit"
               disabled={saving}
@@ -811,6 +832,23 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+
+  function fillDemoProposal() {
+    setForm({
+      ruleType: "employment_status",
+      operator: "eq",
+      value: '"active"',
+      errorMessage: "Only active employees are eligible.",
+      priority: 1,
+    });
+    setActionError(null);
+  }
+
+  function fillDemoReject() {
+    setRejectReason(
+      "This proposal conflicts with the existing policy. Please adjust and resubmit.",
+    );
+  }
 
   const rules = (rulesData?.eligibilityRules ?? []) as EligibilityRule[];
   const proposals = (proposalsData?.ruleProposals ?? []) as RuleProposal[];
@@ -1113,6 +1151,13 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
           <div className="mt-4 flex gap-2">
             <button
               type="button"
+              onClick={fillDemoProposal}
+              className="rounded-lg border border-gray-200 bg-yellow-400 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Fill demo
+            </button>
+            <button
+              type="button"
               onClick={submitProposal}
               disabled={proposing}
               className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-50"
@@ -1277,6 +1322,13 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
+                onClick={fillDemoReject}
+                className="rounded-xl border border-slate-200 bg-yellow-400 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Fill demo
+              </button>
+              <button
+                type="button"
                 onClick={() => setRejectTarget(null)}
                 className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
@@ -1330,6 +1382,20 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
     setForm({ version: "", effectiveDate: "", expiryDate: "", vendorName: "" });
     setFile(null);
   }, []);
+
+  const fillDemo = useCallback(() => {
+    const today = new Date();
+    const nextYear = new Date();
+    nextYear.setDate(today.getDate() + 365);
+    const format = (d: Date) => d.toISOString().slice(0, 10);
+    setForm({
+      version: "1.0",
+      effectiveDate: format(today),
+      expiryDate: format(nextYear),
+      vendorName: benefit?.vendorName ?? "Vendor",
+    });
+    setUploadError(null);
+  }, [benefit?.vendorName]);
 
   const closeModal = useCallback(() => {
     if (!uploading) setModalOpen(false);
@@ -1681,23 +1747,32 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
                 <p className="text-sm text-rose-600">{uploadError}</p>
               )}
             </div>
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-5 flex justify-between gap-2">
               <button
                 type="button"
-                onClick={closeModal}
-                disabled={uploading}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                onClick={fillDemo}
+                className="rounded-xl border border-slate-200 bg-yellow-400 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
-                Cancel
+                Fill demo
               </button>
-              <button
-                type="button"
-                onClick={handleUpload}
-                disabled={uploading}
-                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {uploading ? "Uploading…" : "Upload"}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  disabled={uploading}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUpload}
+                  disabled={uploading}
+                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {uploading ? "Uploading…" : "Upload"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
