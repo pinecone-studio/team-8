@@ -114,15 +114,9 @@ mutation UpsertScreenTimeProgram($input: UpsertScreenTimeProgramInput!) {
   upsertScreenTimeProgram(input: $input) {
     benefitId
     screenshotRetentionDays
+    winnerPercent
+    rewardAmountMnt
     isActive
-    tiers {
-      id
-      benefitId
-      label
-      maxDailyMinutes
-      salaryUpliftPercent
-      displayOrder
-    }
   }
 }
 

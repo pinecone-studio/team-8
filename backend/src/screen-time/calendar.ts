@@ -1,4 +1,5 @@
 export const SCREEN_TIME_TIMEZONE = "Asia/Ulaanbaatar";
+const SCREEN_TIME_SUBMISSION_WEEKDAY = 5;
 
 type LocalDateParts = {
   year: number;
@@ -104,26 +105,109 @@ export function compareDateStrings(left: string, right: string): number {
   return left.localeCompare(right);
 }
 
-export function getMondaySlotDates(monthKey: string): string[] {
-  const { year, month } = parseMonthKey(monthKey);
-  const dates: string[] = [];
-  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+function parseDateString(dateString: string): {
+  year: number;
+  month: number;
+  day: number;
+} {
+  const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    throw new Error("dateString must be in YYYY-MM-DD format.");
+  }
 
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    const utcDate = new Date(Date.UTC(year, month - 1, day));
-    if (utcDate.getUTCDay() === 1) {
-      dates.push(`${year}-${pad2(month)}-${pad2(day)}`);
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  if (
+    utcDate.getUTCFullYear() !== year ||
+    utcDate.getUTCMonth() !== month - 1 ||
+    utcDate.getUTCDate() !== day
+  ) {
+    throw new Error("Invalid dateString.");
+  }
+
+  return { year, month, day };
+}
+
+function addUtcDays(dateString: string, deltaDays: number): string {
+  const { year, month, day } = parseDateString(dateString);
+  const utcDate = new Date(Date.UTC(year, month - 1, day + deltaDays));
+  return formatLocalDateString({
+    year: utcDate.getUTCFullYear(),
+    month: utcDate.getUTCMonth() + 1,
+    day: utcDate.getUTCDate(),
+  });
+}
+
+function getMonthStartDate(monthKey: string): string {
+  const { year, month } = parseMonthKey(monthKey);
+  return `${year}-${pad2(month)}-01`;
+}
+
+function getMonthEndDate(monthKey: string): string {
+  const { year, month } = parseMonthKey(monthKey);
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${year}-${pad2(month)}-${pad2(daysInMonth)}`;
+}
+
+export function getScreenTimeWindowForSlotDate(slotDate: string): {
+  startDate: string;
+  endDate: string;
+} {
+  return {
+    startDate: addUtcDays(slotDate, -6),
+    endDate: slotDate,
+  };
+}
+
+export function getAssignedMonthKeyForSlotDate(slotDate: string): string {
+  const { startDate, endDate } = getScreenTimeWindowForSlotDate(slotDate);
+  const counts = new Map<string, number>();
+
+  let cursor = startDate;
+  while (compareDateStrings(cursor, endDate) <= 0) {
+    const monthKey = getMonthKeyFromDateString(cursor);
+    counts.set(monthKey, (counts.get(monthKey) ?? 0) + 1);
+    cursor = addUtcDays(cursor, 1);
+  }
+
+  const sorted = [...counts.entries()].sort((left, right) => {
+    if (left[1] !== right[1]) return right[1] - left[1];
+    return left[0].localeCompare(right[0]);
+  });
+  return sorted[0]?.[0] ?? getMonthKeyFromDateString(slotDate);
+}
+
+function isSubmissionWeekday(dateString: string): boolean {
+  const { year, month, day } = parseDateString(dateString);
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay() === SCREEN_TIME_SUBMISSION_WEEKDAY;
+}
+
+export function getFridaySlotDates(monthKey: string): string[] {
+  const dates: string[] = [];
+  const scanStart = addUtcDays(getMonthStartDate(monthKey), -6);
+  const scanEnd = addUtcDays(getMonthEndDate(monthKey), 6);
+
+  let cursor = scanStart;
+  while (compareDateStrings(cursor, scanEnd) <= 0) {
+    if (
+      isSubmissionWeekday(cursor) &&
+      getAssignedMonthKeyForSlotDate(cursor) === monthKey
+    ) {
+      dates.push(cursor);
     }
+    cursor = addUtcDays(cursor, 1);
   }
 
   return dates;
 }
 
-export function getDueMondaySlotDates(
+export function getDueFridaySlotDates(
   monthKey: string,
   todayLocalDate: string,
 ): string[] {
-  const slotDates = getMondaySlotDates(monthKey);
+  const slotDates = getFridaySlotDates(monthKey);
   const todayMonthKey = getMonthKeyFromDateString(todayLocalDate);
 
   if (monthKey > todayMonthKey) return [];
@@ -132,15 +216,13 @@ export function getDueMondaySlotDates(
   return slotDates.filter((slotDate) => compareDateStrings(slotDate, todayLocalDate) <= 0);
 }
 
-export function getActiveMondaySlotDate(
+export function getActiveFridaySlotDate(
   monthKey: string,
   todayLocalDate: string,
 ): string | null {
-  const todayMonthKey = getMonthKeyFromDateString(todayLocalDate);
-  if (todayMonthKey !== monthKey) return null;
-
-  const slotDates = getMondaySlotDates(monthKey);
-  return slotDates.includes(todayLocalDate) ? todayLocalDate : null;
+  if (!isSubmissionWeekday(todayLocalDate)) return null;
+  if (getAssignedMonthKeyForSlotDate(todayLocalDate) !== monthKey) return null;
+  return todayLocalDate;
 }
 
 export function isMonthClosed(
@@ -151,7 +233,7 @@ export function isMonthClosed(
   if (monthKey < todayMonthKey) return true;
   if (monthKey > todayMonthKey) return false;
 
-  const slotDates = getMondaySlotDates(monthKey);
+  const slotDates = getFridaySlotDates(monthKey);
   const lastSlotDate = slotDates[slotDates.length - 1];
   if (!lastSlotDate) return false;
 

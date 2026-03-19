@@ -4,11 +4,7 @@ import {
   buildScreenTimeLeaderboard,
   ensureScreenTimeBenefit,
 } from "../../../screen-time/service";
-
-function resolveDebugDate(env: GraphQLContext["env"]): string | null {
-  if (env.ENVIRONMENT !== "development") return null;
-  return env.SCREEN_TIME_DEBUG_TODAY_LOCAL_DATE ?? null;
-}
+import { resolveScreenTimeDebugDate } from "../../../screen-time/debug";
 
 export const getScreenTimeLeaderboard = async (
   _: unknown,
@@ -19,7 +15,7 @@ export const getScreenTimeLeaderboard = async (
     benefitId: string;
     monthKey?: string | null;
   },
-  { db, env, currentEmployee }: GraphQLContext,
+  { db, env, baseUrl, currentEmployee }: GraphQLContext,
 ) => {
   requireAuth(currentEmployee);
   await ensureScreenTimeBenefit(db, benefitId);
@@ -27,6 +23,6 @@ export const getScreenTimeLeaderboard = async (
     db,
     benefitId,
     monthKey,
-    resolveDebugDate(env),
+    resolveScreenTimeDebugDate(env, baseUrl),
   );
 };

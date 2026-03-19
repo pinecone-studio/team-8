@@ -12,7 +12,7 @@ export type RuleConfig = {
   errorMessage: string;
 };
 
-/** Benefit request flow: contract (sign contract → HR approve), normal (request → HR approve), down_payment (amount → employee approve → contract → HR), self_service (no request, show active/options), screen_time (weekly screenshot program with monthly salary uplift review) */
+/** Benefit request flow: contract (sign contract → HR approve), normal (request → HR approve), down_payment (amount → employee approve → contract → HR), self_service (no request, show active/options), screen_time (weekly screenshot competition with monthly ranking rewards) */
 export type BenefitFlowType =
   | "contract"
   | "normal"

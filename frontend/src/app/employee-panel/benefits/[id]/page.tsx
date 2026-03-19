@@ -376,7 +376,7 @@ function NextStepsBox({
         <p className="text-sm text-gray-500">
           You meet all eligibility requirements.{" "}
           {isScreenTime
-            ? "Open the monthly tracker and upload your 7-day average screenshot on each Monday slot."
+            ? "Open the competition tracker and upload your 7-day average screenshot on each required Friday."
             : requiresContract
             ? "You will be asked to accept a vendor contract as part of the request."
             : "Your request will go through an approval process."}

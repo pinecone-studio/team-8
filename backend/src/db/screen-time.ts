@@ -6,6 +6,8 @@ export const screenTimePrograms = sqliteTable("screen_time_programs", {
   screenshotRetentionDays: integer("screenshot_retention_days")
     .notNull()
     .default(30),
+  winnerPercent: integer("winner_percent").notNull().default(20),
+  rewardAmountMnt: integer("reward_amount_mnt").notNull().default(100000),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at")
     .notNull()
@@ -94,6 +96,17 @@ export const screenTimeMonthlyResults = sqliteTable(
     awardedSalaryUpliftPercent: integer("awarded_salary_uplift_percent")
       .notNull()
       .default(0),
+    competitionParticipantCount: integer("competition_participant_count")
+      .notNull()
+      .default(0),
+    rankedParticipantCount: integer("ranked_participant_count")
+      .notNull()
+      .default(0),
+    rankPosition: integer("rank_position"),
+    winnerCutoffRank: integer("winner_cutoff_rank").notNull().default(0),
+    isWinner: integer("is_winner", { mode: "boolean" }).notNull().default(false),
+    rewardAmountMnt: integer("reward_amount_mnt").notNull().default(0),
+    disqualificationReason: text("disqualification_reason"),
     status: text("status").notNull().default("in_progress"),
     approvedByEmployeeId: text("approved_by_employee_id"),
     approvedAt: text("approved_at"),

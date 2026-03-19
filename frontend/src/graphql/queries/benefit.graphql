@@ -251,15 +251,9 @@ query GetMyScreenTimeMonth($benefitId: String!, $monthKey: String) {
     program {
       benefitId
       screenshotRetentionDays
+      winnerPercent
+      rewardAmountMnt
       isActive
-      tiers {
-        id
-        benefitId
-        label
-        maxDailyMinutes
-        salaryUpliftPercent
-        displayOrder
-      }
     }
     month {
       id
@@ -269,15 +263,24 @@ query GetMyScreenTimeMonth($benefitId: String!, $monthKey: String) {
       requiredSlotDates
       dueSlotDates
       missingDueSlotDates
+      rejectedDueSlotDates
       requiredSlotCount
+      dueSlotCount
       submittedSlotCount
       approvedSlotCount
       monthlyAvgDailyMinutes
-      awardedSalaryUpliftPercent
+      competitionParticipantCount
+      rankedParticipantCount
+      rankPosition
+      winnerCutoffRank
+      isWinner
+      rewardAmountMnt
+      isProvisional
       status
       approvedByEmployeeId
       approvedAt
       decisionNote
+      disqualificationReason
       submissions {
         id
         benefitId
@@ -305,23 +308,21 @@ query GetAdminScreenTimeMonth($benefitId: String!, $monthKey: String) {
     benefitId
     monthKey
     slotDates
+    competitionParticipantCount
+    winnerCount
+    totalEmployeeCount
     program {
       benefitId
       screenshotRetentionDays
+      winnerPercent
+      rewardAmountMnt
       isActive
-      tiers {
-        id
-        benefitId
-        label
-        maxDailyMinutes
-        salaryUpliftPercent
-        displayOrder
-      }
     }
     rows {
       employeeId
       employeeName
       employeeEmail
+      benefitStatus
       result {
         id
         benefitId
@@ -330,15 +331,24 @@ query GetAdminScreenTimeMonth($benefitId: String!, $monthKey: String) {
         requiredSlotDates
         dueSlotDates
         missingDueSlotDates
+        rejectedDueSlotDates
         requiredSlotCount
+        dueSlotCount
         submittedSlotCount
         approvedSlotCount
         monthlyAvgDailyMinutes
-        awardedSalaryUpliftPercent
+        competitionParticipantCount
+        rankedParticipantCount
+        rankPosition
+        winnerCutoffRank
+        isWinner
+        rewardAmountMnt
+        isProvisional
         status
         approvedByEmployeeId
         approvedAt
         decisionNote
+        disqualificationReason
         submissions {
           id
           benefitId
@@ -371,10 +381,12 @@ query GetScreenTimeLeaderboard($benefitId: String!, $monthKey: String) {
     monthKey
     status
     avgDailyMinutes
-    awardedSalaryUpliftPercent
+    rewardAmountMnt
     approvedSlotCount
     dueSlotCount
     requiredSlotCount
     isProvisional
+    winnerCutoffRank
+    competitionParticipantCount
   }
 }

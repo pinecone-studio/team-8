@@ -33,6 +33,7 @@ import {
   getScreenTimeSubmissionById,
   recomputeScreenTimeMonthlyResult,
 } from "./screen-time/service";
+import { resolveScreenTimeDebugDate } from "./screen-time/debug";
 import {
   processBonumWebhook,
   reconcileBonumReturnedPayment,
@@ -1267,7 +1268,7 @@ async function handleEmployeeSignedContractView(
  *
  * Rules:
  *  - benefit must be configured with flow_type=screen_time
- *  - upload is accepted only on the current month's active Monday slot
+ *  - upload is accepted only on the current month's active Friday slot
  *  - Gemini extracts the 7-day average daily usage before persistence
  *  - invalid screenshots are rejected and never stored
  */
@@ -1346,10 +1347,7 @@ async function handleScreenTimeUpload(
   }
 
   await ensureScreenTimeBenefit(db, benefitId);
-  const todayOverride =
-    env.ENVIRONMENT === "development"
-      ? env.SCREEN_TIME_DEBUG_TODAY_LOCAL_DATE ?? null
-      : null;
+  const todayOverride = resolveScreenTimeDebugDate(env, request.url);
   const monthState = await buildMyScreenTimeMonth(
     db,
     currentUser.employee,
@@ -1387,7 +1385,7 @@ async function handleScreenTimeUpload(
       new Response(
         JSON.stringify({
           error:
-            "Screen time screenshots can only be uploaded on the required Monday slots of the current month.",
+            "Screen time screenshots can only be uploaded on the required Friday slots of the active competition month.",
         }),
         { status: 409, headers: { "Content-Type": "application/json" } },
       ),

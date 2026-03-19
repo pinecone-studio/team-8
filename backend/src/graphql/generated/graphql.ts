@@ -45,14 +45,18 @@ export type AdminDashboardSummary = {
 export type AdminScreenTimeMonthBoard = {
   __typename?: 'AdminScreenTimeMonthBoard';
   benefitId: Scalars['String']['output'];
+  competitionParticipantCount: Scalars['Int']['output'];
   monthKey: Scalars['String']['output'];
   program?: Maybe<ScreenTimeProgram>;
   rows: Array<AdminScreenTimeMonthRow>;
   slotDates: Array<Scalars['String']['output']>;
+  totalEmployeeCount: Scalars['Int']['output'];
+  winnerCount: Scalars['Int']['output'];
 };
 
 export type AdminScreenTimeMonthRow = {
   __typename?: 'AdminScreenTimeMonthRow';
+  benefitStatus: BenefitEligibilityStatus;
   employeeEmail: Scalars['String']['output'];
   employeeId: Scalars['String']['output'];
   employeeName: Scalars['String']['output'];
@@ -712,7 +716,7 @@ export type ScreenTimeLeaderboardRow = {
   __typename?: 'ScreenTimeLeaderboardRow';
   approvedSlotCount: Scalars['Int']['output'];
   avgDailyMinutes?: Maybe<Scalars['Int']['output']>;
-  awardedSalaryUpliftPercent: Scalars['Int']['output'];
+  competitionParticipantCount: Scalars['Int']['output'];
   dueSlotCount: Scalars['Int']['output'];
   employeeEmail: Scalars['String']['output'];
   employeeId: Scalars['String']['output'];
@@ -721,7 +725,9 @@ export type ScreenTimeLeaderboardRow = {
   monthKey: Scalars['String']['output'];
   rank?: Maybe<Scalars['Int']['output']>;
   requiredSlotCount: Scalars['Int']['output'];
+  rewardAmountMnt: Scalars['Int']['output'];
   status: Scalars['String']['output'];
+  winnerCutoffRank: Scalars['Int']['output'];
 };
 
 export type ScreenTimeMonthlyResult = {
@@ -729,28 +735,38 @@ export type ScreenTimeMonthlyResult = {
   approvedAt?: Maybe<Scalars['String']['output']>;
   approvedByEmployeeId?: Maybe<Scalars['String']['output']>;
   approvedSlotCount: Scalars['Int']['output'];
-  awardedSalaryUpliftPercent: Scalars['Int']['output'];
   benefitId: Scalars['String']['output'];
+  competitionParticipantCount: Scalars['Int']['output'];
   decisionNote?: Maybe<Scalars['String']['output']>;
+  disqualificationReason?: Maybe<Scalars['String']['output']>;
+  dueSlotCount: Scalars['Int']['output'];
   dueSlotDates: Array<Scalars['String']['output']>;
   employeeId: Scalars['String']['output'];
   id: Scalars['String']['output'];
+  isProvisional: Scalars['Boolean']['output'];
+  isWinner: Scalars['Boolean']['output'];
   missingDueSlotDates: Array<Scalars['String']['output']>;
   monthKey: Scalars['String']['output'];
   monthlyAvgDailyMinutes?: Maybe<Scalars['Int']['output']>;
+  rankPosition?: Maybe<Scalars['Int']['output']>;
+  rankedParticipantCount: Scalars['Int']['output'];
+  rejectedDueSlotDates: Array<Scalars['String']['output']>;
   requiredSlotCount: Scalars['Int']['output'];
   requiredSlotDates: Array<Scalars['String']['output']>;
+  rewardAmountMnt: Scalars['Int']['output'];
   status: Scalars['String']['output'];
   submissions: Array<ScreenTimeSubmission>;
   submittedSlotCount: Scalars['Int']['output'];
+  winnerCutoffRank: Scalars['Int']['output'];
 };
 
 export type ScreenTimeProgram = {
   __typename?: 'ScreenTimeProgram';
   benefitId: Scalars['String']['output'];
   isActive: Scalars['Boolean']['output'];
+  rewardAmountMnt: Scalars['Int']['output'];
   screenshotRetentionDays: Scalars['Int']['output'];
-  tiers: Array<ScreenTimeTier>;
+  winnerPercent: Scalars['Int']['output'];
 };
 
 export type ScreenTimeSubmission = {
@@ -771,23 +787,6 @@ export type ScreenTimeSubmission = {
   slotDate: Scalars['String']['output'];
   submittedAt: Scalars['String']['output'];
   viewUrl?: Maybe<Scalars['String']['output']>;
-};
-
-export type ScreenTimeTier = {
-  __typename?: 'ScreenTimeTier';
-  benefitId: Scalars['String']['output'];
-  displayOrder: Scalars['Int']['output'];
-  id: Scalars['String']['output'];
-  label: Scalars['String']['output'];
-  maxDailyMinutes: Scalars['Int']['output'];
-  salaryUpliftPercent: Scalars['Int']['output'];
-};
-
-export type ScreenTimeTierInput = {
-  displayOrder?: InputMaybe<Scalars['Int']['input']>;
-  label: Scalars['String']['input'];
-  maxDailyMinutes: Scalars['Int']['input'];
-  salaryUpliftPercent: Scalars['Int']['input'];
 };
 
 export type UpdateBenefitInput = {
@@ -837,8 +836,9 @@ export type UpdateMySettingsInput = {
 
 export type UpsertScreenTimeProgramInput = {
   benefitId: Scalars['String']['input'];
+  rewardAmountMnt: Scalars['Int']['input'];
   screenshotRetentionDays?: InputMaybe<Scalars['Int']['input']>;
-  tiers: Array<ScreenTimeTierInput>;
+  winnerPercent: Scalars['Int']['input'];
 };
 
 export type WithIndex<TObject> = TObject & Record<string, any>;
@@ -959,8 +959,6 @@ export type ResolversTypes = ResolversObject<{
   ScreenTimeMonthlyResult: ResolverTypeWrapper<ScreenTimeMonthlyResult>;
   ScreenTimeProgram: ResolverTypeWrapper<ScreenTimeProgram>;
   ScreenTimeSubmission: ResolverTypeWrapper<ScreenTimeSubmission>;
-  ScreenTimeTier: ResolverTypeWrapper<ScreenTimeTier>;
-  ScreenTimeTierInput: ScreenTimeTierInput;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
   UpdateBenefitInput: UpdateBenefitInput;
   UpdateEligibilityRuleInput: UpdateEligibilityRuleInput;
@@ -1013,8 +1011,6 @@ export type ResolversParentTypes = ResolversObject<{
   ScreenTimeMonthlyResult: ScreenTimeMonthlyResult;
   ScreenTimeProgram: ScreenTimeProgram;
   ScreenTimeSubmission: ScreenTimeSubmission;
-  ScreenTimeTier: ScreenTimeTier;
-  ScreenTimeTierInput: ScreenTimeTierInput;
   String: Scalars['String']['output'];
   UpdateBenefitInput: UpdateBenefitInput;
   UpdateEligibilityRuleInput: UpdateEligibilityRuleInput;
@@ -1048,14 +1044,18 @@ export type AdminDashboardSummaryResolvers<ContextType = GraphQLContext, ParentT
 
 export type AdminScreenTimeMonthBoardResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AdminScreenTimeMonthBoard'] = ResolversParentTypes['AdminScreenTimeMonthBoard']> = ResolversObject<{
   benefitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  competitionParticipantCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   monthKey?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   program?: Resolver<Maybe<ResolversTypes['ScreenTimeProgram']>, ParentType, ContextType>;
   rows?: Resolver<Array<ResolversTypes['AdminScreenTimeMonthRow']>, ParentType, ContextType>;
   slotDates?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  totalEmployeeCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  winnerCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type AdminScreenTimeMonthRowResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AdminScreenTimeMonthRow'] = ResolversParentTypes['AdminScreenTimeMonthRow']> = ResolversObject<{
+  benefitStatus?: Resolver<ResolversTypes['BenefitEligibilityStatus'], ParentType, ContextType>;
   employeeEmail?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   employeeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   employeeName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -1402,7 +1402,7 @@ export type RuleProposalResolvers<ContextType = GraphQLContext, ParentType exten
 export type ScreenTimeLeaderboardRowResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ScreenTimeLeaderboardRow'] = ResolversParentTypes['ScreenTimeLeaderboardRow']> = ResolversObject<{
   approvedSlotCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   avgDailyMinutes?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
-  awardedSalaryUpliftPercent?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  competitionParticipantCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   dueSlotCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   employeeEmail?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   employeeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -1411,7 +1411,9 @@ export type ScreenTimeLeaderboardRowResolvers<ContextType = GraphQLContext, Pare
   monthKey?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   rank?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   requiredSlotCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  rewardAmountMnt?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  winnerCutoffRank?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -1419,28 +1421,38 @@ export type ScreenTimeMonthlyResultResolvers<ContextType = GraphQLContext, Paren
   approvedAt?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   approvedByEmployeeId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   approvedSlotCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  awardedSalaryUpliftPercent?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   benefitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  competitionParticipantCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   decisionNote?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  disqualificationReason?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  dueSlotCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   dueSlotDates?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
   employeeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  isProvisional?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  isWinner?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   missingDueSlotDates?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
   monthKey?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   monthlyAvgDailyMinutes?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  rankPosition?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  rankedParticipantCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  rejectedDueSlotDates?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
   requiredSlotCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   requiredSlotDates?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  rewardAmountMnt?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   submissions?: Resolver<Array<ResolversTypes['ScreenTimeSubmission']>, ParentType, ContextType>;
   submittedSlotCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  winnerCutoffRank?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type ScreenTimeProgramResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ScreenTimeProgram'] = ResolversParentTypes['ScreenTimeProgram']> = ResolversObject<{
   benefitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   isActive?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  rewardAmountMnt?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   screenshotRetentionDays?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  tiers?: Resolver<Array<ResolversTypes['ScreenTimeTier']>, ParentType, ContextType>;
+  winnerPercent?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -1461,16 +1473,6 @@ export type ScreenTimeSubmissionResolvers<ContextType = GraphQLContext, ParentTy
   slotDate?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   submittedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   viewUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-}>;
-
-export type ScreenTimeTierResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ScreenTimeTier'] = ResolversParentTypes['ScreenTimeTier']> = ResolversObject<{
-  benefitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  displayOrder?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  label?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  maxDailyMinutes?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  salaryUpliftPercent?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -1507,6 +1509,5 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   ScreenTimeMonthlyResult?: ScreenTimeMonthlyResultResolvers<ContextType>;
   ScreenTimeProgram?: ScreenTimeProgramResolvers<ContextType>;
   ScreenTimeSubmission?: ScreenTimeSubmissionResolvers<ContextType>;
-  ScreenTimeTier?: ScreenTimeTierResolvers<ContextType>;
 }>;
 

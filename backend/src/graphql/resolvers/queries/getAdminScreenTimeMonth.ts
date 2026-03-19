@@ -1,11 +1,7 @@
 import { requireHrAdmin } from "../../../auth";
 import type { GraphQLContext } from "../../context";
 import { buildAdminScreenTimeMonthBoard, ensureScreenTimeBenefit } from "../../../screen-time/service";
-
-function resolveDebugDate(env: GraphQLContext["env"]): string | null {
-  if (env.ENVIRONMENT !== "development") return null;
-  return env.SCREEN_TIME_DEBUG_TODAY_LOCAL_DATE ?? null;
-}
+import { resolveScreenTimeDebugDate } from "../../../screen-time/debug";
 
 export const getAdminScreenTimeMonth = async (
   _: unknown,
@@ -16,7 +12,7 @@ export const getAdminScreenTimeMonth = async (
     benefitId: string;
     monthKey?: string | null;
   },
-  { db, env, currentEmployee }: GraphQLContext,
+  { db, env, baseUrl, currentEmployee }: GraphQLContext,
 ) => {
   requireHrAdmin(currentEmployee);
   await ensureScreenTimeBenefit(db, benefitId);
@@ -24,6 +20,6 @@ export const getAdminScreenTimeMonth = async (
     db,
     benefitId,
     monthKey,
-    resolveDebugDate(env),
+    resolveScreenTimeDebugDate(env, baseUrl),
   );
 };
