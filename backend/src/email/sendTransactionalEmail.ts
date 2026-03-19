@@ -183,16 +183,6 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
-function shell(title: string, body: string): string {
-  return `
-    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-      <h2 style="margin: 0 0 16px;">${escapeHtml(title)}</h2>
-      <p style="margin: 0 0 12px;">${body}</p>
-      <p style="margin: 16px 0 0; color: #6b7280; font-size: 14px;">PineQuest EBMS</p>
-    </div>
-  `;
-}
-
 function shellWithAction(title: string, body: string, actionLabel: string, actionUrl: string): string {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">

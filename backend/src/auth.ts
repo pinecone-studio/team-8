@@ -137,7 +137,9 @@ function isFinanceDepartment(dept: string): boolean {
 }
 
 /** Derive the most specific internal role from employee record. */
-export function getInternalRole(employee: Employee | null | undefined): InternalRole {
+export function getInternalRole(
+  employee: Pick<Employee, "department" | "responsibilityLevel"> | null | undefined,
+): InternalRole {
   if (!employee) return "employee";
   const dept = normalizeDepartment(employee.department);
   const level = employee.responsibilityLevel ?? 0;
@@ -261,13 +263,13 @@ export async function getCurrentUserFromRequest(
   }
 
   try {
+    const verifyOptions: Parameters<typeof verifyToken>[1] = {
+      ...(env.CLERK_SECRET_KEY ? { secretKey: env.CLERK_SECRET_KEY } : {}),
+      ...(env.CLERK_JWT_KEY ? { jwtKey: env.CLERK_JWT_KEY } : {}),
+    };
     const verified = await verifyToken(
       token,
-      {
-        // `secretKey` is required by some Clerk setups; `jwtKey` can be used in others.
-        ...(env.CLERK_SECRET_KEY ? { secretKey: env.CLERK_SECRET_KEY } : {}),
-        ...(env.CLERK_JWT_KEY ? { jwtKey: env.CLERK_JWT_KEY } : {}),
-      } as any,
+      verifyOptions,
     );
 
     const verifiedClaims = verified as Record<string, unknown>;

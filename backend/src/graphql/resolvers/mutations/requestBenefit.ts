@@ -527,7 +527,7 @@ export const requestBenefit = async (
   const displayName = employee.nameEng?.trim() || employee.name.trim() || employee.email;
   const reviewerEmails = activeReviewers
     .filter((reviewer) => {
-      const role = getInternalRole(reviewer as any);
+      const role = getInternalRole(reviewer);
       if (isFinanceBenefitFlowType(benefitFromDb.flowType)) {
         return role === "finance_admin" || role === "finance_manager";
       }

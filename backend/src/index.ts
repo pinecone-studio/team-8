@@ -1132,7 +1132,7 @@ async function handleEmployeeContractUpload(
 
       if (financeRequest) {
         const financeManagerEmails = activeEmployees
-          .filter((e) => getInternalRole(e as any) === "finance_manager")
+          .filter((e) => getInternalRole(e) === "finance_manager")
           .map((e) => e.email);
         await Promise.all(
           financeManagerEmails.map((email) =>
@@ -1168,7 +1168,7 @@ async function handleEmployeeContractUpload(
 
         const adminEmails = activeEmployees
           .filter((e) => {
-            const internal = getInternalRole(e as any);
+            const internal = getInternalRole(e);
             return (
               internal === "hr_admin" ||
               internal === "hr_manager" ||
