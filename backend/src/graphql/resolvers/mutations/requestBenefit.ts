@@ -22,7 +22,7 @@ function getTenureMonths(hireDateIso: string, now: Date): number {
 async function resolveEmployeeMonthlySalaryMnt(params: {
   envDb: any;
   employeeId: string;
-}): Promise<number | null> {
+}): Promise<number> {
   // We don't have salary columns in Drizzle schema, but the underlying D1 DB
   // may include them. To keep this resolver resilient, we discover the column
   // name via PRAGMA table_info and then read the value.
@@ -33,9 +33,9 @@ async function resolveEmployeeMonthlySalaryMnt(params: {
     results?: Array<{ name: string }>;
   };
 
-  const cols =
-    (pragma as any)?.results?.map((r: { name: string }) => r.name).filter(Boolean) ??
-    [];
+  const cols: string[] = (pragma.results ?? [])
+    .map((r) => r.name)
+    .filter((n) => n.trim().length > 0);
 
   // Prefer salary/wage/pay/income-like names.
   const candidates = cols.filter((c) => {
@@ -55,19 +55,17 @@ async function resolveEmployeeMonthlySalaryMnt(params: {
   const pick = (names: string[], scoreFn: (n: string) => number) =>
     names.sort((a, b) => scoreFn(b) - scoreFn(a))[0];
 
-  const chosen =
-    pick(candidates, (n) => {
-      const lc = n.toLowerCase();
-      let score = 0;
-      if (lc.includes("monthly") || lc.includes("month")) score += 5;
-      if (lc.includes("mnt")) score += 4;
-      if (lc === "salary") score += 3;
-      if (lc.includes("salary")) score += 2;
-      if (lc.includes("wage")) score += 2;
-      if (lc.includes("income")) score += 2;
-      return score;
-    }) ??
-    null;
+  const chosen = pick(candidates, (n) => {
+    const lc = n.toLowerCase();
+    let score = 0;
+    if (lc.includes("monthly") || lc.includes("month")) score += 5;
+    if (lc.includes("mnt")) score += 4;
+    if (lc === "salary") score += 3;
+    if (lc.includes("salary")) score += 2;
+    if (lc.includes("wage")) score += 2;
+    if (lc.includes("income")) score += 2;
+    return score;
+  });
 
   if (candidates.length === 0) {
     throw new Error(
@@ -89,12 +87,12 @@ async function resolveEmployeeMonthlySalaryMnt(params: {
   };
 
   const raw = rows?.results?.[0]?.monthly_salary_mnt ?? null;
-  const salary = typeof raw === "number" ? raw : Number(raw);
   if (raw === null) {
     throw new Error(
       `Monthly salary value is NULL in column "${chosen}" for this employee.`,
     );
   }
+  const salary = typeof raw === "number" ? raw : Number(raw);
   if (!Number.isFinite(salary) || salary <= 0) {
     throw new Error(
       `Monthly salary value in column "${chosen}" is invalid (value=${String(raw)}).`,
