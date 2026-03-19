@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { getBenefitConfig } from "../../eligibility";
 import { schema } from "../../db";
 import type { GraphQLContext } from "../context";
@@ -72,6 +72,19 @@ export const BenefitRequest = {
       .limit(1);
 
     return fallbackRows[0] ?? null;
+  },
+  async payment(
+    parent: { id: string },
+    _: unknown,
+    { db }: GraphQLContext,
+  ) {
+    const rows = await db
+      .select()
+      .from(schema.benefitRequestPayments)
+      .where(eq(schema.benefitRequestPayments.requestId, parent.id))
+      .orderBy(desc(schema.benefitRequestPayments.createdAt))
+      .limit(1);
+    return rows[0] ?? null;
   },
 };
 

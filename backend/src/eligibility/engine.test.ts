@@ -11,6 +11,8 @@ import type { Employee } from "../db/employee";
 const eligibleEmployee: Employee = {
   id: "emp-1",
   email: "e@co.com",
+  clerkUserId: null,
+  avatarUrl: null,
   name: "Test",
   nameEng: null,
   role: "engineer",

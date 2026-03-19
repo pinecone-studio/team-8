@@ -18,6 +18,7 @@ import {
   isHrAdmin,
   isFinanceAdmin,
 } from "@/app/admin-panel/_lib/access";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 
 const STATUS_TONE: Record<string, string> = {
   pending: "bg-orange-50 text-orange-600 border-orange-200",
@@ -80,6 +81,7 @@ type RequestRow = {
   vendorName: string;
   subsidyPercent: number | null;
   employeeName: string;
+  employeeAvatarUrl: string | null;
   employeeEmail: string;
   employeeDepartment: string;
   employeeRole: string;
@@ -174,6 +176,7 @@ export default function PendingRequestsPage() {
         vendorName: vendor,
         subsidyPercent: benefit?.subsidyPercent ?? null,
         employeeName: emp?.name ?? req.employeeId,
+        employeeAvatarUrl: emp?.avatarUrl ?? null,
         employeeEmail: emp?.email ?? "",
         employeeDepartment: emp?.department ?? "",
         employeeRole: emp?.role ?? "",
@@ -482,7 +485,10 @@ export default function PendingRequestsPage() {
                         >
                           <td className="px-5 py-4 text-sm text-gray-700">
                             <div className="flex items-center gap-2">
-                              <UserAvatar />
+                              <EmployeeAvatar
+                                name={req.employeeName}
+                                imageUrl={req.employeeAvatarUrl}
+                              />
                               <span>{req.employeeName}</span>
                             </div>
                           </td>
@@ -635,7 +641,6 @@ export default function PendingRequestsPage() {
 
 import { X, User, Briefcase, Calendar, ExternalLink } from "lucide-react";
 import { useGetContractsForBenefitQuery } from "@/graphql/generated/graphql";
-import { UserAvatar } from "@clerk/nextjs";
 
 type DetailTab = "approved" | "employee" | "contract";
 

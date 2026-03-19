@@ -3,12 +3,14 @@ import { schema } from "../../../db";
 import type { GraphQLContext } from "../../context";
 import { requireAuth } from "../../../auth";
 import { writeAuditLog } from "../helpers/audit";
+import { expireOpenPaymentsForRequest } from "../../../payments/benefit-request-payments";
 
 const CANCELLABLE_STATUSES = new Set([
   "pending",
   "awaiting_contract_acceptance",
   "awaiting_hr_review",
   "awaiting_finance_review",
+  "awaiting_payment",
 ]);
 
 /** Employee: cancel own non-terminal benefit request. */
@@ -29,9 +31,14 @@ export const cancelBenefitRequest = async (
   }
   if (!CANCELLABLE_STATUSES.has(req.status)) {
     throw new Error(
-      `Request cannot be cancelled from status: ${req.status}. Requests that have been approved or are awaiting secondary review cannot be cancelled.`,
+      `Request cannot be cancelled from status: ${req.status}. Requests that are already approved, paid, or under payment review cannot be cancelled.`,
     );
   }
+
+  const expiredPayments =
+    req.status === "awaiting_payment"
+      ? await expireOpenPaymentsForRequest(db, requestId)
+      : { count: 0, paymentIds: [] as string[] };
 
   const [updated] = await db
     .update(schema.benefitRequests)
@@ -51,7 +58,11 @@ export const cancelBenefitRequest = async (
     requestId,
     reason: "Cancelled by employee",
     before: { status: req.status },
-    after: { status: "cancelled" },
+    after: {
+      status: "cancelled",
+      expiredPaymentCount: expiredPayments.count,
+      expiredPaymentIds: expiredPayments.paymentIds,
+    },
   });
 
   return updated;

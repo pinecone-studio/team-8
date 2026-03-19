@@ -5,6 +5,7 @@ query GetDepartments {
 query GetEmployees($search: String, $department: String, $limit: Int) {
   getEmployees(search: $search, department: $department, limit: $limit) {
     id
+    avatarUrl
     name
     nameEng
     email
@@ -23,6 +24,7 @@ query GetEmployees($search: String, $department: String, $limit: Int) {
 query GetEmployee($id: String!) {
   getEmployee(id: $id) {
     id
+    avatarUrl
     name
     nameEng
     email
@@ -42,6 +44,7 @@ query GetEmployee($id: String!) {
 query GetEmployeeByEmail($email: String!) {
   getEmployeeByEmail(email: $email) {
     id
+    avatarUrl
     name
     nameEng
     email

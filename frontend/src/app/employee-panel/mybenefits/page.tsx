@@ -15,6 +15,16 @@ import { useCurrentEmployee } from "@/lib/use-current-employee";
 
 const STATUS_ORDER: Record<string, number> = { ACTIVE: 0, PENDING: 1 };
 const CATEGORY_ORDER = ["Wellness", "Equipment", "Financial"];
+const IN_FLIGHT_REQUEST_STATUSES = new Set([
+  "pending",
+  "awaiting_contract_acceptance",
+  "awaiting_hr_review",
+  "awaiting_finance_review",
+  "awaiting_payment",
+  "awaiting_payment_review",
+  "hr_approved",
+  "finance_approved",
+]);
 
 type PageProps = { params?: Promise<Record<string, string | string[]>> };
 export default function Mybenefits({ params }: PageProps) {
@@ -50,16 +60,26 @@ export default function Mybenefits({ params }: PageProps) {
     () => new Map((benefitsData?.benefits ?? []).map((b) => [b.id, b])),
     [benefitsData?.benefits]
   );
+  const latestRequestByBenefit = useMemo(() => {
+    return new Map(
+      benefitRequests
+        .slice()
+        .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
+        .map((request) => [request.benefitId, request]),
+    );
+  }, [benefitRequests]);
 
   const requestedBenefits = useMemo(() => {
-    return benefitRequests
+    return Array.from(latestRequestByBenefit.values())
+      .filter((req) => IN_FLIGHT_REQUEST_STATUSES.has(req.status.toLowerCase().trim()))
       .map((req) => {
         const benefit = benefitsById.get(req.benefitId);
         if (!benefit) return null;
+        if (benefit.flowType === "screen_time") return null;
         return { requestId: req.id, benefit, requestStatus: req.status };
       })
       .filter((x): x is { requestId: string; benefit: Benefit; requestStatus: string } => x !== null);
-  }, [benefitRequests, benefitsById]);
+  }, [benefitsById, latestRequestByBenefit]);
 
   const requestedBenefitIds = useMemo(
     () => new Set(requestedBenefits.map((r) => r.benefit.id)),

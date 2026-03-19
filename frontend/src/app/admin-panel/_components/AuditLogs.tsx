@@ -18,7 +18,7 @@ import {
 import { getContractProxyUrl } from "@/lib/contracts";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
-import { UserAvatar } from "@clerk/nextjs";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 
 const ACTION_TYPE_LABELS: Record<string, string> = {
   REQUEST_SUBMITTED: "Request Submitted",
@@ -42,6 +42,9 @@ const ACTION_TYPE_LABELS: Record<string, string> = {
   ATTENDANCE_IMPORT: "Attendance Import",
   ELIGIBILITY_RECOMPUTED: "Eligibility Recomputed",
   OKR_SYNC: "OKR Sync",
+  PAYMENT_INVOICE_CREATED: "Payment Checkout Created",
+  PAYMENT_CONFIRMED: "Payment Confirmed",
+  PAYMENT_FAILED: "Payment Failed",
 };
 
 const ACTION_TONE: Record<string, string> = {
@@ -66,6 +69,9 @@ const ACTION_TONE: Record<string, string> = {
   ATTENDANCE_IMPORT: "bg-amber-50 text-amber-700",
   ELIGIBILITY_RECOMPUTED: "bg-sky-50 text-sky-700",
   OKR_SYNC: "bg-lime-50 text-lime-700",
+  PAYMENT_INVOICE_CREATED: "bg-blue-50 text-blue-700",
+  PAYMENT_CONFIRMED: "bg-emerald-50 text-emerald-700",
+  PAYMENT_FAILED: "bg-red-50 text-red-700",
 };
 
 
@@ -1197,7 +1203,10 @@ export default function AuditLogs() {
                         >
                           <td className="px-5 py-3 text-slate-700">
                             <div className="flex items-center gap-3">
-                              <UserAvatar />
+                              <EmployeeAvatar
+                                name={actorName}
+                                imageUrl={actorEmployee?.avatarUrl ?? null}
+                              />
                               <div className="flex flex-col">
                                 <span className="font-medium">{actorName}</span>
                                 {actorEmployee?.email && (

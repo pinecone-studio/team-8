@@ -1,11 +1,12 @@
 import { eq } from "drizzle-orm";
 import { schema } from "../../../db";
 import { QueryResolvers } from "../../generated/graphql";
+import { syncEmployeeProfile } from "../../../clerk/sync-employee-profiles";
 
 export const getEmployeeByEmail: QueryResolvers["getEmployeeByEmail"] = async (
   _,
   { email },
-  { db, currentUser },
+  { db, env, currentUser },
 ) => {
   if (!currentUser.employee) {
     throw new Error("Not authenticated.");
@@ -23,5 +24,5 @@ export const getEmployeeByEmail: QueryResolvers["getEmployeeByEmail"] = async (
     .from(schema.employees)
     .where(eq(schema.employees.email, requestedEmail));
 
-  return results[0] ?? null;
+  return syncEmployeeProfile(db, env, results[0] ?? null);
 };

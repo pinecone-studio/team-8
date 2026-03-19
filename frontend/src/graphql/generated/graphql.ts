@@ -161,12 +161,34 @@ export type BenefitRequest = {
   employeeId: Scalars['String']['output'];
   employeeSignedContract?: Maybe<EmployeeSignedContract>;
   id: Scalars['String']['output'];
+  payment?: Maybe<BenefitRequestPayment>;
   repaymentMonths?: Maybe<Scalars['Int']['output']>;
   requestedAmount?: Maybe<Scalars['Int']['output']>;
   reviewedBy?: Maybe<Scalars['String']['output']>;
   status: Scalars['String']['output'];
   updatedAt: Scalars['String']['output'];
   viewContractUrl?: Maybe<Scalars['String']['output']>;
+};
+
+export type BenefitRequestPayment = {
+  __typename?: 'BenefitRequestPayment';
+  amount: Scalars['Int']['output'];
+  benefitId: Scalars['String']['output'];
+  bonumInvoiceId?: Maybe<Scalars['String']['output']>;
+  checkoutUrl?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['String']['output'];
+  currency: Scalars['String']['output'];
+  employeeId: Scalars['String']['output'];
+  expiresAt?: Maybe<Scalars['String']['output']>;
+  failedAt?: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  localTransactionId: Scalars['String']['output'];
+  paidAt?: Maybe<Scalars['String']['output']>;
+  paymentVendor?: Maybe<Scalars['String']['output']>;
+  provider: Scalars['String']['output'];
+  requestId: Scalars['String']['output'];
+  status: Scalars['String']['output'];
+  updatedAt: Scalars['String']['output'];
 };
 
 export type Contract = {
@@ -244,6 +266,7 @@ export type EligibilityRule = {
 
 export type Employee = {
   __typename?: 'Employee';
+  avatarUrl?: Maybe<Scalars['String']['output']>;
   benefits: Array<BenefitEligibility>;
   createdAt: Scalars['DateTime']['output'];
   department: Scalars['String']['output'];
@@ -1045,7 +1068,7 @@ export type GetMyBenefitsFullQuery = { __typename?: 'Query', myBenefits: Array<{
 export type GetBenefitRequestsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetBenefitRequestsQuery = { __typename?: 'Query', benefitRequests: Array<{ __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, employeeApprovedAt?: string | null, declineReason?: string | null, employeeContractKey?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null, employeeSignedContract?: { __typename?: 'EmployeeSignedContract', id: string, fileName?: string | null, mimeType?: string | null, status: string, uploadedAt: string, viewUrl?: string | null } | null }> };
+export type GetBenefitRequestsQuery = { __typename?: 'Query', benefitRequests: Array<{ __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, employeeApprovedAt?: string | null, declineReason?: string | null, employeeContractKey?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null, employeeSignedContract?: { __typename?: 'EmployeeSignedContract', id: string, fileName?: string | null, mimeType?: string | null, status: string, uploadedAt: string, viewUrl?: string | null } | null, payment?: { __typename?: 'BenefitRequestPayment', id: string, status: string, amount: number, currency: string, checkoutUrl?: string | null, expiresAt?: string | null, paidAt?: string | null, failedAt?: string | null, paymentVendor?: string | null, localTransactionId: string, bonumInvoiceId?: string | null, createdAt: string, updatedAt: string } | null }> };
 
 export type GetAllBenefitRequestsQueryVariables = Exact<{
   status?: InputMaybe<Scalars['String']['input']>;
@@ -1053,7 +1076,7 @@ export type GetAllBenefitRequestsQueryVariables = Exact<{
 }>;
 
 
-export type GetAllBenefitRequestsQuery = { __typename?: 'Query', allBenefitRequests: Array<{ __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, employeeApprovedAt?: string | null, declineReason?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null, employeeSignedContract?: { __typename?: 'EmployeeSignedContract', id: string, fileName?: string | null, mimeType?: string | null, status: string, uploadedAt: string, viewUrl?: string | null } | null }> };
+export type GetAllBenefitRequestsQuery = { __typename?: 'Query', allBenefitRequests: Array<{ __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, employeeApprovedAt?: string | null, declineReason?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null, employeeSignedContract?: { __typename?: 'EmployeeSignedContract', id: string, fileName?: string | null, mimeType?: string | null, status: string, uploadedAt: string, viewUrl?: string | null } | null, payment?: { __typename?: 'BenefitRequestPayment', id: string, status: string, amount: number, currency: string, expiresAt?: string | null, paidAt?: string | null, failedAt?: string | null, paymentVendor?: string | null, localTransactionId: string, bonumInvoiceId?: string | null, createdAt: string, updatedAt: string } | null }> };
 
 export type GetEmployeeBenefitsQueryVariables = Exact<{
   employeeId: Scalars['String']['input'];
@@ -1112,21 +1135,21 @@ export type GetEmployeesQueryVariables = Exact<{
 }>;
 
 
-export type GetEmployeesQuery = { __typename?: 'Query', getEmployees: Array<{ __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, createdAt: any, updatedAt: any }> };
+export type GetEmployeesQuery = { __typename?: 'Query', getEmployees: Array<{ __typename?: 'Employee', id: string, avatarUrl?: string | null, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, createdAt: any, updatedAt: any }> };
 
 export type GetEmployeeQueryVariables = Exact<{
   id: Scalars['String']['input'];
 }>;
 
 
-export type GetEmployeeQuery = { __typename?: 'Query', getEmployee?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
+export type GetEmployeeQuery = { __typename?: 'Query', getEmployee?: { __typename?: 'Employee', id: string, avatarUrl?: string | null, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
 
 export type GetEmployeeByEmailQueryVariables = Exact<{
   email: Scalars['String']['input'];
 }>;
 
 
-export type GetEmployeeByEmailQuery = { __typename?: 'Query', getEmployeeByEmail?: { __typename?: 'Employee', id: string, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
+export type GetEmployeeByEmailQuery = { __typename?: 'Query', getEmployeeByEmail?: { __typename?: 'Employee', id: string, avatarUrl?: string | null, name: string, nameEng?: string | null, email: string, role: string, department: string, responsibilityLevel: number, employmentStatus: string, hireDate: any, okrSubmitted: number, lateArrivalCount: number, lateArrivalUpdatedAt?: any | null, createdAt: any, updatedAt: any } | null };
 
 export type GetMySettingsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -2632,6 +2655,21 @@ export const GetBenefitRequestsDocument = gql`
       uploadedAt
       viewUrl
     }
+    payment {
+      id
+      status
+      amount
+      currency
+      checkoutUrl
+      expiresAt
+      paidAt
+      failedAt
+      paymentVendor
+      localTransactionId
+      bonumInvoiceId
+      createdAt
+      updatedAt
+    }
     createdAt
     updatedAt
     viewContractUrl
@@ -2694,6 +2732,20 @@ export const GetAllBenefitRequestsDocument = gql`
       status
       uploadedAt
       viewUrl
+    }
+    payment {
+      id
+      status
+      amount
+      currency
+      expiresAt
+      paidAt
+      failedAt
+      paymentVendor
+      localTransactionId
+      bonumInvoiceId
+      createdAt
+      updatedAt
     }
     createdAt
     updatedAt
@@ -3207,6 +3259,7 @@ export const GetEmployeesDocument = gql`
     query GetEmployees($search: String, $department: String, $limit: Int) {
   getEmployees(search: $search, department: $department, limit: $limit) {
     id
+    avatarUrl
     name
     nameEng
     email
@@ -3264,6 +3317,7 @@ export const GetEmployeeDocument = gql`
     query GetEmployee($id: String!) {
   getEmployee(id: $id) {
     id
+    avatarUrl
     name
     nameEng
     email
@@ -3320,6 +3374,7 @@ export const GetEmployeeByEmailDocument = gql`
     query GetEmployeeByEmail($email: String!) {
   getEmployeeByEmail(email: $email) {
     id
+    avatarUrl
     name
     nameEng
     email

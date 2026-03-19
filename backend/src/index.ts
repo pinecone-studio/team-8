@@ -33,6 +33,13 @@ import {
   getScreenTimeSubmissionById,
   recomputeScreenTimeMonthlyResult,
 } from "./screen-time/service";
+import {
+  processBonumWebhook,
+  reconcileBonumReturnedPayment,
+  startBonumBenefitPayment,
+} from "./payments/benefit-request-payments";
+import { resolveBonumReturnUrl } from "./payments/bonum";
+import { requiresEmployeePaymentForBenefit } from "./payments/amounts";
 
 const MAX_EMPLOYEE_CONTRACT_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EMPLOYEE_CONTRACT_MIME_TYPES = new Set([
@@ -90,6 +97,14 @@ export interface Env {
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
   SCREEN_TIME_DEBUG_TODAY_LOCAL_DATE?: string;
+  BONUM_API_BASE_URL?: string;
+  BONUM_APP_SECRET?: string;
+  BONUM_TERMINAL_ID?: string;
+  BONUM_ACCEPT_LANGUAGE?: string;
+  BONUM_CALLBACK_URL?: string;
+  BONUM_RETURN_URL?: string;
+  BONUM_MERCHANT_CHECKSUM_KEY?: string;
+  BONUM_INVOICE_EXPIRES_SECONDS?: string;
 }
 
 function getCorsHeaders(request: Request): HeadersInit {
@@ -788,7 +803,7 @@ async function handleBenefitPaymentSubmit(
     .where(eq(schema.benefits.id, benefitRequest.benefitId))
     .limit(1);
   const benefit = benefitRows[0];
-  if (!benefit || benefit.flowType !== "contract" || !benefit.amount) {
+  if (!benefit || !requiresEmployeePaymentForBenefit(benefit)) {
     return withCors(
       request,
       new Response(JSON.stringify({ error: "This request does not require employee payment." }), {
@@ -828,6 +843,299 @@ async function handleBenefitPaymentSubmit(
       status: 200,
       headers: { "Content-Type": "application/json" },
     }),
+  );
+}
+
+/**
+ * Start or resume a Bonum checkout session for a payment-required benefit.
+ *
+ * The latest non-expired invoice is reused when possible. Otherwise a fresh
+ * Bonum invoice is created and the employee is redirected to followUpLink.
+ */
+async function handleBenefitPaymentStart(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/api/benefit-requests/payment-start" || request.method !== "POST") {
+    return null;
+  }
+
+  const db = createDb(env.DB);
+  const currentUser = await getCurrentUserFromRequest(request, env, db);
+  if (!currentUser.employee) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Authentication required." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  let body: { requestId?: string } = {};
+  try {
+    body = (await request.json()) as { requestId?: string };
+  } catch {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Invalid JSON body." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (!body.requestId) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "requestId is required." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const requestRows = await db
+    .select()
+    .from(schema.benefitRequests)
+    .where(eq(schema.benefitRequests.id, body.requestId))
+    .limit(1);
+  const benefitRequest = requestRows[0];
+  if (!benefitRequest) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Benefit request not found." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (benefitRequest.employeeId !== currentUser.employee.id) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "You can only pay for your own request." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const benefitRows = await db
+    .select()
+    .from(schema.benefits)
+    .where(eq(schema.benefits.id, benefitRequest.benefitId))
+    .limit(1);
+  const benefit = benefitRows[0];
+  if (!benefit) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Benefit not found." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  try {
+    const payment = await startBonumBenefitPayment({
+      db,
+      env,
+      request,
+      benefitRequest,
+      benefit,
+      employee: currentUser.employee,
+    });
+
+    return withCors(
+      request,
+      new Response(JSON.stringify(payment), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to start payment.";
+    const status =
+      message.includes("Authentication required") ? 401 :
+      message.includes("not found") ? 404 :
+      message.includes("cannot be started from status") ? 409 :
+      message.includes("does not require employee payment") ? 400 :
+      message.startsWith("BONUM_") ? 503 :
+      502;
+
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: message }), {
+        status,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+}
+
+async function handleBenefitPaymentReconcile(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/api/benefit-requests/payment-reconcile" || request.method !== "POST") {
+    return null;
+  }
+
+  const db = createDb(env.DB);
+  const currentUser = await getCurrentUserFromRequest(request, env, db);
+  if (!currentUser.employee) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Authentication required." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  let body: { requestId?: string; transactionId?: string } = {};
+  try {
+    body = (await request.json()) as { requestId?: string; transactionId?: string };
+  } catch {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Invalid JSON body." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (!body.requestId || !body.transactionId) {
+    return withCors(
+      request,
+      new Response(
+        JSON.stringify({ error: "requestId and transactionId are required." }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+  }
+
+  try {
+    const payment = await reconcileBonumReturnedPayment({
+      db,
+      env,
+      employee: currentUser.employee,
+      requestId: body.requestId,
+      transactionId: body.transactionId,
+    });
+
+    return withCors(
+      request,
+      new Response(JSON.stringify(payment), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to reconcile Bonum payment.";
+    const status =
+      message.includes("Authentication required") ? 401 :
+      message.includes("not found") ? 404 :
+      message.includes("only reconcile your own payment") ? 403 :
+      message.includes("cannot be reconciled from status") ? 409 :
+      502;
+
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: message }), {
+        status,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+}
+
+/**
+ * Bonum payment callback/webhook.
+ *
+ * GET  -> browser return target; redirect back to the employee requests page
+ * POST -> webhook delivery; verifies checksum when configured and updates the
+ *         local payment + request activation state idempotently.
+ */
+async function handleBonumWebhook(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/api/payments/bonum/webhook") {
+    return null;
+  }
+
+  if (request.method === "GET") {
+    return withCors(request, Response.redirect(resolveBonumReturnUrl(request, env), 302));
+  }
+
+  if (request.method !== "POST") {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Method not allowed." }), {
+        status: 405,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const rawBody = await request.text();
+  const db = createDb(env.DB);
+  const result = await processBonumWebhook(db, env, rawBody, request.headers);
+
+  if (result.kind === "duplicate") {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ received: true, duplicate: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (result.kind === "invalid_signature") {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Invalid checksum." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (result.kind === "unmatched") {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ received: true, unmatched: true }), {
+        status: 202,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  return withCors(
+    request,
+    new Response(
+      JSON.stringify({
+        received: true,
+        paymentId: result.payment.id,
+        status: result.payment.status,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    ),
   );
 }
 
@@ -1591,8 +1899,14 @@ export default {
     if (upload !== null) return upload;
     const employeeUpload = await handleEmployeeContractUpload(request, env);
     if (employeeUpload !== null) return employeeUpload;
+    const paymentStart = await handleBenefitPaymentStart(request, env);
+    if (paymentStart !== null) return paymentStart;
+    const paymentReconcile = await handleBenefitPaymentReconcile(request, env);
+    if (paymentReconcile !== null) return paymentReconcile;
     const paymentSubmit = await handleBenefitPaymentSubmit(request, env);
     if (paymentSubmit !== null) return paymentSubmit;
+    const bonumWebhook = await handleBonumWebhook(request, env);
+    if (bonumWebhook !== null) return bonumWebhook;
     const screenTimeUpload = await handleScreenTimeUpload(request, env);
     if (screenTimeUpload !== null) return screenTimeUpload;
     const imageUpload = await handleBenefitImageUpload(request, env);

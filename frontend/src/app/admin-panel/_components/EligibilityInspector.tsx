@@ -15,13 +15,14 @@ import {
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { getContractProxyUrl } from "@/lib/contracts";
-import { useUser } from "@clerk/nextjs";
 import { isHrAdmin } from "@/app/admin-panel/_lib/access";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 
 // ── Employee picker ───────────────────────────────────────────────────────────
 
 type EmployeeOption = {
   id: string;
+  avatarUrl?: string | null;
   name: string;
   nameEng?: string | null;
   email?: string | null;
@@ -175,17 +176,11 @@ function EmployeePicker({
       <div>
         {selectedEmployee && (
           <div className="mb-5 flex items-center gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 shadow-sm">
-            {selectedEmployeeImageUrl ? (
-              <img
-                src={selectedEmployeeImageUrl}
-                alt={selectedEmployee.name}
-                className="h-11 w-11 shrink-0 rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
-                {selectedEmployee.name.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <EmployeeAvatar
+              name={selectedEmployee.name}
+              imageUrl={selectedEmployeeImageUrl}
+              className="h-11 w-11 shrink-0"
+            />
             <div className="min-w-0 flex-1">
               <p className="text-xl font-semibold text-slate-900">{selectedEmployee.name}</p>
               <p className="text-base text-slate-600">
@@ -406,9 +401,11 @@ function EmployeePicker({
                         >
                           <td className="px-5 py-3 text-slate-700">
                             <div className="flex items-center gap-3">
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
-                                {emp.name.charAt(0).toUpperCase()}
-                              </div>
+                              <EmployeeAvatar
+                                name={emp.name}
+                                imageUrl={emp.avatarUrl}
+                                className="h-8 w-8 shrink-0"
+                              />
                               <div className="flex min-w-0 flex-col">
                                 <span className="truncate font-medium text-slate-900">{emp.name}</span>
                                 <span className="truncate text-xs text-slate-400">
@@ -598,7 +595,6 @@ function ContractExpiryDetails({
 
 export default function EligibilityInspector() {
   const { employee: me, loading: meLoading } = useCurrentEmployee();
-  const { user, isLoaded: isUserLoaded } = useUser();
   const isHr = isHrAdmin(me);
   const canOverride = isHr;
 
@@ -670,14 +666,7 @@ export default function EligibilityInspector() {
   const filteredEligibilities = benefitFilter
     ? sortedEligibilities.filter((row) => row.benefit.name === benefitFilter)
     : sortedEligibilities;
-  const clerkEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? null;
-  const selectedEmployeeImageUrl =
-    isUserLoaded &&
-    !!clerkEmail &&
-    selectedEmployee?.email?.toLowerCase() === clerkEmail &&
-    !!user?.imageUrl
-      ? user.imageUrl
-      : null;
+  const selectedEmployeeImageUrl = selectedEmployee?.avatarUrl ?? null;
   const latestContractAcceptanceByBenefit = (contractAcceptancesData?.contractAcceptances ?? []).reduce<
     Record<string, ContractAcceptanceItem>
   >((acc, acceptance) => {
@@ -845,29 +834,14 @@ export default function EligibilityInspector() {
         {selectedEmployee && (
           <div className="mb-5 rounded-[28px] border border-slate-200 bg-white px-8 py-5">
             <h2 className="text-xl font-semibold text-slate-900">Employee Profile</h2>
-            {/*
-              Clerk only exposes the signed-in user on the client. If the selected
-              employee matches the signed-in user, show their Clerk avatar.
-            */}
             {(() => {
-              const matchesClerkUser =
-                isUserLoaded &&
-                !!clerkEmail &&
-                selectedEmployee.email?.toLowerCase() === clerkEmail &&
-                !!user?.imageUrl;
               const nameValue = (
                 <div className="flex items-center gap-2">
-                  {matchesClerkUser ? (
-                    <img
-                      src={user.imageUrl}
-                      alt={selectedEmployee.name}
-                      className="h-7 w-7 shrink-0 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
-                      {selectedEmployee.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  <EmployeeAvatar
+                    name={selectedEmployee.name}
+                    imageUrl={selectedEmployee.avatarUrl}
+                    className="h-7 w-7 shrink-0"
+                  />
                   <span>{selectedEmployee.name}</span>
                 </div>
               );

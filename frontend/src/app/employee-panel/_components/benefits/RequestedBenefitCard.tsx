@@ -8,11 +8,24 @@ import { useCancelBenefitRequestMutation, GetBenefitRequestsDocument, GetMyBenef
 
 const requestStatusStyle: Record<string, string> = {
   pending: "bg-amber-50 text-amber-700 border-amber-200/80",
+  awaiting_contract_acceptance: "bg-amber-50 text-amber-700 border-amber-200/80",
+  awaiting_hr_review: "bg-amber-50 text-amber-700 border-amber-200/80",
+  awaiting_finance_review: "bg-amber-50 text-amber-700 border-amber-200/80",
+  awaiting_payment: "bg-blue-50 text-blue-700 border-blue-200/80",
+  awaiting_payment_review: "bg-indigo-50 text-indigo-700 border-indigo-200/80",
   approved: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
   rejected: "bg-red-50 text-red-700 border-red-200/80",
   declined: "bg-red-50 text-red-700 border-red-200/80",
   cancelled: "bg-muted text-muted-foreground border-border",
 };
+
+const CANCELLABLE_STATUSES = new Set([
+  "pending",
+  "awaiting_contract_acceptance",
+  "awaiting_hr_review",
+  "awaiting_finance_review",
+  "awaiting_payment",
+]);
 
 type Props = {
   benefit: Benefit;
@@ -25,8 +38,7 @@ export default function RequestedBenefitCard({ benefit, requestStatus, requestId
   const vendor = benefit.vendorName ?? "Internal Benefit";
   const statusKey = requestStatus.toLowerCase();
   const statusClass = requestStatusStyle[statusKey] ?? "bg-muted text-muted-foreground border-border";
-  const isPending = statusKey === "pending";
-  const canCancel = isPending && requestId;
+  const canCancel = Boolean(requestId) && CANCELLABLE_STATUSES.has(statusKey);
 
   const [cancelRequest, { loading: cancelling }] = useCancelBenefitRequestMutation({
     refetchQueries: [

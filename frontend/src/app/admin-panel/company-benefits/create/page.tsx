@@ -259,6 +259,22 @@ const WORKFLOWS: Record<BenefitTypeKey, WorkflowStep[]> = {
   ],
 };
 
+function getWorkflowPreviewSteps(
+  type: BenefitTypeKey,
+  options?: { hasPricing?: boolean },
+): WorkflowStep[] {
+  if (type === "normal" && options?.hasPricing) {
+    return [
+      { icon: <Send className="h-4 w-4" />, label: "Employee Request", desc: "Employee submits a benefit request", color: "bg-slate-100 text-slate-600" },
+      { icon: <UserCheck className="h-4 w-4" />, label: "HR Review", desc: "HR admin reviews the request", color: "bg-blue-100 text-blue-600" },
+      { icon: <CreditCard className="h-4 w-4" />, label: "Bonum Payment", desc: "Employee pays the remaining balance through Bonum", color: "bg-amber-100 text-amber-600" },
+      { icon: <CheckCircle2 className="h-4 w-4" />, label: "Approved", desc: "Benefit becomes active automatically after payment", color: "bg-emerald-100 text-emerald-600" },
+    ];
+  }
+
+  return WORKFLOWS[type];
+}
+
 // ── Rule builder config ───────────────────────────────────────────────────────
 
 type RuleFieldKey =
@@ -528,6 +544,9 @@ export default function CreateBenefitPage() {
   const [upsertScreenTimeProgram] = useUpsertScreenTimeProgramMutation();
 
   const selectedTypeConfig = BENEFIT_TYPES.find((t) => t.key === selectedType);
+  const workflowPreviewSteps = selectedType
+    ? getWorkflowPreviewSteps(selectedType, { hasPricing })
+    : [];
 
   function addRule() {
     const field = RULE_FIELDS[0];
@@ -645,6 +664,12 @@ export default function CreateBenefitPage() {
         throw new Error(
           "Contract-based benefits must leave an employee payment share. Set company subsidy below 100%.",
         );
+      }
+      if (selectedType === "normal" && hasPricing && (!form.amount.trim() || Number(form.amount) <= 0)) {
+        throw new Error("Paid normal benefits require a valid total price.");
+      }
+      if (selectedType === "normal" && hasPricing && form.subsidyPercent >= 100) {
+        throw new Error("Paid normal benefits must leave an employee payment share. Set company subsidy below 100%.");
       }
       const flowType = getFlowTypeForBenefitType(selectedType);
       const subsidyPercent =
@@ -1113,16 +1138,14 @@ export default function CreateBenefitPage() {
                       className={`mt-0.5 h-4 w-4 shrink-0 ${selectedTypeConfig.color}`}
                     />
                     <p className={`text-xs ${selectedTypeConfig.color}`}>
-                      {selectedType === "contract" &&
-                        "A contract signature is required before payment is processed. HR admin must approve."}
+                      {selectedType === "contract" && "A contract signature is required before payment is processed. HR admin must approve."}
                       {selectedType === "normal" &&
-                        "Employee submits a request and HR admin reviews and makes the final decision."}
-                      {selectedType === "finance" &&
-                        "Both Finance and HR approval are required. A repayment plan will be proposed."}
-                      {selectedType === "viewonly" &&
-                        "Employees can only view this benefit on their dashboard. No request needed."}
-                      {selectedType === "screen_time" &&
-                        "Employees upload a 7-day average screen-time screenshot on each Monday of the month. Missing any required Monday means 0% uplift for that month."}
+                        (hasPricing
+                          ? "Employee submits a request, HR reviews it, and the benefit activates only after the employee completes their Bonum co-payment."
+                          : "Employee submits a request and HR admin reviews and makes the final decision.")}
+                      {selectedType === "finance" && "Both Finance and HR approval are required. A repayment plan will be proposed."}
+                      {selectedType === "viewonly" && "Employees can only view this benefit on their dashboard. No request needed."}
+                      {selectedType === "screen_time" && "Employees upload a 7-day average screen-time screenshot on each Monday of the month. Missing any required Monday means 0% uplift for that month."}
                     </p>
                   </div>
                 )}
@@ -1791,7 +1814,7 @@ export default function CreateBenefitPage() {
 
                       {/* Steps */}
                       <div className="flex flex-col gap-0">
-                        {WORKFLOWS[selectedType].map((step, idx) => (
+                        {workflowPreviewSteps.map((step, idx) => (
                           <div key={idx} className="flex gap-3">
                             <div className="flex flex-col items-center">
                               <div
@@ -1799,7 +1822,7 @@ export default function CreateBenefitPage() {
                               >
                                 {step.icon}
                               </div>
-                              {idx < WORKFLOWS[selectedType].length - 1 && (
+                              {idx < workflowPreviewSteps.length - 1 && (
                                 <div className="mt-1 h-6 w-px bg-gray-100" />
                               )}
                             </div>

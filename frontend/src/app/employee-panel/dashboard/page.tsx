@@ -13,11 +13,17 @@ import BenefitCardSkeleton from "../_components/benefits/BenefitCardSkeleton";
 import SummaryCardSkeleton from "../_components/benefits/SummaryCardSkeleton";
 import {
   BenefitEligibilityStatus,
-  BenefitFlowType,
   useGetBenefitRequestsQuery,
   useGetMyBenefitsFullQuery,
   type BenefitEligibility,
 } from "@/graphql/generated/graphql";
+import {
+  benefitRequiresEmployeePayment,
+  type BenefitPaymentRecord,
+  getBenefitPaymentDisplayStatus,
+  openBenefitPaymentCheckout,
+  startBenefitBonumPayment,
+} from "@/lib/benefit-payments";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 
 const STATUS_FILTERS = [
@@ -37,36 +43,22 @@ const STATUS_ORDER: Record<string, number> = {
   LOCKED: 3,
 };
 
-const PAYMENT_ACCOUNT_DETAILS = {
-  bankName: "PineQuest Corporate Account",
-  accountNumber: "0000 0000 0000",
-  accountHolder: "PineQuest LLC",
-} as const;
-
-function getApiBase(): string {
-  const base =
-    typeof process !== "undefined" && process.env?.NEXT_PUBLIC_GRAPHQL_URL
-      ? process.env.NEXT_PUBLIC_GRAPHQL_URL
-      : "https://team8-api.team8pinequest.workers.dev/";
-  return base.replace(/\/$/, "");
-}
-
 function formatMoney(amount: number) {
   return `${amount.toLocaleString()}₮`;
 }
 
 function DashboardPaymentDialog({
   benefit,
-  employeeName,
   requestStatus,
+  payment,
   submitting,
   submitError,
   onSubmit,
   onClose,
 }: {
   benefit: BenefitEligibility;
-  employeeName: string;
   requestStatus: string;
+  payment: BenefitPaymentRecord | null;
   submitting: boolean;
   submitError: string | null;
   onSubmit: () => Promise<void> | void;
@@ -78,16 +70,65 @@ function DashboardPaymentDialog({
   const companyPays = Math.round((totalAmount * companyPercent) / 100);
   const employeePays = Math.round((totalAmount * employeePercent) / 100);
   const waitingForReview = requestStatus === "awaiting_payment_review";
+  const paymentStatus = getBenefitPaymentDisplayStatus(payment);
+  const canOpenCheckout =
+    requestStatus === "awaiting_payment" &&
+    paymentStatus !== "paid";
+
+  let helperTone = "text-blue-700";
+  let helperTitle = "Bonum checkout";
+  let helperBody =
+    "We will open a Bonum checkout page for your remaining payment amount.";
+
+  if (paymentStatus === "created") {
+    helperTitle = "Checkout ready";
+    helperBody = "Your Bonum invoice is ready. Open checkout to complete payment.";
+  } else if (paymentStatus === "expired") {
+    helperTone = "text-amber-700";
+    helperTitle = "Invoice expired";
+    helperBody =
+      "Your previous Bonum invoice expired. Create a fresh checkout and complete payment again.";
+  } else if (paymentStatus === "failed") {
+    helperTone = "text-red-700";
+    helperTitle = "Payment failed";
+    helperBody =
+      "Bonum reported a failed payment. You can retry by opening a fresh checkout.";
+  } else if (paymentStatus === "paid") {
+    helperTone = "text-emerald-700";
+    helperTitle = "Payment received";
+    helperBody =
+      "Your payment is already marked as paid. The benefit should activate automatically.";
+  } else if (waitingForReview) {
+    helperTone = "text-amber-700";
+    helperTitle = "Legacy payment review";
+    helperBody =
+      "This request is waiting for HR review from the earlier manual payment flow.";
+  }
+
+  const buttonLabel =
+    paymentStatus === "created"
+      ? "Open Bonum Checkout"
+      : paymentStatus === "expired"
+        ? "Create New Bonum Checkout"
+        : paymentStatus === "failed"
+          ? "Retry with Bonum"
+          : paymentStatus === "paid"
+            ? "Payment Received"
+            : waitingForReview
+              ? "Payment Submitted"
+              : submitting
+                ? "Opening..."
+                : "Pay with Bonum";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
       <div className="relative w-full max-w-xl rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
           <CreditCard className="h-3.5 w-3.5" />
-          Payment Details
+          Bonum Payment
         </div>
         <h2 className="mt-4 text-xl font-semibold text-gray-900">{benefit.benefit.name}</h2>
-        <p className="mt-1 text-sm text-gray-500">Complete your payment step for this contract-based benefit.</p>
+        <p className="mt-1 text-sm text-gray-500">Complete your employee co-payment through Bonum.</p>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
@@ -105,20 +146,14 @@ function DashboardPaymentDialog({
         </div>
 
         <div className="mt-5 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <p className="text-sm font-semibold text-gray-900">Company Bank Account</p>
-          <div className="mt-3 space-y-2 text-sm text-gray-700">
-            <p>{PAYMENT_ACCOUNT_DETAILS.bankName}</p>
-            <p>{PAYMENT_ACCOUNT_DETAILS.accountHolder}</p>
-            <p className="font-medium">{PAYMENT_ACCOUNT_DETAILS.accountNumber}</p>
-            <p className="text-xs text-blue-700">Reference: {benefit.benefit.name} - {employeeName}</p>
-          </div>
+          <p className="text-sm font-semibold text-gray-900">{helperTitle}</p>
+          <p className={`mt-2 text-sm ${helperTone}`}>{helperBody}</p>
+          {payment?.expiresAt && paymentStatus === "created" && (
+            <p className="mt-2 text-xs text-gray-500">
+              Expires at {new Date(payment.expiresAt).toLocaleString("mn-MN")}
+            </p>
+          )}
         </div>
-
-        {waitingForReview && (
-          <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800">
-            HR is checking your payment now.
-          </div>
-        )}
         {submitError && (
           <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
             {submitError}
@@ -136,14 +171,14 @@ function DashboardPaymentDialog({
           <button
             type="button"
             onClick={onSubmit}
-            disabled={submitting || waitingForReview}
+            disabled={submitting || waitingForReview || !canOpenCheckout}
             className={`inline-flex h-11 items-center justify-center rounded-xl px-5 text-sm font-semibold text-white transition ${
-              waitingForReview
+              waitingForReview || !canOpenCheckout
                 ? "bg-gray-300 cursor-not-allowed"
                 : "bg-blue-600 hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             }`}
           >
-            {waitingForReview ? "Төлбөр илгээгдсэн" : submitting ? "Submitting..." : "Төлбөр төлсөн — Submit"}
+            {buttonLabel}
           </button>
         </div>
       </div>
@@ -169,8 +204,12 @@ export default function DashboardPage() {
     error: benefitsError,
     loading: benefitsLoading,
     refetch: refetchBenefits,
-  } = useGetMyBenefitsFullQuery();
-  const { data: requestsData, refetch: refetchRequests } = useGetBenefitRequestsQuery();
+  } = useGetMyBenefitsFullQuery({
+    fetchPolicy: "cache-and-network",
+  });
+  const { data: requestsData, refetch: refetchRequests } = useGetBenefitRequestsQuery({
+    fetchPolicy: "cache-and-network",
+  });
 
   const myBenefits = (benefitsData?.myBenefits ?? []).filter(
     (benefit) => benefit.benefit.flowType !== "screen_time",
@@ -215,24 +254,17 @@ export default function DashboardPage() {
     setSubmittingPayment(true);
     setPaymentSubmitError(null);
     try {
-      const token = await getToken();
-      const res = await fetch(`${getApiBase()}/api/benefit-requests/payment-submit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ requestId: paymentRequestId }),
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({ error: "Failed to submit payment." }));
-        throw new Error((json as { error?: string }).error ?? "Failed to submit payment.");
-      }
+      const payment = await startBenefitBonumPayment(paymentRequestId, getToken);
       await Promise.all([refetchRequests(), refetchBenefits()]);
       setPaymentBenefit(null);
       setPaymentRequestId(null);
+      if (payment.checkoutUrl) {
+        openBenefitPaymentCheckout(payment.checkoutUrl);
+      } else {
+        throw new Error("Bonum checkout URL was not returned.");
+      }
     } catch (err) {
-      setPaymentSubmitError(err instanceof Error ? err.message : "Failed to submit payment.");
+      setPaymentSubmitError(err instanceof Error ? err.message : "Failed to open Bonum payment.");
     } finally {
       setSubmittingPayment(false);
     }
@@ -372,7 +404,7 @@ export default function DashboardPage() {
                       const latestRequest = latestRequestByBenefit.get(selected.benefitId);
                       const latestStatus = latestRequest?.status?.toLowerCase();
                       const isPaymentPending =
-                        selected.benefit.flowType === BenefitFlowType.Contract &&
+                        benefitRequiresEmployeePayment(selected.benefit) &&
                         (latestStatus === "awaiting_payment" || latestStatus === "awaiting_payment_review");
 
                       if (isPaymentPending && latestRequest) {
@@ -412,8 +444,8 @@ export default function DashboardPage() {
         {paymentBenefit && paymentRequestId && (
           <DashboardPaymentDialog
             benefit={paymentBenefit}
-            employeeName={employee?.name ?? "Employee"}
             requestStatus={latestRequestByBenefit.get(paymentBenefit.benefitId)?.status?.toLowerCase() ?? "awaiting_payment"}
+            payment={latestRequestByBenefit.get(paymentBenefit.benefitId)?.payment ?? null}
             submitting={submittingPayment}
             submitError={paymentSubmitError}
             onSubmit={submitPayment}

@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useAuth, useUser } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import Sidebar from "../../_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
+import { EmployeeAvatar } from "@/components/ui/employee-avatar";
 import {
   useGetAdminBenefitsQuery,
   useGetAllBenefitRequestsQuery,
@@ -199,6 +200,7 @@ type EmployeeSignedContractRow = {
   employeeId: string;
   employeeName: string;
   employeeEmail: string;
+  employeeAvatarUrl: string | null;
   fileName: string;
   uploadedAt: string;
   status: string;
@@ -1299,7 +1301,6 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
 // ── VendorContractSection ─────────────────────────────────────────────────────
 function VendorContractSection({ benefitId }: { benefitId: string }) {
   const { getToken } = useAuth();
-  const { user, isLoaded: isUserLoaded } = useUser();
   const { data: benefitData } = useGetAdminBenefitsQuery();
   const benefit = benefitData?.adminBenefits?.find(
     (item) => item.id === benefitId,
@@ -1397,6 +1398,7 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
         employeeId: request.employeeId,
         employeeName: employee?.name ?? request.employeeId,
         employeeEmail: employee?.email ?? "",
+        employeeAvatarUrl: employee?.avatarUrl ?? null,
         fileName: request.employeeSignedContract?.fileName ?? "Signed contract",
         uploadedAt:
           request.employeeSignedContract?.uploadedAt ?? request.updatedAt,
@@ -1406,9 +1408,6 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
         ),
       };
     });
-
-  const clerkEmail =
-    user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? null;
 
   return (
     <Section
@@ -1534,13 +1533,7 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
                       <div className="flex items-center gap-3">
                         <EmployeeAvatar
                           name={row.employeeName}
-                          imageUrl={
-                            isUserLoaded &&
-                            !!clerkEmail &&
-                            row.employeeEmail.toLowerCase() === clerkEmail
-                              ? (user?.imageUrl ?? null)
-                              : null
-                          }
+                          imageUrl={row.employeeAvatarUrl}
                         />
                         <div>
                           <div className="text-sm font-medium text-slate-900">
@@ -1722,34 +1715,6 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
         {label}
       </p>
       <div className="mt-0.5 text-sm text-gray-800 break-words">{value}</div>
-    </div>
-  );
-}
-
-function EmployeeAvatar({
-  name,
-  imageUrl,
-}: {
-  name: string;
-  imageUrl?: string | null;
-}) {
-  const initials =
-    name
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? "")
-      .join("") || "EM";
-
-  return imageUrl ? (
-    <img
-      src={imageUrl}
-      alt={name}
-      className="h-10 w-10 rounded-full object-cover"
-    />
-  ) : (
-    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
-      {initials}
     </div>
   );
 }

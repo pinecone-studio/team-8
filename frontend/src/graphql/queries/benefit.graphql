@@ -117,6 +117,21 @@ query GetBenefitRequests {
       uploadedAt
       viewUrl
     }
+    payment {
+      id
+      status
+      amount
+      currency
+      checkoutUrl
+      expiresAt
+      paidAt
+      failedAt
+      paymentVendor
+      localTransactionId
+      bonumInvoiceId
+      createdAt
+      updatedAt
+    }
     createdAt
     updatedAt
     viewContractUrl
@@ -143,6 +158,20 @@ query GetAllBenefitRequests($status: String, $queue: String) {
       status
       uploadedAt
       viewUrl
+    }
+    payment {
+      id
+      status
+      amount
+      currency
+      expiresAt
+      paidAt
+      failedAt
+      paymentVendor
+      localTransactionId
+      bonumInvoiceId
+      createdAt
+      updatedAt
     }
     createdAt
     updatedAt

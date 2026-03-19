@@ -15,22 +15,15 @@ import {
   useGetBenefitRequestsQuery,
   useGetContractsForBenefitQuery,
 } from "@/graphql/generated/graphql";
+import {
+  benefitRequiresEmployeePayment,
+  type BenefitPaymentRecord,
+  getBenefitPaymentDisplayStatus,
+  openBenefitPaymentCheckout,
+  startBenefitBonumPayment,
+} from "@/lib/benefit-payments";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 import { getContractProxyUrl } from "@/lib/contracts";
-
-const PAYMENT_ACCOUNT_DETAILS = {
-  bankName: "PineQuest Corporate Account",
-  accountNumber: "0000 0000 0000",
-  accountHolder: "PineQuest LLC",
-} as const;
-
-function getApiBase(): string {
-  const base =
-    typeof process !== "undefined" && process.env?.NEXT_PUBLIC_GRAPHQL_URL
-      ? process.env.NEXT_PUBLIC_GRAPHQL_URL
-      : "https://team8-api.team8pinequest.workers.dev/";
-  return base.replace(/\/$/, "");
-}
 
 function formatRuleLabel(value: string) {
   return value
@@ -73,8 +66,8 @@ function PaymentDetailsDialog({
   open,
   onClose,
   requestStatus,
+  payment,
   benefitName,
-  employeeName,
   totalAmount,
   companyPercent,
   employeePercent,
@@ -85,8 +78,8 @@ function PaymentDetailsDialog({
   open: boolean;
   onClose: () => void;
   requestStatus: string | null;
+  payment: BenefitPaymentRecord | null;
   benefitName: string;
-  employeeName: string;
   totalAmount: number;
   companyPercent: number;
   employeePercent: number;
@@ -98,9 +91,54 @@ function PaymentDetailsDialog({
 
   const companyPays = Math.round((totalAmount * companyPercent) / 100);
   const employeePays = Math.round((totalAmount * employeePercent) / 100);
-  const transactionReference = `${benefitName} - ${employeeName}`;
   const canSubmitPayment = requestStatus === "awaiting_payment";
   const waitingForReview = requestStatus === "awaiting_payment_review";
+  const paymentStatus = getBenefitPaymentDisplayStatus(payment);
+
+  let statusTitle = "Bonum checkout";
+  let statusCopy =
+    "We will open a Bonum checkout page for your remaining payment amount.";
+  let statusTone = "text-blue-700";
+
+  if (paymentStatus === "created") {
+    statusTitle = "Checkout ready";
+    statusCopy = "Your Bonum invoice is ready. Open checkout to complete payment.";
+  } else if (paymentStatus === "expired") {
+    statusTitle = "Invoice expired";
+    statusCopy =
+      "Your previous Bonum invoice expired. Generate a fresh checkout to continue.";
+    statusTone = "text-amber-700";
+  } else if (paymentStatus === "failed") {
+    statusTitle = "Payment failed";
+    statusCopy =
+      "Bonum reported a failed payment. You can retry by opening a fresh checkout.";
+    statusTone = "text-red-700";
+  } else if (paymentStatus === "paid") {
+    statusTitle = "Payment received";
+    statusCopy =
+      "Your payment is already marked as paid. The benefit should activate automatically.";
+    statusTone = "text-emerald-700";
+  } else if (waitingForReview) {
+    statusTitle = "Legacy payment review";
+    statusCopy =
+      "This request is waiting for HR review from the earlier manual payment flow.";
+    statusTone = "text-amber-700";
+  }
+
+  const buttonLabel =
+    paymentStatus === "created"
+      ? "Open Bonum Checkout"
+      : paymentStatus === "expired"
+        ? "Create New Bonum Checkout"
+        : paymentStatus === "failed"
+          ? "Retry with Bonum"
+          : paymentStatus === "paid"
+            ? "Payment Received"
+            : waitingForReview
+              ? "Payment Submitted"
+              : submittingPayment
+                ? "Opening..."
+                : "Pay with Bonum";
 
   return (
     <div
@@ -125,11 +163,11 @@ function PaymentDetailsDialog({
         <div className="pr-10">
           <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
             <CreditCard className="h-3.5 w-3.5" />
-            Payment Details
+            Bonum Payment
           </div>
           <h2 className="mt-4 text-xl font-semibold text-gray-900">{benefitName}</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Review the payment breakdown and transfer details for this benefit.
+            Review the payment breakdown and complete your co-payment through Bonum.
           </p>
         </div>
 
@@ -157,37 +195,14 @@ function PaymentDetailsDialog({
         <div className="mt-5 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
             <Building2 className="h-4 w-4 text-gray-400" />
-            Company Bank Account
+            {statusTitle}
           </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-gray-400">Bank</p>
-              <p className="mt-1 text-sm text-gray-700">{PAYMENT_ACCOUNT_DETAILS.bankName}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-gray-400">Account Holder</p>
-              <p className="mt-1 text-sm text-gray-700">{PAYMENT_ACCOUNT_DETAILS.accountHolder}</p>
-            </div>
-            <div className="sm:col-span-2">
-              <p className="text-xs uppercase tracking-wide text-gray-400">Account Number</p>
-              <div className="mt-1 flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
-                <p className="text-sm font-medium text-gray-800">{PAYMENT_ACCOUNT_DETAILS.accountNumber}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-5">
-          <div className="flex items-center gap-2 text-sm font-semibold text-blue-800">
-            <Copy className="h-4 w-4" />
-            Transaction Reference
-          </div>
-          <p className="mt-3 rounded-xl border border-blue-100 bg-white px-3 py-2 text-sm font-medium text-blue-900">
-            {transactionReference}
-          </p>
-          <p className="mt-2 text-xs text-blue-700">
-            Use this exact reference when sending your payment so HR can match it to your benefit request.
-          </p>
+          <p className={`mt-3 text-sm ${statusTone}`}>{statusCopy}</p>
+          {payment?.expiresAt && paymentStatus === "created" && (
+            <p className="mt-2 text-xs text-gray-500">
+              Expires at {new Date(payment.expiresAt).toLocaleString("mn-MN")}
+            </p>
+          )}
         </div>
 
         {waitingForReview && (
@@ -216,14 +231,14 @@ function PaymentDetailsDialog({
           <button
             type="button"
             onClick={onSubmitPayment}
-            disabled={!canSubmitPayment || submittingPayment || waitingForReview}
+            disabled={!canSubmitPayment || submittingPayment || waitingForReview || paymentStatus === "paid"}
             className={`inline-flex h-11 items-center justify-center rounded-xl px-5 text-sm font-semibold text-white transition ${
-              waitingForReview
+              waitingForReview || !canSubmitPayment || paymentStatus === "paid"
                 ? "bg-gray-300 cursor-not-allowed"
                 : "bg-blue-600 hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             }`}
           >
-            {waitingForReview ? "Төлбөр илгээгдсэн" : submittingPayment ? "Submitting..." : "Төлбөр төлсөн — Submit"}
+            {buttonLabel}
           </button>
         </div>
       </div>
@@ -435,7 +450,7 @@ function NextStepsBox({
             <div>
               <p className="font-medium">Payment required</p>
               <p className="mt-0.5 text-blue-700">
-                HR approved your request. Please pay your portion now, then mark it as paid so HR can verify it.
+                HR approved your request. Complete your Bonum payment and the benefit will activate automatically.
               </p>
             </div>
           </div>
@@ -452,16 +467,16 @@ function NextStepsBox({
 
     if (requestStatus === "awaiting_payment_review") {
       return (
-        <div className="flex items-start gap-2.5 rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-700">
-          <Clock className="mt-0.5 h-4 w-4 shrink-0" />
-          <div>
-            <p className="font-medium">Waiting for payment verification</p>
-            <p className="mt-0.5 text-amber-600">
-              You submitted your payment. HR will check the transfer and activate the benefit after verification.
-            </p>
+          <div className="flex items-start gap-2.5 rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-700">
+            <Clock className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-medium">Waiting for payment verification</p>
+              <p className="mt-0.5 text-amber-600">
+                This request is still in the legacy manual-payment review flow.
+              </p>
+            </div>
           </div>
-        </div>
-      );
+        );
     }
 
     const waiting =
@@ -492,8 +507,12 @@ export default function BenefitDetailPage() {
   const [submittingPayment, setSubmittingPayment] = useState(false);
   const [paymentSubmitError, setPaymentSubmitError] = useState<string | null>(null);
   const { employee, loading: employeeLoading } = useCurrentEmployee();
-  const { data, error, loading, refetch: refetchBenefits } = useGetMyBenefitsFullQuery();
-  const { data: requestsData, refetch: refetchRequests } = useGetBenefitRequestsQuery();
+  const { data, error, loading, refetch: refetchBenefits } = useGetMyBenefitsFullQuery({
+    fetchPolicy: "cache-and-network",
+  });
+  const { data: requestsData, refetch: refetchRequests } = useGetBenefitRequestsQuery({
+    fetchPolicy: "cache-and-network",
+  });
   const { data: contractsData } = useGetContractsForBenefitQuery({ variables: { benefitId: id } });
 
   const benefitEligibility = data?.myBenefits.find((item: { benefitId: string }) => item.benefitId === id);
@@ -538,10 +557,10 @@ export default function BenefitDetailPage() {
   const benefit = benefitEligibility.benefit;
   const vendor = benefit.vendorName ?? "Internal Benefit";
   const policy = benefit.approvalPolicy ?? "hr";
-  const hasPayment = benefit.flowType === BenefitFlowType.Contract && benefit.amount != null;
+  const hasPayment = benefitRequiresEmployeePayment(benefit);
   const latestRequestStatus = latestRequest?.status?.toLowerCase() ?? null;
+  const latestPayment = latestRequest?.payment ?? null;
   const shouldShowPaymentDialogTrigger =
-    benefit.flowType === BenefitFlowType.Contract &&
     hasPayment &&
     (latestRequestStatus === "awaiting_payment" || latestRequestStatus === "awaiting_payment_review");
 
@@ -550,23 +569,16 @@ export default function BenefitDetailPage() {
     setSubmittingPayment(true);
     setPaymentSubmitError(null);
     try {
-      const token = await getToken();
-      const res = await fetch(`${getApiBase()}/api/benefit-requests/payment-submit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ requestId: latestRequest.id }),
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({ error: "Failed to submit payment confirmation." }));
-        throw new Error((json as { error?: string }).error ?? "Failed to submit payment confirmation.");
-      }
+      const payment = await startBenefitBonumPayment(latestRequest.id, getToken);
       await Promise.all([refetchRequests(), refetchBenefits()]);
       setPaymentDialogOpen(false);
+      if (payment.checkoutUrl) {
+        openBenefitPaymentCheckout(payment.checkoutUrl);
+      } else {
+        throw new Error("Bonum checkout URL was not returned.");
+      }
     } catch (err) {
-      setPaymentSubmitError(err instanceof Error ? err.message : "Failed to submit payment confirmation.");
+      setPaymentSubmitError(err instanceof Error ? err.message : "Failed to start Bonum payment.");
     } finally {
       setSubmittingPayment(false);
     }
@@ -850,7 +862,7 @@ export default function BenefitDetailPage() {
                       <p className="mt-1 text-xs text-blue-700">
                         {latestRequestStatus === "awaiting_payment_review"
                           ? "HR is checking your payment now. You can still reopen the details if you need them."
-                          : "Your request passed approval. Pay your share now, then mark it as paid so HR can verify it."}
+                          : "Your request passed approval. Open Bonum checkout and your benefit will activate automatically once the payment succeeds."}
                       </p>
                       <button
                         type="button"
@@ -885,8 +897,8 @@ export default function BenefitDetailPage() {
           open={paymentDialogOpen}
           onClose={() => setPaymentDialogOpen(false)}
           requestStatus={latestRequestStatus}
+          payment={latestPayment}
           benefitName={benefit.name}
-          employeeName={employee?.name ?? "Employee"}
           totalAmount={benefit.amount}
           companyPercent={benefit.subsidyPercent}
           employeePercent={benefit.employeePercent}

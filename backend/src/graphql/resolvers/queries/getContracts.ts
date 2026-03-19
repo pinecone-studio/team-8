@@ -4,6 +4,7 @@ import { getBenefitConfig } from "../../../eligibility";
 import { createContractViewToken, getContractViewUrl } from "../../../contracts";
 import type { GraphQLContext } from "../../context";
 import { requireAuth, isAdminEmployee } from "../../../auth";
+import { getBenefitsForEmployee } from "../helpers/employeeBenefits";
 
 type ContractsArgs = { benefitId?: string | null };
 
@@ -63,6 +64,25 @@ export const getContracts = async (
     for (const row of requestRows) {
       if (CONTRACT_RELEVANT_STATUSES.has(row.status)) {
         allowedBenefitIds.add(row.benefitId);
+      }
+    }
+
+    // Allow employees to review the active HR contract before they submit a new
+    // request for a contract-based benefit. Without this, the request flow's
+    // "Contract Review" step can dead-end because the contract only becomes
+    // visible after a request already exists.
+    if (benefitId) {
+      const employeeBenefits = await getBenefitsForEmployee(db, employee.id);
+      const matchingBenefit = employeeBenefits.find(
+        (benefit) => benefit.benefitId === benefitId,
+      );
+
+      if (
+        matchingBenefit?.benefit.requiresContract &&
+        matchingBenefit.benefit.isActive &&
+        matchingBenefit.status !== "LOCKED"
+      ) {
+        allowedBenefitIds.add(benefitId);
       }
     }
 

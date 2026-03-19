@@ -31,6 +31,15 @@ export interface Env {
   GEMINI_MODEL?: string;
   // Local/dev-only override for testing Monday slot flows on non-Monday days.
   SCREEN_TIME_DEBUG_TODAY_LOCAL_DATE?: string;
+  // Bonum payment integration.
+  BONUM_API_BASE_URL?: string;
+  BONUM_APP_SECRET?: string;
+  BONUM_TERMINAL_ID?: string;
+  BONUM_ACCEPT_LANGUAGE?: string;
+  BONUM_CALLBACK_URL?: string;
+  BONUM_RETURN_URL?: string;
+  BONUM_MERCHANT_CHECKSUM_KEY?: string;
+  BONUM_INVOICE_EXPIRES_SECONDS?: string;
 }
 
 export interface GraphQLContext {

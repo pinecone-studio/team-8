@@ -7,7 +7,7 @@
     "build": "wrangler deploy --dry-run --outdir=dist",
     "deploy": "wrangler deploy",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
-    "codegen": "graphql-codegen --config codegen.ts",
+    "codegen": "node ../node_modules/@graphql-codegen/cli/cjs/bin.js --config codegen.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply team8 --local",
     "db:seed": "wrangler d1 execute team8 --local --file=./scripts/seed-demo.sql",

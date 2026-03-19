@@ -13,6 +13,8 @@ import * as notificationReadsSchema from "./notification-reads";
 import * as attendanceRecordsSchema from "./attendance-records";
 import * as employeeSettingsSchema from "./employee-settings";
 import * as screenTimeSchema from "./screen-time";
+import * as bonumAuthTokensSchema from "./bonum-auth-tokens";
+import * as benefitRequestPaymentsSchema from "./benefit-request-payments";
 
 // Combine schema pieces — benefits, contracts, eligibility_rules, benefit_eligibility, benefit_requests (TDD §10)
 export const schema = {
@@ -31,6 +33,8 @@ export const schema = {
   ...attendanceRecordsSchema,
   ...employeeSettingsSchema,
   ...screenTimeSchema,
+  ...bonumAuthTokensSchema,
+  ...benefitRequestPaymentsSchema,
 };
 
 // Re-export tables and types for consumers and GraphQL codegen
@@ -49,3 +53,5 @@ export * from "./notification-reads";
 export * from "./attendance-records";
 export * from "./employee-settings";
 export * from "./screen-time";
+export * from "./bonum-auth-tokens";
+export * from "./benefit-request-payments";
