@@ -66,11 +66,7 @@ export const updateBenefit = async (
   if ("location" in input) updates.location = input.location ?? null;
   if ("imageUrl" in input) updates.imageUrl = input.imageUrl ?? null;
 
-  const effectiveFlowType = (input.flowType ?? existing.flowType) as string;
-  const effectiveRequiresContract =
-    input.requiresContract ?? existing.requiresContract;
-  const effectiveSubsidyPercent =
-    input.subsidyPercent ?? existing.subsidyPercent;
+
   const effectiveAmount =
     "amount" in input ? input.amount ?? null : existing.amount;
   if (effectiveFlowType === "screen_time" && effectiveRequiresContract) {

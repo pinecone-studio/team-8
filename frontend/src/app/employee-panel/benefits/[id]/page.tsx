@@ -864,34 +864,6 @@ export default function BenefitDetailPage() {
                       </button>
                     </div>
                   )}
-                  {benefit.requiresContract && benefitEligibility.status === "ELIGIBLE" && (
-              {/* Right: action panel */}
-              <div className="rounded-2xl border border-gray-200 bg-white p-6 self-start">
-                <h2 className="text-base font-semibold text-gray-900">Next Steps</h2>
-                <div className="mt-4">
-                  <NextStepsBox
-                    status={benefitEligibility.status}
-                    benefitId={benefitEligibility.benefitId}
-                    failedRuleError={benefitEligibility.failedRule?.errorMessage}
-                    approvalPolicy={policy}
-                    requiresContract={benefit.requiresContract}
-                    flowType={benefit.flowType}
-                    awaitingContract={awaitingContract}
-                    onRequestBenefit={() => setRequestModalOpen(true)}
-                  />
-                </div>
-                {benefit.requiresContract &&
-                  benefitEligibility.status === "ELIGIBLE" &&
-                  !isSelfService && (
-                    <div className="mt-5 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3">
-                      <div className="flex items-start gap-2">
-                        <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
-                        <p className="text-xs text-amber-700">
-                          A vendor contract must be reviewed and accepted before your request can proceed to HR review.
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
