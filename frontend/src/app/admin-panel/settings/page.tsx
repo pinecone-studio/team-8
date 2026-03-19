@@ -105,7 +105,12 @@ const NOTIFICATION_ROWS: {
 export default function AdminSettingsPage() {
   const { employee } = useCurrentEmployee();
 
-  const { data, loading } = useQuery<{ mySettings: SettingsData }>(GET_MY_SETTINGS);
+  const { data, loading, refetch } = useQuery<{ mySettings: SettingsData }>(
+    GET_MY_SETTINGS,
+    {
+      fetchPolicy: "cache-and-network",
+    },
+  );
   const [updateMySettings, { loading: saving }] = useMutation(UPDATE_MY_SETTINGS, {
     update(cache, { data: mutationData }) {
       if (!mutationData?.updateMySettings) return;
@@ -124,13 +129,14 @@ export default function AdminSettingsPage() {
   const handleSave = useCallback(async () => {
     try {
       await updateMySettings({ variables: { input: form } });
+      await refetch();
       setLocalOverrides({});
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch {
       alert("Failed to save settings.");
     }
-  }, [form, updateMySettings]);
+  }, [form, refetch, updateMySettings]);
 
   const handleCancel = useCallback(() => setLocalOverrides({}), []);
 

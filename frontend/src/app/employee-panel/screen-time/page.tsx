@@ -21,7 +21,9 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function EmployeeScreenTimeHubPage() {
   const router = useRouter();
-  const { data, loading, error } = useGetMyBenefitsFullQuery();
+  const { data, loading, error } = useGetMyBenefitsFullQuery({
+    fetchPolicy: "cache-and-network",
+  });
 
   const screenTimePrograms = useMemo(
     () =>

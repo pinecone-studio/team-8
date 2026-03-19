@@ -321,7 +321,9 @@ function Section({
 }
 
 function ScreenTimeProgramLinkSection({ benefitId }: { benefitId: string }) {
-  const { data, loading } = useGetAdminBenefitsQuery();
+  const { data, loading } = useGetAdminBenefitsQuery({
+    fetchPolicy: "cache-and-network",
+  });
   const benefit = data?.adminBenefits?.find((item) => item.id === benefitId);
 
   if (loading || benefit?.flowType !== "screen_time") return null;
@@ -384,6 +386,7 @@ function BenefitDetails({
 
   const [updateBenefit, { loading: saving }] = useUpdateBenefitMutation({
     refetchQueries: [{ query: GetAdminBenefitsDocument }],
+    awaitRefetchQueries: true,
     onCompleted: () => {
       setEditing(false);
       setFeedback({ ok: true, msg: "Saved." });
@@ -394,6 +397,7 @@ function BenefitDetails({
 
   const [deleteBenefit, { loading: deleting }] = useDeleteBenefitMutation({
     refetchQueries: [{ query: GetAdminBenefitsDocument }],
+    awaitRefetchQueries: true,
     onError: (e) => setFeedback({ ok: false, msg: e.message }),
   });
 

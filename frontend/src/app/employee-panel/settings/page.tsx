@@ -47,7 +47,12 @@ const DEFAULTS: SettingsData = {
 
 export default function SettingsPage() {
   const { employee } = useCurrentEmployee();
-  const { data, loading } = useQuery<{ mySettings: SettingsData }>(GET_MY_SETTINGS);
+  const { data, loading, refetch } = useQuery<{ mySettings: SettingsData }>(
+    GET_MY_SETTINGS,
+    {
+      fetchPolicy: "cache-and-network",
+    },
+  );
   const [updateMySettings, { loading: saving }] = useMutation(UPDATE_MY_SETTINGS, {
     // Write the returned settings directly into the mySettings query cache so
     // the form reflects the committed server state immediately after save,
@@ -82,13 +87,14 @@ export default function SettingsPage() {
   const handleSave = useCallback(async () => {
     try {
       await updateMySettings({ variables: { input: form } });
+      await refetch();
       setLocalOverrides({});
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch {
       alert("Failed to save settings.");
     }
-  }, [form, updateMySettings]);
+  }, [form, refetch, updateMySettings]);
 
   const handleCancel = useCallback(() => {
     setLocalOverrides({});
