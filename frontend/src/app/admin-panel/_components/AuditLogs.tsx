@@ -184,13 +184,9 @@ function MonthCalendar({
           // Continuous stripe background between start and end
           const bg = single
             ? ""
-            : isLo && hi
-              ? "bg-gradient-to-r from-transparent to-blue-50"
-              : isHi && lo
-                ? "bg-gradient-to-r from-blue-50 to-transparent"
-                : inRange
-                  ? "bg-blue-50"
-                  : "";
+            : isLo || isHi || inRange
+              ? "bg-blue-50"
+              : "";
 
           const btnColor =
             isLo || isHi
@@ -909,7 +905,9 @@ export default function AuditLogs() {
         <section className="mx-auto max-w-7xl">
           <div className="mb-8 flex items-end justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-white">Request History</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">
+                Request History
+              </h1>
               <p className="mt-1 text-sm text-gray-400">
                 All benefit request activity and change history
               </p>

@@ -816,7 +816,7 @@ function RequestsContent() {
         />
       )}
 
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-gray-50">
         <Sidebar />
         <div className="flex flex-1 flex-col items-center">
           <main className="w-full max-w-5xl p-8">
@@ -827,7 +827,9 @@ function RequestsContent() {
               </div>
             ) : (
               <>
-                <h1 className="text-xl font-semibold text-white">My Requests</h1>
+                <h1 className="text-xl font-semibold text-gray-900 dark:text-foreground">
+                  My Requests
+                </h1>
                 <p className="mt-1 text-sm text-gray-500">Track the status of your benefit requests</p>
               </>
             )}

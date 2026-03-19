@@ -8,6 +8,14 @@ type Props = {
 };
 
 function buildDescription(benefit: BenefitEligibility) {
+  if (benefit.benefit.flowType === "self_service") {
+    if (benefit.failedRule?.errorMessage) return benefit.failedRule.errorMessage;
+    return (
+      benefit.benefit.description ??
+      benefit.benefit.optionsDescription ??
+      "This benefit is activated automatically when you meet the eligibility requirements."
+    );
+  }
   if (benefit.failedRule?.errorMessage) return benefit.failedRule.errorMessage;
   if (benefit.benefit.description) return benefit.benefit.description;
   if (benefit.benefit.optionsDescription) return benefit.benefit.optionsDescription;

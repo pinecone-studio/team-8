@@ -16,8 +16,14 @@ export const createBenefit = async (
       subsidyPercent: number;
       vendorName?: string | null;
       requiresContract?: boolean | null;
-      flowType?: string | null;
       approvalPolicy?: string | null;
+      flowType?:
+        | "contract"
+        | "normal"
+        | "down_payment"
+        | "self_service"
+        | "screen_time"
+        | null;
       amount?: number | null;
       location?: string | null;
       imageUrl?: string | null;
