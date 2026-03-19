@@ -56,7 +56,7 @@ function BenefitTableRowSkeleton() {
     </tr>
   );
 }
-import { isAdminEmployee, isHrAdmin } from "../../_lib/access";
+import { isAdminEmployee, isHrAdmin } from "../_lib/access";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 
 const APPROVAL_POLICY_LABELS: Record<string, string> = {
