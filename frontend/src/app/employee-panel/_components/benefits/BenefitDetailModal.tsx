@@ -106,11 +106,31 @@ export default function BenefitDetailModal({
           {/* Description */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-              Description
+              {benefit.status === BenefitEligibilityStatus.Locked
+                ? "Locked Reason"
+                : "Description"}
             </p>
-            <p className="mt-1.5 text-sm leading-relaxed text-gray-700">
-              {description}
-            </p>
+            {benefit.status === BenefitEligibilityStatus.Locked ? (
+              failedRules.length > 0 ? (
+                <ul className="mt-2 space-y-1.5 text-sm text-red-600">
+                  {failedRules.map((r) => (
+                    <li key={r.ruleType} className="flex items-start gap-2">
+                      <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+                      <span>{r.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-1.5 text-sm leading-relaxed text-red-600">
+                  {benefit.failedRule?.errorMessage ??
+                    "You do not meet the eligibility requirements for this benefit."}
+                </p>
+              )
+            ) : (
+              <p className="mt-1.5 text-sm leading-relaxed text-gray-700">
+                {description}
+              </p>
+            )}
           </div>
 
           {/* Amount + Subsidy */}
