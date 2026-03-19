@@ -4,6 +4,10 @@ import type { GraphQLContext } from "../../context";
 import { mapBenefitRecordToGraphql } from "../helpers/employeeBenefits";
 import { requireHrAdmin } from "../../../auth";
 import { invalidateAllEmployeeEligibilityCaches } from "../helpers/benefitCatalogRefresh";
+import {
+  assertSingleActiveFinanceBenefit,
+  isFinanceBenefitFlowType,
+} from "../../../benefits/finance";
 
 export const updateBenefit = async (
   _: unknown,
@@ -49,28 +53,54 @@ export const updateBenefit = async (
   if (input.name != null) updates.name = input.name;
   if ("description" in input) updates.description = input.description ?? null;
   if (input.category != null) updates.category = input.category;
-  if (input.subsidyPercent != null) updates.subsidyPercent = input.subsidyPercent;
   if ("vendorName" in input) updates.vendorName = input.vendorName ?? null;
   const effectiveFlowType = input.flowType ?? existing.flowType ?? "normal";
+  const effectiveIsActive = input.isActive ?? existing.isActive;
   const effectiveRequiresContract =
     effectiveFlowType === "screen_time"
       ? false
-      : input.requiresContract ?? existing.requiresContract;
+      : isFinanceBenefitFlowType(effectiveFlowType)
+        ? true
+        : input.requiresContract ?? existing.requiresContract;
   if (input.requiresContract != null || effectiveFlowType === "screen_time") {
     updates.requiresContract = effectiveRequiresContract;
   }
   if (input.flowType != null) updates.flowType = input.flowType;
   if (input.isActive != null) updates.isActive = input.isActive;
-  if (input.approvalPolicy != null) updates.approvalPolicy = input.approvalPolicy;
-  if ("amount" in input) updates.amount = input.amount ?? null;
+  if (input.approvalPolicy != null || isFinanceBenefitFlowType(effectiveFlowType)) {
+    updates.approvalPolicy = isFinanceBenefitFlowType(effectiveFlowType)
+      ? "finance"
+      : input.approvalPolicy ?? existing.approvalPolicy;
+  }
+  if ("amount" in input || isFinanceBenefitFlowType(effectiveFlowType)) {
+    updates.amount = isFinanceBenefitFlowType(effectiveFlowType)
+      ? null
+      : input.amount ?? null;
+  }
   if ("location" in input) updates.location = input.location ?? null;
   if ("imageUrl" in input) updates.imageUrl = input.imageUrl ?? null;
+  if (input.subsidyPercent != null || isFinanceBenefitFlowType(effectiveFlowType)) {
+    updates.subsidyPercent = isFinanceBenefitFlowType(effectiveFlowType)
+      ? 0
+      : input.subsidyPercent ?? existing.subsidyPercent;
+  }
 
 
   const effectiveAmount =
-    "amount" in input ? input.amount ?? null : existing.amount;
+    isFinanceBenefitFlowType(effectiveFlowType)
+      ? null
+      : "amount" in input
+        ? input.amount ?? null
+        : existing.amount;
   const effectiveSubsidyPercent =
-    input.subsidyPercent != null ? input.subsidyPercent : existing.subsidyPercent;
+    isFinanceBenefitFlowType(effectiveFlowType)
+      ? 0
+      : input.subsidyPercent != null
+        ? input.subsidyPercent
+        : existing.subsidyPercent;
+  if (isFinanceBenefitFlowType(effectiveFlowType) && effectiveIsActive) {
+    await assertSingleActiveFinanceBenefit(db, { excludeBenefitId: id });
+  }
   if (effectiveFlowType === "screen_time" && effectiveRequiresContract) {
     throw new Error("Screen time benefits cannot require a contract.");
   }

@@ -71,6 +71,44 @@ mutation CancelBenefitRequest($requestId: String!) {
   }
 }
 
+mutation RespondToFinanceBenefitOffer($input: RespondToFinanceBenefitOfferInput!) {
+  respondToFinanceBenefitOffer(input: $input) {
+    id
+    employeeId
+    benefitId
+    status
+    reviewedBy
+    requestedAmount
+    repaymentMonths
+    financeProposedAmount
+    financeProposedRepaymentMonths
+    financeProposalNote
+    financeProposedBy
+    financeProposedAt
+    financeContractFileName
+    financeContractMimeType
+    financeContractUploadedAt
+    financeContractViewUrl
+    employeeDecisionAt
+    finalApprovedBy
+    finalApprovedAt
+    employeeApprovedAt
+    declineReason
+    employeeContractKey
+    employeeSignedContract {
+      id
+      fileName
+      mimeType
+      status
+      uploadedAt
+      viewUrl
+    }
+    createdAt
+    updatedAt
+    viewContractUrl
+  }
+}
+
 mutation CreateBenefit($input: CreateBenefitInput!) {
   createBenefit(input: $input) {
     id

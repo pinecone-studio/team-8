@@ -23,6 +23,7 @@ import {
   useGetContractsForBenefitQuery,
   useRequestBenefitMutation,
   useConfirmBenefitRequestMutation,
+  useRespondToFinanceBenefitOfferMutation,
 } from "@/graphql/generated/graphql";
 import { getContractProxyUrl } from "@/lib/contracts";
 
@@ -64,7 +65,8 @@ export default function BenefitRequestModal({
   onSuccess,
 }: Props) {
   const { getToken } = useAuth();
-  const { data, error, loading } = useGetMyBenefitsQuery();
+  const { data, error, loading, refetch: refetchMyBenefits } =
+    useGetMyBenefitsQuery();
   const [requestBenefit, { loading: submitting }] = useRequestBenefitMutation();
   const [confirmBenefitRequest, { loading: confirming }] =
     useConfirmBenefitRequestMutation();
@@ -89,11 +91,17 @@ export default function BenefitRequestModal({
   const isSelfService = benefit?.flowType === BenefitFlowType.SelfService;
   const isFinanceFlow = benefit?.flowType === BenefitFlowType.DownPayment;
 
-  const { data: requestsData, loading: requestsLoading } =
+  const {
+    data: requestsData,
+    loading: requestsLoading,
+    refetch: refetchBenefitRequests,
+  } =
     useGetBenefitRequestsQuery({
       skip: !isFinanceFlow,
       fetchPolicy: "cache-and-network",
     });
+  const [respondToFinanceOffer, { loading: respondingToOffer }] =
+    useRespondToFinanceBenefitOfferMutation();
 
   const latestFinanceRequest = useMemo(() => {
     if (!requestsData?.benefitRequests?.length) return null;
@@ -170,7 +178,9 @@ export default function BenefitRequestModal({
 
   const now = new Date();
   const approvalDone =
+    latestFinanceRequest?.status === "awaiting_employee_decision" ||
     latestFinanceRequest?.status === "awaiting_employee_signed_contract" ||
+    latestFinanceRequest?.status === "awaiting_final_finance_approval" ||
     latestFinanceRequest?.status === "approved";
   const repaymentStarted = Boolean(latestApprovedDownPaymentLoan);
   const repaymentDone = repaymentStarted
@@ -181,7 +191,7 @@ export default function BenefitRequestModal({
   const { data: contractsData, loading: contractsLoading } =
     useGetContractsForBenefitQuery({
       variables: { benefitId },
-      skip: !requiresContract || !benefitId || (isFinanceFlow && step !== 3),
+      skip: !requiresContract || !benefitId || isFinanceFlow,
     });
   const activeContract =
     contractsData?.contracts.find((c) => c.isActive) ?? null;
@@ -190,15 +200,24 @@ export default function BenefitRequestModal({
   const contractStepBlocked =
     requiresContract && !contractsLoading && !hasReviewableContract;
 
-  const isWorking = submitting || confirming || uploading;
+  const isWorking =
+    submitting || confirming || uploading || respondingToOffer;
 
   useEffect(() => {
     if (!isFinanceFlow) return;
-    if (latestFinanceRequest?.status === "awaiting_employee_signed_contract") {
+    const status = latestFinanceRequest?.status;
+    if (status === "awaiting_employee_decision") {
       setStep(2);
-    } else {
-      setStep(1);
+      return;
     }
+    if (
+      status === "awaiting_employee_signed_contract" ||
+      status === "awaiting_final_finance_approval"
+    ) {
+      setStep(3);
+      return;
+    }
+    setStep(1);
   }, [isFinanceFlow, latestFinanceRequest?.status, benefitId]);
 
   useEffect(() => {
@@ -244,6 +263,9 @@ export default function BenefitRequestModal({
       };
       setEmployeeSignedContract(json);
       setUploadedFileName(json.fileName ?? file.name);
+      if (options?.financeRequestId) {
+        await Promise.all([refetchBenefitRequests(), refetchMyBenefits()]);
+      }
       if (json.completedEnrollment) {
         onSuccess();
         onClose();
@@ -360,6 +382,52 @@ export default function BenefitRequestModal({
     }
   };
 
+  const respondToOffer = async (accepted: boolean) => {
+    if (!latestFinanceRequest?.id) return;
+    setSubmitMessage(null);
+    try {
+      const result = await respondToFinanceOffer({
+        variables: {
+          input: {
+            requestId: latestFinanceRequest.id,
+            accept: accepted,
+            note: accepted
+              ? undefined
+              : "Employee declined the proposed finance offer.",
+          },
+        },
+        refetchQueries: [
+          { query: GetBenefitRequestsDocument },
+          { query: GetMyBenefitsDocument },
+        ],
+      });
+
+      if (result.errors?.length) {
+        setSubmitMessage(result.errors[0].message ?? "Failed to update offer.");
+        return;
+      }
+
+      await Promise.all([refetchBenefitRequests(), refetchMyBenefits()]);
+
+      if (accepted) {
+        setStep(3);
+        setSubmitMessage(
+          "Offer accepted. Upload your signed contract to continue.",
+        );
+        return;
+      }
+
+      onSuccess();
+      onClose();
+    } catch (error) {
+      setSubmitMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to update your finance offer decision.",
+      );
+    }
+  };
+
   if (loading || (isFinanceFlow && requestsLoading)) {
     return (
       <div
@@ -406,10 +474,15 @@ export default function BenefitRequestModal({
     );
   }
 
-  const allowFinancePostApproval =
+  const financeContinuationStatuses = new Set([
+    "awaiting_employee_decision",
+    "awaiting_employee_signed_contract",
+    "awaiting_final_finance_approval",
+  ]);
+  const allowFinanceContinuation =
     isFinanceFlow &&
-    benefitEligibility.status === BenefitEligibilityStatus.Pending &&
-    latestFinanceRequest?.status === "awaiting_employee_signed_contract";
+    latestFinanceRequest?.status != null &&
+    financeContinuationStatuses.has(latestFinanceRequest.status);
 
   const canOpenFinanceStep1 =
     isFinanceFlow &&
@@ -419,7 +492,7 @@ export default function BenefitRequestModal({
 
   if (
     isFinanceFlow &&
-    !allowFinancePostApproval &&
+    !allowFinanceContinuation &&
     !canOpenFinanceStep1
   ) {
     return (
@@ -484,6 +557,17 @@ export default function BenefitRequestModal({
   // ── Finance Benefit (down_payment): 3-step flow ─────────────────────────
   if (isFinanceFlow) {
     const reqId = latestFinanceRequest?.id;
+    const financeOfferContractUrl = getContractProxyUrl(
+      latestFinanceRequest?.financeContractViewUrl,
+    );
+    const awaitingFinanceOffer =
+      latestFinanceRequest?.status === "awaiting_finance_review";
+    const financeOfferReady =
+      latestFinanceRequest?.status === "awaiting_employee_decision";
+    const awaitingSignedContract =
+      latestFinanceRequest?.status === "awaiting_employee_signed_contract";
+    const awaitingFinalFinanceApproval =
+      latestFinanceRequest?.status === "awaiting_final_finance_approval";
 
     return (
       <div
@@ -610,8 +694,9 @@ export default function BenefitRequestModal({
                 </h1>
                 <p className="mt-1 text-sm text-gray-600">
                   Enter the amount you need and how many months you will repay.
-                  After HR and Finance approve, you will sign and upload the
-                  contract.
+                  Finance reviews the request, prepares the final offer, and
+                  sends you a request-specific contract if the request is
+                  feasible.
                 </p>
 
                 <div className="mt-5 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4">
@@ -673,6 +758,13 @@ export default function BenefitRequestModal({
                   </span>
                 </div>
 
+                {awaitingFinanceOffer && (
+                  <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
+                    Your request has been submitted and is currently under
+                    Finance review.
+                  </div>
+                )}
+
                 {submitMessage && (
                   <div className="mt-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700">
                     {submitMessage}
@@ -693,81 +785,124 @@ export default function BenefitRequestModal({
             {step === 2 && (
               <>
                 <h1 className="text-xl font-bold text-gray-900">
-                  Request approved
+                  Review finance offer
                 </h1>
                 <p className="mt-1 text-sm text-gray-600">
-                  HR and Finance have approved your request. Continue to
-                  download the contract, sign it, and upload your signed copy.
+                  Finance prepared the final loan terms and attached your
+                  request-specific contract. Review the offer carefully before
+                  you accept it.
                 </p>
 
-                <div className="mt-6 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                  <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-emerald-600" />
+                <div className="mt-6 flex items-start gap-3 rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+                  <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-cyan-600" />
                   <div>
-                    <p className="text-sm font-semibold text-emerald-800">
-                      Your request was successful
+                    <p className="text-sm font-semibold text-cyan-800">
+                      Finance offer ready
                     </p>
-                    {latestFinanceRequest?.requestedAmount != null && (
-                      <p className="mt-1 text-xs text-emerald-700">
-                        Amount:{" "}
+                    {latestFinanceRequest?.financeProposedAmount != null && (
+                      <p className="mt-1 text-xs text-cyan-700">
+                        Offer:{" "}
                         {Number(
-                          latestFinanceRequest.requestedAmount,
+                          latestFinanceRequest.financeProposedAmount,
                         ).toLocaleString()}
                         ₮
-                        {latestFinanceRequest.repaymentMonths != null &&
-                          ` · ${latestFinanceRequest.repaymentMonths} months`}
+                        {latestFinanceRequest.financeProposedRepaymentMonths !=
+                          null &&
+                          ` · ${latestFinanceRequest.financeProposedRepaymentMonths} months`}
                       </p>
                     )}
                   </div>
                 </div>
 
-                {latestFinanceRequest?.repaymentMonths != null && (
+                {latestFinanceRequest?.financeProposalNote && (
                   <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-600">
-                    Repayment period:{" "}
-                    <span className="font-semibold text-gray-900">
-                      {latestFinanceRequest.repaymentMonths} months
-                    </span>
-                    . Repayment starts after your contract upload completes
-                    enrollment.
+                    {latestFinanceRequest.financeProposalNote}
                   </div>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => setStep(3)}
-                  className="mt-6 h-12 w-full rounded-xl bg-blue-600 text-base font-medium text-white shadow-md transition hover:bg-blue-700"
-                >
-                  Continue
-                </button>
+                <div className="mt-6">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    Finance contract
+                  </p>
+                  {financeOfferContractUrl ? (
+                    <>
+                      <iframe
+                        src={financeOfferContractUrl}
+                        className="h-[220px] w-full rounded-2xl border border-gray-200 bg-gray-50"
+                        title="Finance contract"
+                      />
+                      <a
+                        href={financeOfferContractUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-3 inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download / open contract
+                      </a>
+                    </>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-6 py-10 text-center text-sm text-gray-500">
+                      Finance has not attached the contract yet.
+                    </div>
+                  )}
+                </div>
+
+                {submitMessage && (
+                  <div className="mt-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700">
+                    {submitMessage}
+                  </div>
+                )}
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => void respondToOffer(false)}
+                    disabled={isWorking || !financeOfferReady}
+                    className="h-12 flex-1 rounded-xl border border-red-200 bg-white text-base font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-40"
+                  >
+                    {respondingToOffer ? "Saving…" : "Decline Offer"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void respondToOffer(true)}
+                    disabled={
+                      isWorking ||
+                      !financeOfferReady ||
+                      !financeOfferContractUrl
+                    }
+                    className="h-12 flex-1 rounded-xl bg-blue-600 text-base font-medium text-white shadow-md transition hover:bg-blue-700 disabled:opacity-40"
+                  >
+                    {respondingToOffer ? "Saving…" : "Accept Offer"}
+                  </button>
+                </div>
               </>
             )}
 
             {step === 3 && reqId && (
               <>
                 <h1 className="text-xl font-bold text-gray-900">
-                  Sign &amp; upload contract
+                  Signed contract
                 </h1>
                 <p className="mt-1 text-sm text-gray-600">
-                  Download the HR contract, sign it, then upload a scan or photo
-                  (PDF, PNG, or JPG). HR and Finance will be notified.
+                  Download the finance contract, sign it, then upload a scan or
+                  photo. The benefit activates only after final finance-manager
+                  approval.
                 </p>
 
                 <div className="mt-6">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                    HR contract
+                    Finance contract
                   </p>
-                  {contractsLoading ? (
-                    <div className="flex h-[200px] items-center justify-center rounded-2xl border border-gray-200 bg-gray-50">
-                      <PageLoading inline message="Loading contract…" />
-                    </div>
-                  ) : contractUrl ? (
+                  {financeOfferContractUrl ? (
                     <>
                       <iframe
-                        src={contractUrl}
+                        src={financeOfferContractUrl}
                         className="h-[220px] w-full rounded-2xl border border-gray-200 bg-gray-50"
-                        title="HR contract"
+                        title="Finance contract"
                       />
                       <a
-                        href={contractUrl}
+                        href={financeOfferContractUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="mt-3 inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50"
@@ -780,72 +915,81 @@ export default function BenefitRequestModal({
                     <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 px-6 py-10 text-center">
                       <FileText className="h-8 w-8 text-gray-400" />
                       <p className="text-sm text-gray-600">
-                        No active contract is available yet. Please contact HR.
+                        Finance has not attached the contract yet. Please check
+                        back later.
                       </p>
                     </div>
                   )}
                 </div>
 
-                <div
-                  className={`relative mt-6 flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed p-10 text-center transition ${
-                    employeeSignedContract?.id
-                      ? "border-emerald-300 bg-emerald-50"
-                      : uploadError
-                        ? "border-red-300 bg-red-50"
-                        : "border-gray-200 bg-gray-50 hover:border-blue-300 hover:bg-blue-50/40"
-                  }`}
-                  onClick={() =>
-                    !employeeSignedContract?.id &&
-                    !uploading &&
-                    fileInputRef.current?.click()
-                  }
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setEmployeeSignedContract(null);
-                        setUploadedFileName(null);
-                        void handleFileUpload(file, { financeRequestId: reqId });
-                      }
-                      e.target.value = "";
-                    }}
-                  />
-                  {uploading ? (
-                    <>
-                      <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
-                      <p className="text-sm font-medium text-blue-700">
-                        Uploading…
-                      </p>
-                    </>
-                  ) : employeeSignedContract?.id ? (
-                    <>
-                      <CheckCircle2 className="h-11 w-11 text-emerald-500" />
-                      <p className="text-sm font-semibold text-emerald-700">
-                        Signed contract uploaded — enrollment complete
-                      </p>
-                      {uploadedFileName && (
-                        <p className="text-xs text-emerald-600">
-                          {uploadedFileName}
+                {awaitingFinalFinanceApproval ? (
+                  <div className="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50 p-5 text-sm text-indigo-800">
+                    Your signed contract has been uploaded. We are waiting for a
+                    finance manager to give the final approval.
+                  </div>
+                ) : (
+                  <div
+                    className={`relative mt-6 flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed p-10 text-center transition ${
+                      employeeSignedContract?.id
+                        ? "border-emerald-300 bg-emerald-50"
+                        : uploadError
+                          ? "border-red-300 bg-red-50"
+                          : "border-gray-200 bg-gray-50 hover:border-blue-300 hover:bg-blue-50/40"
+                    }`}
+                    onClick={() =>
+                      !employeeSignedContract?.id &&
+                      !uploading &&
+                      awaitingSignedContract &&
+                      fileInputRef.current?.click()
+                    }
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setEmployeeSignedContract(null);
+                          setUploadedFileName(null);
+                          void handleFileUpload(file, { financeRequestId: reqId });
+                        }
+                        e.target.value = "";
+                      }}
+                    />
+                    {uploading ? (
+                      <>
+                        <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
+                        <p className="text-sm font-medium text-blue-700">
+                          Uploading…
                         </p>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <UploadCloud className="h-8 w-8 text-gray-400" />
-                      <p className="text-sm font-semibold text-gray-700">
-                        Click to upload signed contract
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        PDF, PNG, or JPG — max 10MB
-                      </p>
-                    </>
-                  )}
-                </div>
+                      </>
+                    ) : employeeSignedContract?.id ? (
+                      <>
+                        <CheckCircle2 className="h-11 w-11 text-emerald-500" />
+                        <p className="text-sm font-semibold text-emerald-700">
+                          Signed contract uploaded
+                        </p>
+                        {uploadedFileName && (
+                          <p className="text-xs text-emerald-600">
+                            {uploadedFileName}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="h-8 w-8 text-gray-400" />
+                        <p className="text-sm font-semibold text-gray-700">
+                          Click to upload signed contract
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          PDF, PNG, or JPG — max 10MB
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
 
                 {uploadError && (
                   <div className="mt-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700">
@@ -856,10 +1000,16 @@ export default function BenefitRequestModal({
                 <div className="mt-4 flex gap-3">
                   <button
                     type="button"
-                    onClick={() => setStep(2)}
+                    onClick={() => {
+                      if (financeOfferReady) {
+                        setStep(2);
+                        return;
+                      }
+                      onClose();
+                    }}
                     className="h-10 flex-1 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
-                    Back
+                    {financeOfferReady ? "Back" : "Close"}
                   </button>
                 </div>
               </>

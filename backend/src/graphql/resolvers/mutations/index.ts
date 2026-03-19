@@ -2,6 +2,7 @@ import { createEmployee } from "./createEmployee";
 import { updateEmployee } from "./updateEmployee";
 import { deleteEmployee } from "./deleteEmployee";
 import { requestBenefit } from "./requestBenefit";
+import { respondToFinanceBenefitOffer } from "./respondToFinanceBenefitOffer";
 import { confirmBenefitRequest } from "./confirmBenefitRequest";
 import { approveBenefitRequest } from "./approveBenefitRequest";
 import { declineBenefitRequest } from "./declineBenefitRequest";
@@ -31,6 +32,7 @@ export const mutations = {
   updateEmployee,
   deleteEmployee,
   requestBenefit,
+  respondToFinanceBenefitOffer,
   confirmBenefitRequest,
   approveBenefitRequest,
   declineBenefitRequest,

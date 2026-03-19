@@ -1,11 +1,16 @@
 import { and, eq, notInArray } from "drizzle-orm";
 import { schema } from "../../../db";
+import type { Employee } from "../../../db";
 import { getOrCreateContractViewToken, getContractViewUrl } from "../../../contracts";
 import { sendBenefitRequestSubmittedEmail, sendHrNewBenefitRequestEmail } from "../../../email/sendTransactionalEmail";
 import type { GraphQLContext } from "../../context";
-import { requireAuth } from "../../../auth";
+import { getInternalRole, requireAuth } from "../../../auth";
 import { getBenefitsForEmployee } from "../helpers/employeeBenefits";
 import { writeAuditLog } from "../helpers/audit";
+import {
+  AWAITING_FINANCE_REVIEW_STATUS,
+  isFinanceBenefitFlowType,
+} from "../../../benefits/finance";
 
 function addMonths(date: Date, months: number): Date {
   const d = new Date(date);
@@ -20,13 +25,51 @@ function getTenureMonths(hireDateIso: string, now: Date): number {
 }
 
 async function resolveEmployeeMonthlySalaryMnt(params: {
-  envDb: any;
+  envDb: D1Database;
   employeeId: string;
+  employee: Pick<Employee, "id" | "role" | "department" | "responsibilityLevel">;
 }): Promise<number> {
-  // We don't have salary columns in Drizzle schema, but the underlying D1 DB
-  // may include them. To keep this resolver resilient, we discover the column
-  // name via PRAGMA table_info and then read the value.
-  const { envDb, employeeId } = params;
+  // Prefer a real salary column when available. If the current environment
+  // doesn't carry payroll data, fall back to a stable role/level estimate so
+  // the finance-benefit demo flow still works without crashing.
+  const { envDb, employeeId, employee } = params;
+
+  const estimateMonthlySalaryMnt = () => {
+    const level = Math.max(1, employee.responsibilityLevel ?? 1);
+    const role = String(employee.role ?? "").trim().toLowerCase();
+    const department = String(employee.department ?? "").trim().toLowerCase();
+
+    const baseByLevel: Record<number, number> = {
+      1: 2200000,
+      2: 3200000,
+      3: 4500000,
+      4: 6200000,
+      5: 8000000,
+    };
+
+    let estimate = baseByLevel[level] ?? (8000000 + Math.max(0, level - 5) * 1200000);
+
+    if (role.includes("intern")) estimate = Math.min(estimate, 1800000);
+    else if (role.includes("manager")) estimate += 900000;
+    else if (role.includes("lead")) estimate += 700000;
+    else if (role.includes("senior")) estimate += 500000;
+    else if (
+      role.includes("engineer") ||
+      role.includes("analyst") ||
+      role.includes("designer") ||
+      role.includes("specialist")
+    ) {
+      estimate += 300000;
+    }
+
+    if (department === "finance" || department === "engineering") {
+      estimate += 200000;
+    }
+
+    return Math.round(estimate / 10000) * 10000;
+  };
+
+  const fallbackSalary = estimateMonthlySalaryMnt();
 
   const pragmaStmt = envDb.prepare("PRAGMA table_info(employees)");
   const pragma = (await pragmaStmt.all()) as unknown as {
@@ -68,15 +111,17 @@ async function resolveEmployeeMonthlySalaryMnt(params: {
   });
 
   if (candidates.length === 0) {
-    throw new Error(
-      `Monthly salary column not found in "employees". Available columns: ${cols.join(", ")}`,
+    console.warn(
+      `[requestBenefit] Monthly salary column not found for employee ${employeeId}. Falling back to estimated salary ${fallbackSalary} MNT. Available columns: ${cols.join(", ")}`,
     );
+    return fallbackSalary;
   }
 
   if (!chosen) {
-    throw new Error(
-      `Monthly salary column candidate was not selected. Candidates: ${candidates.join(", ")}.`,
+    console.warn(
+      `[requestBenefit] Monthly salary column could not be selected for employee ${employeeId}. Falling back to estimated salary ${fallbackSalary} MNT. Candidates: ${candidates.join(", ")}.`,
     );
+    return fallbackSalary;
   }
 
   const salaryStmt = envDb.prepare(
@@ -88,15 +133,17 @@ async function resolveEmployeeMonthlySalaryMnt(params: {
 
   const raw = rows?.results?.[0]?.monthly_salary_mnt ?? null;
   if (raw === null) {
-    throw new Error(
-      `Monthly salary value is NULL in column "${chosen}" for this employee.`,
+    console.warn(
+      `[requestBenefit] Monthly salary is NULL in column "${chosen}" for employee ${employeeId}. Falling back to estimated salary ${fallbackSalary} MNT.`,
     );
+    return fallbackSalary;
   }
   const salary = typeof raw === "number" ? raw : Number(raw);
   if (!Number.isFinite(salary) || salary <= 0) {
-    throw new Error(
-      `Monthly salary value in column "${chosen}" is invalid (value=${String(raw)}).`,
+    console.warn(
+      `[requestBenefit] Monthly salary in column "${chosen}" is invalid for employee ${employeeId} (value=${String(raw)}). Falling back to estimated salary ${fallbackSalary} MNT.`,
     );
+    return fallbackSalary;
   }
   return Math.round(salary);
 }
@@ -111,11 +158,14 @@ function deriveInitialStatus(
   requiresContract: boolean,
   financeFirstPhase: boolean,
 ): string {
-  if (requiresContract && !financeFirstPhase) {
+  if (financeFirstPhase) {
+    return AWAITING_FINANCE_REVIEW_STATUS;
+  }
+  if (requiresContract) {
     return "awaiting_contract_acceptance";
   }
   if (approvalPolicy === "finance") {
-    return "awaiting_finance_review";
+    return AWAITING_FINANCE_REVIEW_STATUS;
   }
   // hr or dual → HR reviews first
   return "awaiting_hr_review";
@@ -166,6 +216,10 @@ export const requestBenefit = async (
     );
   }
 
+  const approvalPolicy = benefitFromDb.approvalPolicy ?? "hr";
+  const flowNorm = String(benefitFromDb.flowType ?? "").trim().toLowerCase();
+  const isDownPaymentFlow = flowNorm === "down_payment";
+
   const eligibilities = await getBenefitsForEmployee(db, employee.id);
   const eligibility = eligibilities.find((item) => item.benefitId === benefitId);
 
@@ -173,7 +227,11 @@ export const requestBenefit = async (
     throw new Error("No eligibility information found for this benefit.");
   }
 
-  if (eligibility.status !== "ELIGIBLE") {
+  const canRequestFromStatus =
+    eligibility.status === "ELIGIBLE" ||
+    (isDownPaymentFlow && eligibility.status === "ACTIVE");
+
+  if (!canRequestFromStatus) {
     throw new Error(
       eligibility.failedRule?.errorMessage ??
         "You are not currently eligible to request this benefit.",
@@ -183,7 +241,9 @@ export const requestBenefit = async (
   // Duplicate-request guard: reject if an active (non-terminal) request for this
   // benefit already exists for this employee.  This prevents accidental double-
   // submissions from rapid clicks or retried network requests.
-  const TERMINAL_STATUSES = ["cancelled", "declined"] as const;
+  const TERMINAL_STATUSES = isDownPaymentFlow
+    ? (["cancelled", "declined", "rejected", "approved"] as const)
+    : (["cancelled", "declined", "rejected"] as const);
   const existingActive = await db
     .select({ id: schema.benefitRequests.id })
     .from(schema.benefitRequests)
@@ -202,9 +262,6 @@ export const requestBenefit = async (
     );
   }
 
-  const approvalPolicy = benefitFromDb.approvalPolicy ?? "hr";
-  const flowNorm = String(benefitFromDb.flowType ?? "").trim().toLowerCase();
-  const isDownPaymentFlow = flowNorm === "down_payment";
   const amt = requestedAmount ?? null;
   const months = repaymentMonths ?? null;
   const hasValidLoanFields =
@@ -250,6 +307,7 @@ export const requestBenefit = async (
     const monthlySalaryMnt = await resolveEmployeeMonthlySalaryMnt({
       envDb: env.DB,
       employeeId: employee.id,
+      employee,
     });
 
     const cappedInstallment = Math.ceil(monthlyInstallmentFirstMonth);
@@ -453,19 +511,27 @@ export const requestBenefit = async (
   // Notify active HR managers about the new request.
   // Awaited via Promise.all so emails are sent before the Worker response
   // completes (avoids being killed mid-flight by the Workers runtime).
-  const hrManagers = await db
-    .select({ email: schema.employees.email })
+  const activeReviewers = await db
+    .select({
+      email: schema.employees.email,
+      department: schema.employees.department,
+      responsibilityLevel: schema.employees.responsibilityLevel,
+    })
     .from(schema.employees)
-    .where(
-      and(
-        eq(schema.employees.employmentStatus, "active"),
-        eq(schema.employees.role, "hr_manager"),
-      ),
-    );
+    .where(eq(schema.employees.employmentStatus, "active"));
   const displayName = employee.nameEng?.trim() || employee.name.trim() || employee.email;
+  const reviewerEmails = activeReviewers
+    .filter((reviewer) => {
+      const role = getInternalRole(reviewer as any);
+      if (isFinanceBenefitFlowType(benefitFromDb.flowType)) {
+        return role === "finance_admin" || role === "finance_manager";
+      }
+      return role === "hr_admin" || role === "hr_manager";
+    })
+    .map((reviewer) => reviewer.email);
   await Promise.all(
-    hrManagers.map((hr) =>
-      sendHrNewBenefitRequestEmail(env, hr.email, displayName, benefitFromDb.name).catch(
+    reviewerEmails.map((email) =>
+      sendHrNewBenefitRequestEmail(env, email, displayName, benefitFromDb.name).catch(
         (err) => console.error("[requestBenefit] HR alert email failed:", err),
       ),
     ),

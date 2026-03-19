@@ -106,6 +106,18 @@ query GetBenefitRequests {
     reviewedBy
     requestedAmount
     repaymentMonths
+    financeProposedAmount
+    financeProposedRepaymentMonths
+    financeProposalNote
+    financeProposedBy
+    financeProposedAt
+    financeContractFileName
+    financeContractMimeType
+    financeContractUploadedAt
+    financeContractViewUrl
+    employeeDecisionAt
+    finalApprovedBy
+    finalApprovedAt
     employeeApprovedAt
     declineReason
     employeeContractKey
@@ -149,6 +161,18 @@ query GetAllBenefitRequests($status: String, $queue: String) {
     reviewedBy
     requestedAmount
     repaymentMonths
+    financeProposedAmount
+    financeProposedRepaymentMonths
+    financeProposalNote
+    financeProposedBy
+    financeProposedAt
+    financeContractFileName
+    financeContractMimeType
+    financeContractUploadedAt
+    financeContractViewUrl
+    employeeDecisionAt
+    finalApprovedBy
+    finalApprovedAt
     employeeApprovedAt
     declineReason
     employeeSignedContract {

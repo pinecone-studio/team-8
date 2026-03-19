@@ -40,6 +40,8 @@ const CANCELLABLE_STATUSES = new Set([
   "awaiting_contract_acceptance",
   "awaiting_hr_review",
   "awaiting_finance_review",
+  "awaiting_employee_decision",
+  "awaiting_employee_signed_contract",
   "awaiting_payment",
 ]);
 
@@ -83,6 +85,12 @@ function getStatusBadgeConfig(status: string): StatusBadgeConfig {
       return { label: "HR Review", className: "bg-amber-50 text-amber-700 border border-amber-200" };
     case "awaiting_finance_review":
       return { label: "Finance Review", className: "bg-amber-50 text-amber-700 border border-amber-200" };
+    case "awaiting_employee_decision":
+      return { label: "Offer Review", className: "bg-cyan-50 text-cyan-700 border border-cyan-200" };
+    case "awaiting_employee_signed_contract":
+      return { label: "Upload Signed Contract", className: "bg-violet-50 text-violet-700 border border-violet-200" };
+    case "awaiting_final_finance_approval":
+      return { label: "Final Finance Approval", className: "bg-indigo-50 text-indigo-700 border border-indigo-200" };
     case "pending":
       return { label: "Pending", className: "bg-amber-50 text-amber-700 border border-amber-200" };
     default:
@@ -100,6 +108,9 @@ function getCardAccentClass(status: string): string {
   if (s === "hr_approved") return "border-l-teal-400";
   if (s === "awaiting_payment") return "border-l-blue-400";
   if (s === "awaiting_payment_review") return "border-l-indigo-400";
+  if (s === "awaiting_employee_decision") return "border-l-cyan-400";
+  if (s === "awaiting_employee_signed_contract") return "border-l-violet-400";
+  if (s === "awaiting_final_finance_approval") return "border-l-indigo-400";
   if (s === "awaiting_contract_acceptance") return "border-l-amber-400";
   return "border-l-amber-400";
 }
@@ -114,6 +125,12 @@ function getStatusTooltip(status: string): string | null {
       return "Your request is in the HR review queue. The HR team will process it shortly — no action needed from you.";
     case "awaiting_finance_review":
       return "Your request is in the Finance review queue. The Finance team will process it — no action needed from you.";
+    case "awaiting_employee_decision":
+      return "Finance sent the final offer and attached contract. Review the offer and decide whether to accept it.";
+    case "awaiting_employee_signed_contract":
+      return "You accepted the finance offer. Upload your signed contract to continue.";
+    case "awaiting_final_finance_approval":
+      return "Your signed contract was uploaded. A finance manager is doing the final approval.";
     case "hr_approved":
       return "HR has approved its review step. If Finance approval is still required, the request continues there.";
     case "finance_approved":
@@ -139,9 +156,81 @@ function buildTimeline(
   policy: string | null | undefined,
   requiresContract: boolean | null | undefined,
   hasPayment: boolean,
+  flowType?: string | null,
 ): TimelineStep[] {
   const p = (policy ?? "hr").toLowerCase();
   const rc = requiresContract ?? false;
+  const isFinanceFlow = flowType === "down_payment";
+  if (isFinanceFlow) {
+    const stepIds = [
+      "submitted",
+      "finance_review",
+      "employee_review",
+      "signed_contract",
+      "final_finance",
+      "done",
+    ];
+    let activeIdx: number;
+    switch (status) {
+      case "awaiting_finance_review":
+        activeIdx = stepIds.indexOf("finance_review");
+        break;
+      case "awaiting_employee_decision":
+        activeIdx = stepIds.indexOf("employee_review");
+        break;
+      case "awaiting_employee_signed_contract":
+        activeIdx = stepIds.indexOf("signed_contract");
+        break;
+      case "awaiting_final_finance_approval":
+        activeIdx = stepIds.indexOf("final_finance");
+        break;
+      case "approved":
+      case "rejected":
+      case "declined":
+      case "cancelled":
+        activeIdx = stepIds.length;
+        break;
+      default:
+        activeIdx = stepIds.indexOf("submitted");
+    }
+
+    const LABELS: Record<string, string> = {
+      submitted: "Submitted",
+      finance_review: "Finance",
+      employee_review: "Your Review",
+      signed_contract: "Signed Contract",
+      final_finance: "Final Approval",
+      done:
+        status === "rejected"
+          ? "Rejected"
+          : status === "declined"
+            ? "Declined"
+            : status === "cancelled"
+              ? "Cancelled"
+              : "Approved",
+    };
+
+    const isRejected = status === "rejected";
+    const isDeclined = status === "declined";
+    const isCancelled = status === "cancelled";
+    const isTerminal = isRejected || isDeclined || isCancelled;
+
+    return stepIds.map((id, idx): TimelineStep => {
+      let state: StepState;
+      if (status === "approved") {
+        state = "done";
+      } else if (isTerminal && id === "done") {
+        state = "failed";
+      } else if (idx < activeIdx) {
+        state = "done";
+      } else if (idx === activeIdx) {
+        state = "active";
+      } else {
+        state = "waiting";
+      }
+      return { id, label: LABELS[id] ?? id, state };
+    });
+  }
   // Down payment (finance) flow: contract upload happens AFTER HR+Finance approvals.
   // We infer it by: dual approval + requires contract + no employee payment.
   const isDownPaymentFlowTimeline =
@@ -288,15 +377,17 @@ function RequestTimeline({
   policy,
   requiresContract,
   hasPayment,
+  flowType,
 }: {
   status: string;
   policy: string | null | undefined;
   requiresContract: boolean | null | undefined;
   hasPayment: boolean;
+  flowType?: string | null;
 }) {
   const steps = useMemo(
-    () => buildTimeline(status, policy, requiresContract, hasPayment),
-    [status, policy, requiresContract, hasPayment],
+    () => buildTimeline(status, policy, requiresContract, hasPayment, flowType),
+    [status, policy, requiresContract, hasPayment, flowType],
   );
 
   return (
@@ -811,6 +902,9 @@ function RequestsContent() {
     awaiting_contract_acceptance: 0,
     hr_approved: 0,
     finance_approved: 0,
+    awaiting_employee_decision: 0,
+    awaiting_employee_signed_contract: 0,
+    awaiting_final_finance_approval: 0,
     awaiting_payment: 0,
     awaiting_payment_review: 0,
     pending: 0,
@@ -857,12 +951,19 @@ function RequestsContent() {
         id: req.id,
         benefitId: req.benefitId,
         benefitLabel: vendor ? `${name} · ${vendor}` : name,
+        flowType: benefit?.flowType ?? null,
         status: req.status,
         requestDate: req.createdAt?.split("T")[0] ?? "—",
         updatedDate: req.updatedAt?.split("T")[0] ?? null,
         reviewer: req.reviewedBy,
         declineReason: req.declineReason,
         viewContractUrl: req.viewContractUrl,
+        financeContractViewUrl: req.financeContractViewUrl ?? null,
+        financeContractFileName: req.financeContractFileName ?? null,
+        financeProposedAmount: req.financeProposedAmount ?? null,
+        financeProposedRepaymentMonths:
+          req.financeProposedRepaymentMonths ?? null,
+        financeProposalNote: req.financeProposalNote ?? null,
         employeeSignedContractViewUrl: req.employeeSignedContract?.viewUrl,
         employeeSignedContractFileName:
           req.employeeSignedContract?.fileName ?? null,
@@ -1063,6 +1164,50 @@ function RequestsContent() {
                         </div>
                       )}
 
+                      {normalizeRequestStatus(req.status) ===
+                        "awaiting_employee_decision" && (
+                        <div className="mx-5 mb-3 rounded-lg border border-cyan-100 bg-cyan-50 px-4 py-3">
+                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-cyan-600">
+                            Finance Offer Ready
+                          </p>
+                          <p className="text-xs text-cyan-700">
+                            Finance prepared your final offer and attached the contract. Open the benefit to review the amount, term, and contract before you accept or decline.
+                          </p>
+                          {req.financeProposedAmount != null && (
+                            <p className="mt-2 text-xs font-medium text-cyan-800">
+                              {formatMoney(req.financeProposedAmount)}
+                              {req.financeProposedRepaymentMonths
+                                ? ` · ${req.financeProposedRepaymentMonths} months`
+                                : ""}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {normalizeRequestStatus(req.status) ===
+                        "awaiting_employee_signed_contract" && (
+                        <div className="mx-5 mb-3 rounded-lg border border-violet-100 bg-violet-50 px-4 py-3">
+                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-violet-600">
+                            Signed Contract Needed
+                          </p>
+                          <p className="text-xs text-violet-700">
+                            You accepted the finance offer. Upload your signed contract to continue.
+                          </p>
+                        </div>
+                      )}
+
+                      {normalizeRequestStatus(req.status) ===
+                        "awaiting_final_finance_approval" && (
+                        <div className="mx-5 mb-3 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3">
+                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-600">
+                            Final Finance Approval
+                          </p>
+                          <p className="text-xs text-indigo-700">
+                            Your signed contract was uploaded. A finance manager is completing the final approval now.
+                          </p>
+                        </div>
+                      )}
+
                       {/* Payment confirmation — employee must pay before activation */}
                       {normalizeRequestStatus(req.status) === "awaiting_payment" && req.hasPayment && req.paymentInfo && (
                         <div className="mx-5 mb-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
@@ -1207,6 +1352,7 @@ function RequestsContent() {
                             policy={req.approvalPolicy}
                             requiresContract={req.requiresContract}
                             hasPayment={req.hasPayment}
+                            flowType={req.flowType}
                           />
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -1260,7 +1406,13 @@ function RequestsContent() {
                               className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-1.5 text-xs font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:border-gray-300 whitespace-nowrap"
                             >
                               <Eye className="h-3 w-3" aria-hidden="true" />
-                              View Benefit
+                              {[
+                                "awaiting_employee_decision",
+                                "awaiting_employee_signed_contract",
+                                "awaiting_final_finance_approval",
+                              ].includes(normalizeRequestStatus(req.status))
+                                ? "Continue Finance Flow"
+                                : "View Benefit"}
                             </Link>
                           )}
                         </div>

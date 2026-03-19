@@ -172,7 +172,19 @@ export const benefitTypeDefs = gql`
     reviewedBy: String
     requestedAmount: Int
     repaymentMonths: Int
+    financeProposedAmount: Int
+    financeProposedRepaymentMonths: Int
+    financeProposalNote: String
+    financeProposedBy: String
+    financeProposedAt: String
+    financeContractFileName: String
+    financeContractMimeType: String
+    financeContractUploadedAt: String
+    financeContractViewUrl: String
     employeeApprovedAt: String
+    employeeDecisionAt: String
+    finalApprovedBy: String
+    finalApprovedAt: String
     declineReason: String
     employeeContractKey: String
     employeeSignedContract: EmployeeSignedContract
@@ -314,6 +326,12 @@ export const benefitTypeDefs = gql`
     employeeSignedContractId: String
   }
 
+  input RespondToFinanceBenefitOfferInput {
+    requestId: String!
+    accept: Boolean!
+    note: String
+  }
+
   input CreateEligibilityRuleInput {
     benefitId: String!
     ruleType: String!
@@ -355,6 +373,7 @@ export const benefitTypeDefs = gql`
     deleteBenefit(id: String!): Boolean!
     upsertScreenTimeProgram(input: UpsertScreenTimeProgramInput!): ScreenTimeProgram!
     requestBenefit(input: RequestBenefitInput!): BenefitRequest!
+    respondToFinanceBenefitOffer(input: RespondToFinanceBenefitOfferInput!): BenefitRequest!
     confirmBenefitRequest(requestId: String!, contractAccepted: Boolean!): BenefitRequest!
     approveBenefitRequest(requestId: String!): BenefitRequest!
     declineBenefitRequest(requestId: String!, reason: String): BenefitRequest!

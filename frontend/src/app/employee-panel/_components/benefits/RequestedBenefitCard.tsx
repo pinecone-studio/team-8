@@ -11,6 +11,11 @@ const requestStatusStyle: Record<string, string> = {
   awaiting_contract_acceptance: "bg-amber-50 text-amber-700 border-amber-200/80",
   awaiting_hr_review: "bg-amber-50 text-amber-700 border-amber-200/80",
   awaiting_finance_review: "bg-amber-50 text-amber-700 border-amber-200/80",
+  awaiting_employee_decision: "bg-cyan-50 text-cyan-700 border-cyan-200/80",
+  awaiting_employee_signed_contract:
+    "bg-violet-50 text-violet-700 border-violet-200/80",
+  awaiting_final_finance_approval:
+    "bg-indigo-50 text-indigo-700 border-indigo-200/80",
   awaiting_payment: "bg-blue-50 text-blue-700 border-blue-200/80",
   awaiting_payment_review: "bg-indigo-50 text-indigo-700 border-indigo-200/80",
   approved: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
@@ -24,6 +29,8 @@ const CANCELLABLE_STATUSES = new Set([
   "awaiting_contract_acceptance",
   "awaiting_hr_review",
   "awaiting_finance_review",
+  "awaiting_employee_decision",
+  "awaiting_employee_signed_contract",
   "awaiting_payment",
 ]);
 

@@ -162,8 +162,20 @@ export type BenefitRequest = {
   declineReason?: Maybe<Scalars['String']['output']>;
   employeeApprovedAt?: Maybe<Scalars['String']['output']>;
   employeeContractKey?: Maybe<Scalars['String']['output']>;
+  employeeDecisionAt?: Maybe<Scalars['String']['output']>;
   employeeId: Scalars['String']['output'];
   employeeSignedContract?: Maybe<EmployeeSignedContract>;
+  finalApprovedAt?: Maybe<Scalars['String']['output']>;
+  finalApprovedBy?: Maybe<Scalars['String']['output']>;
+  financeContractFileName?: Maybe<Scalars['String']['output']>;
+  financeContractMimeType?: Maybe<Scalars['String']['output']>;
+  financeContractUploadedAt?: Maybe<Scalars['String']['output']>;
+  financeContractViewUrl?: Maybe<Scalars['String']['output']>;
+  financeProposalNote?: Maybe<Scalars['String']['output']>;
+  financeProposedAmount?: Maybe<Scalars['Int']['output']>;
+  financeProposedAt?: Maybe<Scalars['String']['output']>;
+  financeProposedBy?: Maybe<Scalars['String']['output']>;
+  financeProposedRepaymentMonths?: Maybe<Scalars['Int']['output']>;
   id: Scalars['String']['output'];
   payment?: Maybe<BenefitRequestPayment>;
   repaymentMonths?: Maybe<Scalars['Int']['output']>;
@@ -368,6 +380,7 @@ export type Mutation = {
   proposeRuleChange: RuleProposal;
   rejectRuleProposal: RuleProposal;
   requestBenefit: BenefitRequest;
+  respondToFinanceBenefitOffer: BenefitRequest;
   seedScreenTimeSubmissions: Scalars['Int']['output'];
   syncOkrStatus: OkrSyncResult;
   updateBenefit: Benefit;
@@ -464,6 +477,11 @@ export type MutationRejectRuleProposalArgs = {
 
 export type MutationRequestBenefitArgs = {
   input: RequestBenefitInput;
+};
+
+
+export type MutationRespondToFinanceBenefitOfferArgs = {
+  input: RespondToFinanceBenefitOfferInput;
 };
 
 
@@ -694,6 +712,12 @@ export type RequestBenefitInput = {
   requestedAmount?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type RespondToFinanceBenefitOfferInput = {
+  accept: Scalars['Boolean']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  requestId: Scalars['String']['input'];
+};
+
 export type RuleEvaluation = {
   __typename?: 'RuleEvaluation';
   passed: Scalars['Boolean']['output'];
@@ -890,6 +914,13 @@ export type CancelBenefitRequestMutationVariables = Exact<{
 
 export type CancelBenefitRequestMutation = { __typename?: 'Mutation', cancelBenefitRequest: { __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, createdAt: string, updatedAt: string } };
 
+export type RespondToFinanceBenefitOfferMutationVariables = Exact<{
+  input: RespondToFinanceBenefitOfferInput;
+}>;
+
+
+export type RespondToFinanceBenefitOfferMutation = { __typename?: 'Mutation', respondToFinanceBenefitOffer: { __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, financeProposedAmount?: number | null, financeProposedRepaymentMonths?: number | null, financeProposalNote?: string | null, financeProposedBy?: string | null, financeProposedAt?: string | null, financeContractFileName?: string | null, financeContractMimeType?: string | null, financeContractUploadedAt?: string | null, financeContractViewUrl?: string | null, employeeDecisionAt?: string | null, finalApprovedBy?: string | null, finalApprovedAt?: string | null, employeeApprovedAt?: string | null, declineReason?: string | null, employeeContractKey?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null, employeeSignedContract?: { __typename?: 'EmployeeSignedContract', id: string, fileName?: string | null, mimeType?: string | null, status: string, uploadedAt: string, viewUrl?: string | null } | null } };
+
 export type CreateBenefitMutationVariables = Exact<{
   input: CreateBenefitInput;
 }>;
@@ -1085,7 +1116,7 @@ export type GetMyBenefitsFullQuery = { __typename?: 'Query', myBenefits: Array<{
 export type GetBenefitRequestsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetBenefitRequestsQuery = { __typename?: 'Query', benefitRequests: Array<{ __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, employeeApprovedAt?: string | null, declineReason?: string | null, employeeContractKey?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null, employeeSignedContract?: { __typename?: 'EmployeeSignedContract', id: string, fileName?: string | null, mimeType?: string | null, status: string, uploadedAt: string, viewUrl?: string | null } | null, payment?: { __typename?: 'BenefitRequestPayment', id: string, status: string, amount: number, currency: string, checkoutUrl?: string | null, expiresAt?: string | null, paidAt?: string | null, failedAt?: string | null, paymentVendor?: string | null, localTransactionId: string, bonumInvoiceId?: string | null, createdAt: string, updatedAt: string } | null }> };
+export type GetBenefitRequestsQuery = { __typename?: 'Query', benefitRequests: Array<{ __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, financeProposedAmount?: number | null, financeProposedRepaymentMonths?: number | null, financeProposalNote?: string | null, financeProposedBy?: string | null, financeProposedAt?: string | null, financeContractFileName?: string | null, financeContractMimeType?: string | null, financeContractUploadedAt?: string | null, financeContractViewUrl?: string | null, employeeDecisionAt?: string | null, finalApprovedBy?: string | null, finalApprovedAt?: string | null, employeeApprovedAt?: string | null, declineReason?: string | null, employeeContractKey?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null, employeeSignedContract?: { __typename?: 'EmployeeSignedContract', id: string, fileName?: string | null, mimeType?: string | null, status: string, uploadedAt: string, viewUrl?: string | null } | null, payment?: { __typename?: 'BenefitRequestPayment', id: string, status: string, amount: number, currency: string, checkoutUrl?: string | null, expiresAt?: string | null, paidAt?: string | null, failedAt?: string | null, paymentVendor?: string | null, localTransactionId: string, bonumInvoiceId?: string | null, createdAt: string, updatedAt: string } | null }> };
 
 export type GetAllBenefitRequestsQueryVariables = Exact<{
   status?: InputMaybe<Scalars['String']['input']>;
@@ -1093,7 +1124,7 @@ export type GetAllBenefitRequestsQueryVariables = Exact<{
 }>;
 
 
-export type GetAllBenefitRequestsQuery = { __typename?: 'Query', allBenefitRequests: Array<{ __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, employeeApprovedAt?: string | null, declineReason?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null, employeeSignedContract?: { __typename?: 'EmployeeSignedContract', id: string, fileName?: string | null, mimeType?: string | null, status: string, uploadedAt: string, viewUrl?: string | null } | null, payment?: { __typename?: 'BenefitRequestPayment', id: string, status: string, amount: number, currency: string, expiresAt?: string | null, paidAt?: string | null, failedAt?: string | null, paymentVendor?: string | null, localTransactionId: string, bonumInvoiceId?: string | null, createdAt: string, updatedAt: string } | null }> };
+export type GetAllBenefitRequestsQuery = { __typename?: 'Query', allBenefitRequests: Array<{ __typename?: 'BenefitRequest', id: string, employeeId: string, benefitId: string, status: string, contractVersionAccepted?: string | null, contractAcceptedAt?: string | null, reviewedBy?: string | null, requestedAmount?: number | null, repaymentMonths?: number | null, financeProposedAmount?: number | null, financeProposedRepaymentMonths?: number | null, financeProposalNote?: string | null, financeProposedBy?: string | null, financeProposedAt?: string | null, financeContractFileName?: string | null, financeContractMimeType?: string | null, financeContractUploadedAt?: string | null, financeContractViewUrl?: string | null, employeeDecisionAt?: string | null, finalApprovedBy?: string | null, finalApprovedAt?: string | null, employeeApprovedAt?: string | null, declineReason?: string | null, createdAt: string, updatedAt: string, viewContractUrl?: string | null, employeeSignedContract?: { __typename?: 'EmployeeSignedContract', id: string, fileName?: string | null, mimeType?: string | null, status: string, uploadedAt: string, viewUrl?: string | null } | null, payment?: { __typename?: 'BenefitRequestPayment', id: string, status: string, amount: number, currency: string, expiresAt?: string | null, paidAt?: string | null, failedAt?: string | null, paymentVendor?: string | null, localTransactionId: string, bonumInvoiceId?: string | null, createdAt: string, updatedAt: string } | null }> };
 
 export type GetEmployeeBenefitsQueryVariables = Exact<{
   employeeId: Scalars['String']['input'];
@@ -1419,6 +1450,71 @@ export function useCancelBenefitRequestMutation(baseOptions?: Apollo.MutationHoo
 export type CancelBenefitRequestMutationHookResult = ReturnType<typeof useCancelBenefitRequestMutation>;
 export type CancelBenefitRequestMutationResult = Apollo.MutationResult<CancelBenefitRequestMutation>;
 export type CancelBenefitRequestMutationOptions = Apollo.BaseMutationOptions<CancelBenefitRequestMutation, CancelBenefitRequestMutationVariables>;
+export const RespondToFinanceBenefitOfferDocument = gql`
+    mutation RespondToFinanceBenefitOffer($input: RespondToFinanceBenefitOfferInput!) {
+  respondToFinanceBenefitOffer(input: $input) {
+    id
+    employeeId
+    benefitId
+    status
+    reviewedBy
+    requestedAmount
+    repaymentMonths
+    financeProposedAmount
+    financeProposedRepaymentMonths
+    financeProposalNote
+    financeProposedBy
+    financeProposedAt
+    financeContractFileName
+    financeContractMimeType
+    financeContractUploadedAt
+    financeContractViewUrl
+    employeeDecisionAt
+    finalApprovedBy
+    finalApprovedAt
+    employeeApprovedAt
+    declineReason
+    employeeContractKey
+    employeeSignedContract {
+      id
+      fileName
+      mimeType
+      status
+      uploadedAt
+      viewUrl
+    }
+    createdAt
+    updatedAt
+    viewContractUrl
+  }
+}
+    `;
+export type RespondToFinanceBenefitOfferMutationFn = Apollo.MutationFunction<RespondToFinanceBenefitOfferMutation, RespondToFinanceBenefitOfferMutationVariables>;
+
+/**
+ * __useRespondToFinanceBenefitOfferMutation__
+ *
+ * To run a mutation, you first call `useRespondToFinanceBenefitOfferMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRespondToFinanceBenefitOfferMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [respondToFinanceBenefitOfferMutation, { data, loading, error }] = useRespondToFinanceBenefitOfferMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useRespondToFinanceBenefitOfferMutation(baseOptions?: Apollo.MutationHookOptions<RespondToFinanceBenefitOfferMutation, RespondToFinanceBenefitOfferMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RespondToFinanceBenefitOfferMutation, RespondToFinanceBenefitOfferMutationVariables>(RespondToFinanceBenefitOfferDocument, options);
+      }
+export type RespondToFinanceBenefitOfferMutationHookResult = ReturnType<typeof useRespondToFinanceBenefitOfferMutation>;
+export type RespondToFinanceBenefitOfferMutationResult = Apollo.MutationResult<RespondToFinanceBenefitOfferMutation>;
+export type RespondToFinanceBenefitOfferMutationOptions = Apollo.BaseMutationOptions<RespondToFinanceBenefitOfferMutation, RespondToFinanceBenefitOfferMutationVariables>;
 export const CreateBenefitDocument = gql`
     mutation CreateBenefit($input: CreateBenefitInput!) {
   createBenefit(input: $input) {
@@ -2688,6 +2784,18 @@ export const GetBenefitRequestsDocument = gql`
     reviewedBy
     requestedAmount
     repaymentMonths
+    financeProposedAmount
+    financeProposedRepaymentMonths
+    financeProposalNote
+    financeProposedBy
+    financeProposedAt
+    financeContractFileName
+    financeContractMimeType
+    financeContractUploadedAt
+    financeContractViewUrl
+    employeeDecisionAt
+    finalApprovedBy
+    finalApprovedAt
     employeeApprovedAt
     declineReason
     employeeContractKey
@@ -2767,6 +2875,18 @@ export const GetAllBenefitRequestsDocument = gql`
     reviewedBy
     requestedAmount
     repaymentMonths
+    financeProposedAmount
+    financeProposedRepaymentMonths
+    financeProposalNote
+    financeProposedBy
+    financeProposedAt
+    financeContractFileName
+    financeContractMimeType
+    financeContractUploadedAt
+    financeContractViewUrl
+    employeeDecisionAt
+    finalApprovedBy
+    finalApprovedAt
     employeeApprovedAt
     declineReason
     employeeSignedContract {

@@ -6,11 +6,15 @@ import {
   canReviewHrBenefit,
   canReviewFinanceBenefit,
   getInternalRole,
+  isFinanceManager,
 } from "../../../auth";
 import { writeAuditLog } from "../helpers/audit";
 import { finalizeBenefitApproval } from "../helpers/finalizeBenefitApproval";
 import { requiresEmployeePaymentForBenefit } from "../../../payments/amounts";
-import { sendDownPaymentReadyForSignedContractEmail } from "../../../email/sendTransactionalEmail";
+import {
+  AWAITING_FINAL_FINANCE_APPROVAL_STATUS,
+  isFinanceBenefit,
+} from "../../../benefits/finance";
 
 const HR_REVIEWABLE = new Set([
   "pending",
@@ -50,6 +54,54 @@ export const approveBenefitRequest = async (
   const reviewerIsHr = canReviewHrBenefit(admin);
   const reviewerIsFinance = canReviewFinanceBenefit(admin);
   const status = req.status;
+
+  if (isFinanceBenefit(benefit)) {
+    if (status !== AWAITING_FINAL_FINANCE_APPROVAL_STATUS) {
+      throw new Error(
+        "Finance benefits cannot be directly approved from this stage. Send a finance offer first, then wait for the employee’s signed contract and final finance-manager approval.",
+      );
+    }
+    if (!isFinanceManager(admin)) {
+      throw new Error(
+        `Final finance approval requires a finance manager. Your role (${reviewerRole}) does not have this permission.`,
+      );
+    }
+
+    const now = new Date().toISOString();
+    const [updated] = await db
+      .update(schema.benefitRequests)
+      .set({
+        status: "approved",
+        reviewedBy: admin.id,
+        finalApprovedBy: admin.id,
+        finalApprovedAt: now,
+        employeeApprovedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(schema.benefitRequests.id, requestId))
+      .returning();
+
+    if (!updated || !benefit) {
+      throw new Error("Benefit request not found");
+    }
+
+    await finalizeBenefitApproval({
+      db,
+      env,
+      actor: admin,
+      benefitRequest: updated,
+      benefit,
+      beforeStatus: status,
+      actionType: "REQUEST_FINANCE_APPROVED",
+      metadata: {
+        approvalPolicy: "finance",
+        reviewerRole,
+        finalFinanceApproval: true,
+      },
+    });
+
+    return updated;
+  }
 
   let nextStatus: string;
   let auditAction:
@@ -152,27 +204,6 @@ export const approveBenefitRequest = async (
       after: { status: nextStatus },
       metadata: { approvalPolicy, reviewerRole, requiresEmployeePayment },
     });
-  }
-
-  if (nextStatus === "awaiting_employee_signed_contract" && benefit) {
-    const employeeRows = await db
-      .select()
-      .from(schema.employees)
-      .where(eq(schema.employees.id, req.employeeId))
-      .limit(1);
-    const targetEmployee = employeeRows[0];
-    if (targetEmployee) {
-      await sendDownPaymentReadyForSignedContractEmail(
-        env,
-        targetEmployee,
-        benefit,
-      ).catch((err) =>
-        console.error(
-          "[approveBenefitRequest] Ready-for-contract email failed:",
-          err,
-        ),
-      );
-    }
   }
 
   return updated;
