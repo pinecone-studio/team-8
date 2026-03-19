@@ -1452,3 +1452,4 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   ScreenTimeSubmission?: ScreenTimeSubmissionResolvers<ContextType>;
   ScreenTimeTier?: ScreenTimeTierResolvers<ContextType>;
 }>;
+
