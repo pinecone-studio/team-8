@@ -1,23 +1,66 @@
-import type { GraphQLContext } from "../../context";
+import { schema } from "../../../db";
+import type { Database } from "../../../db";
 import { requireHrAdmin } from "../../../auth";
+import type { GraphQLContext } from "../../context";
+import { writeAuditLog } from "../helpers/audit";
+import { recomputeAllEmployeeEligibilities } from "../helpers/benefitCatalogRefresh";
 
-/**
- * GOVERNANCE GATE — direct rule creation is intentionally disabled.
- *
- * All eligibility rule changes require a formal proposal (proposeRuleChange)
- * followed by a second HR admin's approval (approveRuleProposal).
- * This ensures every rule change has an audit trail and second-approver sign-off.
- *
- * The mutation remains in the schema so legacy clients receive a clear error
- * rather than an unknown-field failure.
- */
+type CreateEligibilityRuleInput = {
+  benefitId: string;
+  ruleType: string;
+  operator: string;
+  value: string;
+  errorMessage: string;
+  priority?: number | null;
+};
+
 export const createEligibilityRule = async (
   _: unknown,
-  __: unknown,
-  { currentEmployee }: GraphQLContext,
-): Promise<never> => {
-  requireHrAdmin(currentEmployee);
-  throw new Error(
-    "Direct rule creation is disabled. Submit a rule proposal via proposeRuleChange; a second HR admin must approve it before it takes effect.",
-  );
+  { input }: { input: CreateEligibilityRuleInput },
+  { db, env, currentEmployee }: GraphQLContext & { db: Database },
+) => {
+  const admin = requireHrAdmin(currentEmployee);
+
+  const [createdRule] = await db
+    .insert(schema.eligibilityRules)
+    .values({
+      benefitId: input.benefitId,
+      ruleType: input.ruleType,
+      operator: input.operator,
+      value: input.value,
+      errorMessage: input.errorMessage,
+      priority: input.priority ?? 0,
+      isActive: true,
+    })
+    .returning();
+
+  await writeAuditLog({
+    db,
+    actor: admin,
+    actionType: "ELIGIBILITY_RULE_CREATED",
+    entityType: "eligibility_rule",
+    entityId: createdRule.id,
+    benefitId: createdRule.benefitId,
+    after: createdRule,
+  });
+
+  try {
+    await recomputeAllEmployeeEligibilities(db, {
+      source: "manual",
+      actor: admin,
+      kvCache: env.ELIGIBILITY_CACHE,
+      metadata: {
+        trigger: "createEligibilityRule",
+        benefitId: createdRule.benefitId,
+        ruleId: createdRule.id,
+      },
+    });
+  } catch (err) {
+    console.error(
+      `[createEligibilityRule] Failed to recompute eligibilities after creating rule ${createdRule.id}:`,
+      err,
+    );
+  }
+
+  return createdRule;
 };

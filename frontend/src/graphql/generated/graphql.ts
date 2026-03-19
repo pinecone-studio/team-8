@@ -561,6 +561,7 @@ export type OverrideEligibilityInput = {
 export type ProposeRuleChangeInput = {
   benefitId: Scalars['String']['input'];
   changeType: Scalars['String']['input'];
+  proposalId?: InputMaybe<Scalars['String']['input']>;
   proposedData: Scalars['String']['input'];
   ruleId?: InputMaybe<Scalars['String']['input']>;
   summary: Scalars['String']['input'];
@@ -661,6 +662,7 @@ export type QueryGetEmployeeByEmailArgs = {
 
 
 export type QueryGetEmployeesArgs = {
+  benefitId?: InputMaybe<Scalars['String']['input']>;
   department?: InputMaybe<Scalars['String']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
@@ -1146,6 +1148,7 @@ export type GetDepartmentsQuery = { __typename?: 'Query', getDepartments: Array<
 export type GetEmployeesQueryVariables = Exact<{
   search?: InputMaybe<Scalars['String']['input']>;
   department?: InputMaybe<Scalars['String']['input']>;
+  benefitId?: InputMaybe<Scalars['String']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
@@ -3309,8 +3312,13 @@ export type GetDepartmentsLazyQueryHookResult = ReturnType<typeof useGetDepartme
 export type GetDepartmentsSuspenseQueryHookResult = ReturnType<typeof useGetDepartmentsSuspenseQuery>;
 export type GetDepartmentsQueryResult = Apollo.QueryResult<GetDepartmentsQuery, GetDepartmentsQueryVariables>;
 export const GetEmployeesDocument = gql`
-    query GetEmployees($search: String, $department: String, $limit: Int) {
-  getEmployees(search: $search, department: $department, limit: $limit) {
+    query GetEmployees($search: String, $department: String, $benefitId: String, $limit: Int) {
+  getEmployees(
+    search: $search
+    department: $department
+    benefitId: $benefitId
+    limit: $limit
+  ) {
     id
     avatarUrl
     name
@@ -3343,6 +3351,7 @@ export const GetEmployeesDocument = gql`
  *   variables: {
  *      search: // value for 'search'
  *      department: // value for 'department'
+ *      benefitId: // value for 'benefitId'
  *      limit: // value for 'limit'
  *   },
  * });

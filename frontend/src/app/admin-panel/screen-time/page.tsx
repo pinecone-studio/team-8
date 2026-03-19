@@ -21,6 +21,7 @@ export default function AdminScreenTimePage() {
   const canManage = isHrAdmin(employee);
   const { data, loading, error } = useGetAdminBenefitsQuery({
     skip: !canManage,
+    fetchPolicy: "cache-and-network",
   });
   const [feedback, setFeedback] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);

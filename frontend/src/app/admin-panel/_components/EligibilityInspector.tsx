@@ -31,6 +31,11 @@ type EmployeeOption = {
   employmentStatus?: string | null;
 };
 
+type BenefitOption = {
+  id: string;
+  name: string;
+};
+
 function formatRoleLabel(role: string | null | undefined) {
   if (!role) return "—";
 
@@ -62,11 +67,11 @@ function EmployeePicker({
   onSelect,
   departments,
   onSelectionChange,
-  benefitFilter,
+  selectedBenefitId,
   benefitOptions,
   benefitMenuOpen,
   onBenefitMenuToggle,
-  onBenefitFilterChange,
+  onBenefitChange,
   benefitsFilterRef,
 }: {
   selectedEmployee: EmployeeOption | null;
@@ -74,18 +79,17 @@ function EmployeePicker({
   onSelect: (emp: EmployeeOption | null) => void;
   departments: string[];
   onSelectionChange?: () => void;
-  benefitFilter?: string;
-  benefitOptions?: string[];
-  benefitMenuOpen?: boolean;
-  onBenefitMenuToggle?: () => void;
-  onBenefitFilterChange?: (value: string) => void;
-  benefitsFilterRef?: React.RefObject<HTMLDivElement | null>;
+  selectedBenefitId: string;
+  benefitOptions: BenefitOption[];
+  benefitMenuOpen: boolean;
+  onBenefitMenuToggle: () => void;
+  onBenefitChange: (benefitId: string) => void;
+  benefitsFilterRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
+  const [deptMenuOpen, setDeptMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Debounce text search 300 ms
@@ -101,7 +105,7 @@ function EmployeePicker({
         containerRef.current &&
         !containerRef.current.contains(e.target as Node)
       ) {
-        setRoleMenuOpen(false);
+        setDeptMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -110,42 +114,25 @@ function EmployeePicker({
 
   const hasSearch = debouncedSearch.length > 0;
   const hasDept = !!deptFilter;
-  const hasRole = !!roleFilter;
-
-  const { data: roleSeedData } = useGetEmployeesQuery({
-    variables: {
-      limit: 100,
-    },
-    fetchPolicy: "cache-first",
-  });
 
   const { data, loading } = useGetEmployeesQuery({
     variables: {
       search: hasSearch ? debouncedSearch : undefined,
       department: hasDept ? deptFilter : undefined,
-      limit:
-        !hasSearch && !hasDept && !hasRole
-          ? 100
-          : hasRole && !hasSearch && !hasDept
-            ? 100
-            : 30,
+      benefitId: selectedBenefitId || undefined,
+      limit: !hasSearch ? 100 : 30,
     },
     fetchPolicy: "cache-and-network",
   });
 
-  const roleOptions = Array.from(
-    new Set(
-      (roleSeedData?.getEmployees ?? [])
-        .map((emp) => emp.role?.trim())
-        .filter((role): role is string => Boolean(role)),
-    ),
+  const departmentOptions = Array.from(
+    new Set(departments.map((department) => department.trim()).filter(Boolean)),
   ).sort((a, b) => a.localeCompare(b));
 
-  const results = (data?.getEmployees ?? []).filter((emp) =>
-    roleFilter
-      ? (emp.role ?? "").toLowerCase() === roleFilter.toLowerCase()
-      : true,
-  );
+  const results = data?.getEmployees ?? [];
+  const selectedBenefitName =
+    benefitOptions.find((benefit) => benefit.id === selectedBenefitId)?.name ??
+    "";
 
   // Group results by department for structured display
   const grouped = results.reduce<Record<string, EmployeeOption[]>>(
@@ -172,7 +159,7 @@ function EmployeePicker({
     onSelectionChange?.();
     setSearchInput("");
     setDebouncedSearch("");
-    setRoleMenuOpen(false);
+    setDeptMenuOpen(false);
   };
 
   const handleClear = () => {
@@ -181,15 +168,8 @@ function EmployeePicker({
     setSearchInput("");
     setDebouncedSearch("");
     setDeptFilter("");
-    setRoleFilter("");
-    setRoleMenuOpen(false);
-  };
-
-  const fillDemoSearch = () => {
-    setSearchInput("Anu");
-    setDeptFilter("");
-    setRoleFilter("");
-    setRoleMenuOpen(false);
+    setDeptMenuOpen(false);
+    onBenefitChange("");
   };
 
   // ── Search state ──────────────────────────────────────────────────────────
@@ -237,64 +217,57 @@ function EmployeePicker({
                 className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
               />
             </div>
-            <button
-              type="button"
-              onClick={fillDemoSearch}
-              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm bg-yellow-400 font-medium text-slate-600 shadow-sm transition hover:bg-slate-50"
-            >
-              Fill demo
-            </button>
 
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setRoleMenuOpen((prev) => !prev)}
+                onClick={() => setDeptMenuOpen((prev) => !prev)}
                 className="inline-flex min-w-[200px] items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50"
               >
-                {roleFilter ? formatRoleLabel(roleFilter) : "All Positions"}
+                {deptFilter || "All Departments"}
                 <ChevronDown
-                  className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${roleMenuOpen ? "rotate-180" : ""}`}
+                  className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${deptMenuOpen ? "rotate-180" : ""}`}
                 />
               </button>
 
-              {roleMenuOpen && (
+              {deptMenuOpen && (
                 <div className="absolute left-0 top-full z-30 mt-1.5 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
                   <button
                     type="button"
                     onClick={() => {
-                      setRoleFilter("");
-                      setRoleMenuOpen(false);
+                      setDeptFilter("");
+                      setDeptMenuOpen(false);
                     }}
                     className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm transition hover:bg-slate-50 ${
-                      !roleFilter
+                      !deptFilter
                         ? "bg-slate-50 text-slate-900"
                         : "text-slate-700"
                     }`}
                   >
-                    <span className="font-medium">All Positions</span>
-                    {!roleFilter && (
+                    <span className="font-medium">All Departments</span>
+                    {!deptFilter && (
                       <span className="text-xs text-slate-400">Selected</span>
                     )}
                   </button>
                   <div className="max-h-72 overflow-y-auto py-1">
-                    {roleOptions.map((role) => (
+                    {departmentOptions.map((department) => (
                       <button
-                        key={role}
+                        key={department}
                         type="button"
                         onClick={() => {
-                          setRoleFilter(role);
-                          setRoleMenuOpen(false);
+                          setDeptFilter(department);
+                          setDeptMenuOpen(false);
                         }}
                         className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm transition hover:bg-slate-50 ${
-                          roleFilter === role
+                          deptFilter === department
                             ? "bg-slate-50 text-slate-900"
                             : "text-slate-700"
                         }`}
                       >
                         <span className="truncate font-medium">
-                          {formatRoleLabel(role)}
+                          {department}
                         </span>
-                        {roleFilter === role && (
+                        {deptFilter === department && (
                           <span className="text-xs text-slate-400">
                             Selected
                           </span>
@@ -306,77 +279,64 @@ function EmployeePicker({
               )}
             </div>
 
-            {benefitOptions &&
-              onBenefitFilterChange &&
-              onBenefitMenuToggle &&
-              benefitsFilterRef && (
-                <div className="relative" ref={benefitsFilterRef}>
+            <div className="relative" ref={benefitsFilterRef}>
+              <button
+                type="button"
+                onClick={onBenefitMenuToggle}
+                className="inline-flex min-w-[260px] items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50"
+              >
+                <span className="truncate">
+                  {selectedBenefitName || "All Benefits"}
+                </span>
+                <ChevronDown
+                  className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200 ${benefitMenuOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {benefitMenuOpen && (
+                <div className="absolute left-0 top-full z-30 mt-1.5 w-[360px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
                   <button
                     type="button"
-                    onClick={onBenefitMenuToggle}
-                    className="inline-flex min-w-[280px] items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50"
+                    onClick={() => onBenefitChange("")}
+                    className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition hover:bg-slate-50 ${
+                      !selectedBenefitId
+                        ? "bg-slate-50 text-slate-900"
+                        : "text-slate-700"
+                    }`}
                   >
-                    <span className="truncate">
-                      {benefitFilter || "All Benefits"}
-                    </span>
-                    <ChevronDown
-                      className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200 ${benefitMenuOpen ? "rotate-180" : ""}`}
-                    />
+                    <span className="font-medium">All Benefits</span>
+                    {!selectedBenefitId && (
+                      <span className="text-xs text-slate-400">Selected</span>
+                    )}
                   </button>
-
-                  {benefitMenuOpen && (
-                    <div className="absolute left-0 top-full z-30 mt-1.5 w-[420px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                  <div className="max-h-80 overflow-y-auto py-1">
+                    {benefitOptions.map((benefit) => (
                       <button
+                        key={benefit.id}
                         type="button"
-                        onClick={() => onBenefitFilterChange("")}
+                        onClick={() => onBenefitChange(benefit.id)}
                         className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition hover:bg-slate-50 ${
-                          !benefitFilter
+                          selectedBenefitId === benefit.id
                             ? "bg-slate-50 text-slate-900"
                             : "text-slate-700"
                         }`}
                       >
-                        <span className="font-medium">All Benefits</span>
-                        {!benefitFilter && (
+                        <span className="truncate font-medium">
+                          {benefit.name}
+                        </span>
+                        {selectedBenefitId === benefit.id && (
                           <span className="text-xs text-slate-400">
                             Selected
                           </span>
                         )}
                       </button>
-                      {benefitOptions.length > 0 ? (
-                        <div className="max-h-80 overflow-y-auto py-1">
-                          {benefitOptions.map((benefitName) => (
-                            <button
-                              key={benefitName}
-                              type="button"
-                              onClick={() => onBenefitFilterChange(benefitName)}
-                              className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition hover:bg-slate-50 ${
-                                benefitFilter === benefitName
-                                  ? "bg-slate-50 text-slate-900"
-                                  : "text-slate-700"
-                              }`}
-                            >
-                              <span className="truncate font-medium">
-                                {benefitName}
-                              </span>
-                              {benefitFilter === benefitName && (
-                                <span className="text-xs text-slate-400">
-                                  Selected
-                                </span>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="px-4 py-4 text-sm text-slate-400">
-                          Select an employee first
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
               )}
+            </div>
 
-            {(searchInput || deptFilter || roleFilter) && (
+            {(searchInput || deptFilter || selectedBenefitId) && (
               <button
                 type="button"
                 onClick={handleClear}
@@ -416,8 +376,8 @@ function EmployeePicker({
                 No matching employee found
               </p>
               <p className="mt-1 text-sm text-slate-500">
-                Try a different name or clear the active department or position
-                filter and search again.
+                Try a different name or clear the active department filter and
+                search again.
               </p>
             </div>
           ) : (
@@ -426,20 +386,16 @@ function EmployeePicker({
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {hasDept && !hasSearch && !hasRole
+                      {hasDept && !hasSearch
                         ? deptFilter
-                        : hasRole && !hasSearch && !hasDept
-                          ? formatRoleLabel(roleFilter)
-                          : !hasSearch && !hasDept && !hasRole
+                        : !hasSearch && !hasDept
                             ? "Employee Directory"
                             : "Matching Employees"}
                     </p>
                     <p className="mt-1 text-sm text-gray-400">
-                      {hasDept && !hasSearch && !hasRole
+                      {hasDept && !hasSearch
                         ? `Employees in the ${deptFilter} department`
-                        : hasRole && !hasSearch && !hasDept
-                          ? `Employees with the ${formatRoleLabel(roleFilter)} position`
-                          : !hasSearch && !hasDept && !hasRole
+                        : !hasSearch && !hasDept
                             ? "Browse and select an employee to inspect eligibility"
                             : "Employees that match your current filters"}
                     </p>
@@ -703,7 +659,8 @@ export default function EligibilityInspector() {
   const [overrideExpiresAt, setOverrideExpiresAt] = useState("");
   const [overrideError, setOverrideError] = useState<string | null>(null);
   const [overrideSuccess, setOverrideSuccess] = useState(false);
-  const [benefitFilter, setBenefitFilter] = useState("");
+  const [employeeBenefitIdFilter, setEmployeeBenefitIdFilter] = useState("");
+  const [benefitSearch, setBenefitSearch] = useState("");
   const [benefitMenuOpen, setBenefitMenuOpen] = useState(false);
   const benefitsFilterRef = useRef<HTMLDivElement>(null);
 
@@ -760,17 +717,18 @@ export default function EligibilityInspector() {
     if (aRank !== bRank) return aRank - bRank;
     return a.benefit.name.localeCompare(b.benefit.name);
   });
-  const benefitOptions = Array.from(
-    new Set(
-      (adminBenefitsData?.adminBenefits ?? [])
-        .map((benefit) => benefit.name)
-        .filter(Boolean),
-    ),
-  ).sort((a, b) => a.localeCompare(b));
-  const filteredEligibilities = benefitFilter
-    ? sortedEligibilities.filter((row) => row.benefit.name === benefitFilter)
+  const filteredEligibilities = benefitSearch
+    ? sortedEligibilities.filter((row) =>
+        row.benefit.name.toLowerCase().includes(benefitSearch.toLowerCase()),
+      )
     : sortedEligibilities;
   const selectedEmployeeImageUrl = selectedEmployee?.avatarUrl ?? null;
+  const benefitOptions: BenefitOption[] = (adminBenefitsData?.adminBenefits ?? [])
+    .map((benefit) => ({
+      id: benefit.id,
+      name: benefit.name,
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
   const latestContractAcceptanceByBenefit = (
     contractAcceptancesData?.contractAcceptances ?? []
   ).reduce<Record<string, ContractAcceptanceItem>>((acc, acceptance) => {
@@ -897,17 +855,6 @@ export default function EligibilityInspector() {
     });
   };
 
-  const fillOverrideDemo = () => {
-    const nextMonth = new Date();
-    nextMonth.setDate(nextMonth.getDate() + 30);
-    setOverrideStatus("eligible");
-    setOverrideReason(
-      "HR approved temporary eligibility based on project needs.",
-    );
-    setOverrideExpiresAt(nextMonth.toISOString().slice(0, 10));
-    setOverrideError(null);
-  };
-
   return (
     <main className="flex-1 px-8 py-9">
       <section className="mx-auto max-w-7xl">
@@ -916,8 +863,8 @@ export default function EligibilityInspector() {
             Employee Eligibility Inspector
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-            Review an employee&apos;s benefit eligibility from a clean search
-            and department filter panel.
+            Review an employee&apos;s benefit eligibility from a clean search,
+            department filter, and benefit search workflow.
           </p>
         </div>
 
@@ -931,19 +878,18 @@ export default function EligibilityInspector() {
             selectedEmployeeImageUrl={selectedEmployeeImageUrl}
             onSelect={setSelectedEmployee}
             departments={departments}
-            onSelectionChange={() => {
-              setBenefitFilter("");
-              setBenefitMenuOpen(false);
-            }}
-            benefitFilter={benefitFilter}
+            selectedBenefitId={employeeBenefitIdFilter}
             benefitOptions={benefitOptions}
             benefitMenuOpen={benefitMenuOpen}
             onBenefitMenuToggle={() => setBenefitMenuOpen((prev) => !prev)}
-            onBenefitFilterChange={(value) => {
-              setBenefitFilter(value);
+            onBenefitChange={(benefitId) => {
+              setEmployeeBenefitIdFilter(benefitId);
               setBenefitMenuOpen(false);
             }}
             benefitsFilterRef={benefitsFilterRef}
+            onSelectionChange={() => {
+              setBenefitSearch("");
+            }}
           />
         </div>
 
@@ -1004,9 +950,37 @@ export default function EligibilityInspector() {
             className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm animate-in fade-in duration-300"
           >
             <div className="border-b border-slate-200/70 px-5 py-4">
-              <h2 className="text-base font-semibold text-gray-900">
-                Benefits Eligibility
-              </h2>
+              <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900">
+                    Benefits Eligibility
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Search within the selected employee&apos;s available
+                    benefits.
+                  </p>
+                </div>
+                <div className="relative w-full md:max-w-sm">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={benefitSearch}
+                    onChange={(event) => setBenefitSearch(event.target.value)}
+                    placeholder="Search benefit"
+                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+                  />
+                  {benefitSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setBenefitSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                      aria-label="Clear benefit search"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -1195,13 +1169,6 @@ export default function EligibilityInspector() {
               </div>
 
               <div className="mt-6 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={fillOverrideDemo}
-                  className="rounded-xl border border-slate-200 bg-yellow-400 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
-                >
-                  Fill demo
-                </button>
                 <button
                   type="button"
                   onClick={() => {

@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
-  Check,
   CheckCircle2,
   ChevronDown,
   Clock,
@@ -31,14 +30,12 @@ import {
   useUpdateBenefitMutation,
   useDeleteBenefitMutation,
   useGetEligibilityRulesQuery,
-  useGetRuleProposalsQuery,
   useGetContractsForBenefitQuery,
-  useProposeRuleChangeMutation,
-  useApproveRuleProposalMutation,
-  useRejectRuleProposalMutation,
+  useCreateEligibilityRuleMutation,
+  useUpdateEligibilityRuleMutation,
+  useDeleteEligibilityRuleMutation,
   GetAdminBenefitsDocument,
   GetEligibilityRulesDocument,
-  GetRuleProposalsDocument,
 } from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
 import { isAdminEmployee, isHrAdmin } from "../../_lib/access";
@@ -156,15 +153,84 @@ const RULE_FIELDS: {
   },
 ];
 
-const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-amber-100 text-amber-700",
-  approved: "bg-emerald-100 text-emerald-700",
-  rejected: "bg-red-100 text-red-700",
-};
-
 const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+function getRuleFieldConfig(ruleType: string) {
+  return RULE_FIELDS.find((field) => field.key === ruleType);
+}
+
+function getRuleFieldLabel(ruleType: string) {
+  return getRuleFieldConfig(ruleType)?.label ?? ruleType.replace(/_/g, " ");
+}
+
+function getRuleOperatorLabel(ruleType: string, operator: string) {
+  return (
+    getRuleFieldConfig(ruleType)?.operators.find((item) => item.value === operator)
+      ?.label ?? operator
+  );
+}
+
+function getRuleValueLabel(ruleType: string, value: string) {
+  const field = getRuleFieldConfig(ruleType);
+  const optionLabel = field?.options?.find((item) => item.value === value)?.label;
+  if (optionLabel) return optionLabel;
+
+  try {
+    const parsed = JSON.parse(value);
+    if (typeof parsed === "string") return parsed;
+    if (typeof parsed === "boolean") return parsed ? "Yes" : "No";
+    if (typeof parsed === "number") {
+      return field?.unit ? `${parsed} ${field.unit}` : String(parsed);
+    }
+  } catch {
+    // fall through to raw formatting
+  }
+
+  if (field?.valueType === "number" && field.unit) {
+    return `${value} ${field.unit}`;
+  }
+
+  return value.replace(/^"|"$/g, "");
+}
+
+function getRuleOrderLabel(priority: number) {
+  return `#${priority + 1}`;
+}
+
+function getPlainLanguageRuleSummary(rule: {
+  ruleType: string;
+  operator: string;
+  value: string;
+}) {
+  const subject = getRuleFieldLabel(rule.ruleType);
+  const value = getRuleValueLabel(rule.ruleType, rule.value);
+  const normalizedValue = value.toLowerCase();
+
+  if (rule.ruleType === "okr_submitted" && rule.operator === "eq") {
+    return normalizedValue === "yes"
+      ? "OKR must be submitted"
+      : "OKR must not be submitted";
+  }
+
+  switch (rule.operator) {
+    case "eq":
+      return `${subject} must be ${value}`;
+    case "neq":
+      return `${subject} must not be ${value}`;
+    case "gte":
+      return `${subject} must be at least ${value}`;
+    case "lte":
+      return `${subject} must be at most ${value}`;
+    case "gt":
+      return `${subject} must be more than ${value}`;
+    case "lt":
+      return `${subject} must be less than ${value}`;
+    default:
+      return `${subject}: ${getRuleOperatorLabel(rule.ruleType, rule.operator)} ${value}`;
+  }
+}
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -321,7 +387,9 @@ function Section({
 }
 
 function ScreenTimeProgramLinkSection({ benefitId }: { benefitId: string }) {
-  const { data, loading } = useGetAdminBenefitsQuery();
+  const { data, loading } = useGetAdminBenefitsQuery({
+    fetchPolicy: "cache-and-network",
+  });
   const benefit = data?.adminBenefits?.find((item) => item.id === benefitId);
 
   if (loading || benefit?.flowType !== "screen_time") return null;
@@ -384,6 +452,7 @@ function BenefitDetails({
 
   const [updateBenefit, { loading: saving }] = useUpdateBenefitMutation({
     refetchQueries: [{ query: GetAdminBenefitsDocument }],
+    awaitRefetchQueries: true,
     onCompleted: () => {
       setEditing(false);
       setFeedback({ ok: true, msg: "Saved." });
@@ -394,6 +463,7 @@ function BenefitDetails({
 
   const [deleteBenefit, { loading: deleting }] = useDeleteBenefitMutation({
     refetchQueries: [{ query: GetAdminBenefitsDocument }],
+    awaitRefetchQueries: true,
     onError: (e) => setFeedback({ ok: false, msg: e.message }),
   });
 
@@ -785,24 +855,24 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
   const { employee: me } = useCurrentEmployee();
   const isHr = isHrAdmin(me);
 
-  const refetchQueries = [
-    { query: GetEligibilityRulesDocument, variables: { benefitId } },
-    { query: GetRuleProposalsDocument, variables: { benefitId } },
-  ];
+  const refetchQueries = [{ query: GetEligibilityRulesDocument, variables: { benefitId } }];
 
   const { data: rulesData, loading: rulesLoading } =
     useGetEligibilityRulesQuery({ variables: { benefitId }, skip: !isHr });
-  const { data: proposalsData, loading: proposalsLoading } =
-    useGetRuleProposalsQuery({ variables: { benefitId }, skip: !isHr });
-  const [proposeChange, { loading: proposing }] = useProposeRuleChangeMutation({
+  const [createRule, { loading: creating }] = useCreateEligibilityRuleMutation({
     refetchQueries,
+    awaitRefetchQueries: true,
   });
-  const [approveProposal, { loading: approving }] =
-    useApproveRuleProposalMutation({ refetchQueries });
-  const [rejectProposal, { loading: rejecting }] =
-    useRejectRuleProposalMutation({ refetchQueries });
+  const [updateRule, { loading: updating }] = useUpdateEligibilityRuleMutation({
+    refetchQueries,
+    awaitRefetchQueries: true,
+  });
+  const [deleteRule, { loading: deleting }] = useDeleteEligibilityRuleMutation({
+    refetchQueries,
+    awaitRefetchQueries: true,
+  });
 
-  type ProposalMode = "create" | "update" | "delete";
+  type RuleMode = "create" | "update" | "delete";
   type EligibilityRule = {
     id: string;
     benefitId: string;
@@ -813,103 +883,100 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
     priority: number;
     isActive: boolean;
   };
-  type RuleProposal = {
-    id: string;
-    ruleId?: string | null;
-    changeType: string;
-    proposedData: string;
-    summary: string;
-    status: string;
-    proposedByEmployeeId: string;
-    proposedAt: string;
-    reason?: string | null;
-  };
 
-  const [proposalMode, setProposalMode] = useState<ProposalMode | null>(null);
-  const [editingFromProposal, setEditingFromProposal] = useState(false);
+  const [mode, setMode] = useState<RuleMode | null>(null);
   const [editingRule, setEditingRule] = useState<EligibilityRule | null>(null);
   const [form, setForm] = useState(defaultRuleForm);
-  const [rejectTarget, setRejectTarget] = useState<string | null>(null);
-  const [rejectReason, setRejectReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
 
-  function fillDemoProposal() {
+  const rules = (rulesData?.eligibilityRules ?? []) as EligibilityRule[];
+
+  const isSaving = creating || updating || deleting;
+
+  function openCreateRule() {
+    setMode("create");
+    setEditingRule(null);
+    setForm(defaultRuleForm);
+    setActionError(null);
+  }
+
+  function openEditRule(rule: EligibilityRule) {
+    setMode("update");
+    setEditingRule(rule);
     setForm({
-      ruleType: "employment_status",
-      operator: "eq",
-      value: '"active"',
-      errorMessage: "Only active employees are eligible.",
-      priority: 1,
+      ruleType: rule.ruleType,
+      operator: rule.operator,
+      value: rule.value,
+      errorMessage: rule.errorMessage,
+      priority: rule.priority,
     });
     setActionError(null);
   }
 
-  function fillDemoReject() {
-    setRejectReason(
-      "This proposal conflicts with the existing policy. Please adjust and resubmit.",
-    );
+  function openDeleteRule(rule: EligibilityRule) {
+    setMode("delete");
+    setEditingRule(rule);
+    setActionError(null);
   }
 
-  const rules = (rulesData?.eligibilityRules ?? []) as EligibilityRule[];
-  const proposals = (proposalsData?.ruleProposals ?? []) as RuleProposal[];
-  const pending = proposals.filter((p) => p.status === "pending");
-  const history = proposals.filter((p) => p.status !== "pending");
+  function closeEditor() {
+    setMode(null);
+    setEditingRule(null);
+    setActionError(null);
+  }
 
-  async function submitProposal() {
-    if (!proposalMode) return;
-    if (proposalMode !== "delete" && (!form.value || !form.errorMessage)) {
+  async function saveRule() {
+    if (!mode) return;
+
+    if (mode !== "delete" && (!form.value || !form.errorMessage)) {
       setActionError("Please fill in all required fields.");
       return;
     }
+
     setActionError(null);
+
     try {
-      const proposedData =
-        proposalMode === "delete"
-          ? JSON.stringify({ id: editingRule?.id })
-          : JSON.stringify({
+      if (mode === "create") {
+        await createRule({
+          variables: {
+            input: {
+              benefitId,
               ruleType: form.ruleType,
               operator: form.operator,
               value: form.value,
               errorMessage: form.errorMessage,
               priority: form.priority,
-              isActive: true,
-            });
-      const summary =
-        proposalMode === "create"
-          ? `Add new rule: ${form.ruleType} ${form.operator} ${form.value}`
-          : proposalMode === "update"
-            ? `Update rule: ${form.ruleType} ${form.operator} ${form.value}`
-            : `Delete rule: ${editingRule?.ruleType} ${editingRule?.operator} ${editingRule?.value}`;
-      await proposeChange({
-        variables: {
-          input: {
-            benefitId,
-            ruleId: editingRule?.id ?? null,
-            changeType: proposalMode,
-            proposedData,
-            summary,
+            },
           },
-        },
-      });
-      setProposalMode(null);
-      setEditingRule(null);
-    } catch (e) {
-      setActionError(
-        e instanceof Error ? e.message : "Failed to submit proposal",
-      );
-    }
-  }
+        });
+      } else if (mode === "update") {
+        if (!editingRule) {
+          throw new Error("Rule not found.");
+        }
 
-  async function handleReject() {
-    if (!rejectTarget || !rejectReason.trim()) return;
-    try {
-      await rejectProposal({
-        variables: { id: rejectTarget, reason: rejectReason.trim() },
-      });
-      setRejectTarget(null);
-      setRejectReason("");
+        await updateRule({
+          variables: {
+            id: editingRule.id,
+            input: {
+              ruleType: form.ruleType,
+              operator: form.operator,
+              value: form.value,
+              errorMessage: form.errorMessage,
+              priority: form.priority,
+            },
+          },
+        });
+      } else {
+        if (!editingRule) {
+          throw new Error("Rule not found.");
+        }
+
+        await deleteRule({ variables: { id: editingRule.id } });
+      }
+
+      closeEditor();
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Failed to reject");
+      setActionError(e instanceof Error ? e.message : "Failed to save rule");
     }
   }
 
@@ -924,107 +991,14 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
       title="Active Rules"
       icon={<ChevronDown className="h-4 w-4 text-gray-400" />}
     >
-      {/* Pending proposals */}
-      {proposalsLoading ? (
-        <PageLoading inline message="Loading…" />
-      ) : (
-        pending.length > 0 && (
-          <div className="mb-5 space-y-2">
-            {pending.map((p) => {
-              const relatedRule = rules.find((r) => r.id === p.ruleId);
-              const parsed = (() => {
-                try {
-                  return JSON.parse(p.proposedData);
-                } catch {
-                  return null;
-                }
-              })();
-              function openEdit() {
-                if (relatedRule) {
-                  setProposalMode("update");
-                  setEditingRule(relatedRule);
-                  setForm({
-                    ruleType: relatedRule.ruleType,
-                    operator: relatedRule.operator,
-                    value: relatedRule.value,
-                    errorMessage: relatedRule.errorMessage,
-                    priority: relatedRule.priority,
-                  });
-                } else if (parsed) {
-                  setProposalMode("create");
-                  setEditingRule(null);
-                  setForm({
-                    ruleType: parsed.ruleType ?? "employment_status",
-                    operator: parsed.operator ?? "eq",
-                    value: parsed.value ?? "",
-                    errorMessage: parsed.errorMessage ?? "",
-                    priority: parsed.priority ?? 0,
-                  });
-                }
-                setEditingFromProposal(true);
-                setActionError(null);
-              }
-              return (
-                <div
-                  key={p.id}
-                  className="rounded-xl border border-slate-200 bg-white p-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-slate-800">
-                        {p.summary}
-                      </p>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        Proposed {timeAgo(p.proposedAt)} · by{" "}
-                        {p.proposedByEmployeeId.slice(0, 8)}…
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 gap-2">
-                      {p.proposedByEmployeeId !== me?.id && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            approveProposal({ variables: { id: p.id } })
-                          }
-                          disabled={approving}
-                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
-                        >
-                          <Check className="h-3 w-3" />
-                          Approve
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={openEdit}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                        Edit
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )
-      )}
-
-      {/* Active rules */}
       <div className="flex items-center justify-between mb-4">
         <button
           type="button"
-          onClick={() => {
-            setProposalMode("create");
-            setEditingRule(null);
-            setForm(defaultRuleForm);
-            setEditingFromProposal(false);
-            setActionError(null);
-          }}
+          onClick={openCreateRule}
           className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-700"
         >
           <Plus className="h-3.5 w-3.5" />
-          Propose New Rule
+          Add Rule
         </button>
       </div>
 
@@ -1034,19 +1008,18 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
         </div>
       )}
 
-      {/* Proposal form */}
-      {proposalMode && (
+      {mode && (
         <div
-          className={`mb-4 rounded-2xl border p-4 ${proposalMode === "delete" ? "border-red-100 bg-red-50" : "border-gray-100 bg-white"}`}
+          className={`mb-4 rounded-2xl border p-4 ${mode === "delete" ? "border-red-100 bg-red-50" : "border-gray-100 bg-white"}`}
         >
           <p className="mb-4 text-sm font-semibold text-gray-800">
-            {proposalMode === "delete"
+            {mode === "delete"
               ? "Delete Rule"
-              : editingFromProposal || proposalMode === "update"
+              : mode === "update"
                 ? "Edit Rule"
-                : "New Rule"}
+                : "Add Rule"}
           </p>
-          {proposalMode === "delete" ? (
+          {mode === "delete" ? (
             <div className="rounded-lg border border-red-200 bg-white px-4 py-3 text-sm text-slate-700">
               <p className="font-medium text-red-800">Delete rule:</p>
               <p className="mt-1">
@@ -1151,27 +1124,22 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
           <div className="mt-4 flex gap-2">
             <button
               type="button"
-              onClick={fillDemoProposal}
-              className="rounded-lg border border-gray-200 bg-yellow-400 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Fill demo
-            </button>
-            <button
-              type="button"
-              onClick={submitProposal}
-              disabled={proposing}
+              onClick={saveRule}
+              disabled={isSaving}
               className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-50"
             >
-              {proposing ? "Saving…" : "Save"}
+              {mode === "delete"
+                ? deleting
+                  ? "Deleting…"
+                  : "Delete Rule"
+                : isSaving
+                  ? "Saving…"
+                  : "Save Rule"}
             </button>
             <button
               type="button"
-              onClick={() => {
-                setProposalMode(null);
-                setEditingRule(null);
-                setEditingFromProposal(false);
-              }}
-              disabled={proposing}
+              onClick={closeEditor}
+              disabled={isSaving}
               className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
@@ -1201,62 +1169,57 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setProposalMode("update");
-                      setEditingRule(rule);
-                      setForm({
-                        ruleType: rule.ruleType,
-                        operator: rule.operator,
-                        value: rule.value,
-                        errorMessage: rule.errorMessage,
-                        priority: rule.priority,
-                      });
-                      setActionError(null);
-                    }}
-                    className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
+                    onClick={() => openEditRule(rule)}
+                    className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Propose Edit
+                    Edit Rule
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setEditingRule(rule);
-                      setProposalMode("delete");
-                      setActionError(null);
-                    }}
-                    className="rounded-lg border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50"
+                    onClick={() => openDeleteRule(rule)}
+                    className="rounded-lg border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
+              <div className="mt-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+                  What this rule means
+                </p>
+                <p className="mt-1 text-sm font-medium text-slate-900">
+                  {getPlainLanguageRuleSummary(rule)}
+                </p>
+              </div>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div>
-                  <p className="text-xs text-slate-500">Rule Type</p>
+                  <p className="text-xs text-slate-500">What we check</p>
                   <p className="mt-0.5 text-sm font-medium text-slate-800">
-                    {rule.ruleType}
+                    {getRuleFieldLabel(rule.ruleType)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">Operator</p>
+                  <p className="text-xs text-slate-500">Condition</p>
                   <p className="mt-0.5 text-sm font-medium text-slate-800">
-                    {rule.operator}
+                    {getRuleOperatorLabel(rule.ruleType, rule.operator)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">Value</p>
+                  <p className="text-xs text-slate-500">Required value</p>
                   <p className="mt-0.5 text-sm font-medium text-slate-800">
-                    {rule.value}
+                    {getRuleValueLabel(rule.ruleType, rule.value)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">Priority</p>
+                  <p className="text-xs text-slate-500">Check order</p>
                   <p className="mt-0.5 text-sm font-medium text-slate-800">
-                    {rule.priority}
+                    {getRuleOrderLabel(rule.priority)}
                   </p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-xs text-slate-500">Error Message</p>
+                  <p className="text-xs text-slate-500">
+                    Shown to employee if this rule fails
+                  </p>
                   <p className="mt-0.5 text-sm text-slate-700">
                     {rule.errorMessage}
                   </p>
@@ -1264,86 +1227,6 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Proposal history */}
-      {history.length > 0 && (
-        <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4">
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Proposal History
-          </h3>
-          <div className="space-y-2">
-            {history.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-start justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2"
-              >
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    {p.summary}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-400">
-                    {timeAgo(p.proposedAt)}
-                    {p.reason && ` · ${p.reason}`}
-                  </p>
-                </div>
-                <span
-                  className={`shrink-0 rounded px-2 py-0.5 text-[11px] font-semibold uppercase ${STATUS_STYLES[p.status] ?? "bg-slate-100 text-slate-600"}`}
-                >
-                  {p.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Reject modal */}
-      {rejectTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setRejectTarget(null)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="mb-3 text-sm font-semibold text-slate-900">
-              Reject Proposal
-            </h3>
-            <textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Reason (required)"
-              rows={3}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700"
-            />
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={fillDemoReject}
-                className="rounded-xl border border-slate-200 bg-yellow-400 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Fill demo
-              </button>
-              <button
-                type="button"
-                onClick={() => setRejectTarget(null)}
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleReject}
-                disabled={!rejectReason.trim() || rejecting}
-                className="rounded-xl bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-              >
-                {rejecting ? "Rejecting…" : "Reject"}
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </Section>

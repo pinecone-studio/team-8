@@ -85,23 +85,38 @@ export default function AdminScreenTimeProgramPage() {
 
   const { employee, loading: employeeLoading } = useCurrentEmployee();
   const canManage = isHrAdmin(employee);
-  const { data: adminBenefitsData, loading: benefitsLoading } = useGetAdminBenefitsQuery({
+  const {
+    data: adminBenefitsData,
+    loading: benefitsLoading,
+    refetch: refetchBenefits,
+  } = useGetAdminBenefitsQuery({
     skip: !canManage,
+    fetchPolicy: "cache-and-network",
   });
-  const { data, loading } = useGetAdminScreenTimeMonthQuery({
+  const { data, loading, refetch: refetchBoard } = useGetAdminScreenTimeMonthQuery({
     variables: { benefitId, monthKey },
     skip: !canManage || !benefitId,
     fetchPolicy: "cache-and-network",
   });
-  const { data: leaderboardData, loading: leaderboardLoading } = useGetScreenTimeLeaderboardQuery({
+  const {
+    data: leaderboardData,
+    loading: leaderboardLoading,
+    refetch: refetchLeaderboard,
+  } = useGetScreenTimeLeaderboardQuery({
     variables: { benefitId, monthKey },
     skip: !canManage || !benefitId,
     fetchPolicy: "cache-and-network",
   });
-
-  const [upsertProgram, { loading: savingProgram }] = useUpsertScreenTimeProgramMutation({
-    refetchQueries: [{ query: GetAdminScreenTimeMonthDocument, variables: { benefitId, monthKey } }],
-  });
+  const [upsertProgram, { loading: savingProgram }] =
+    useUpsertScreenTimeProgramMutation({
+      refetchQueries: [
+        {
+          query: GetAdminScreenTimeMonthDocument,
+          variables: { benefitId, monthKey },
+        },
+      ],
+      awaitRefetchQueries: true,
+    });
 
   const benefit = adminBenefitsData?.adminBenefits.find((item) => item.id === benefitId);
   const board = data?.adminScreenTimeMonth;
@@ -146,6 +161,11 @@ export default function AdminScreenTimeProgramPage() {
           },
         },
       });
+      await Promise.all([
+        refetchBenefits(),
+        refetchBoard({ benefitId, monthKey }),
+        refetchLeaderboard({ benefitId, monthKey }),
+      ]);
       setWinnerPercentOverride(null);
       setRewardAmountOverride(null);
       setFeedback("Competition settings saved.");

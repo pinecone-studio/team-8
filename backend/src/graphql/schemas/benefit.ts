@@ -341,6 +341,7 @@ export const benefitTypeDefs = gql`
   }
 
   input ProposeRuleChangeInput {
+    proposalId: String
     benefitId: String!
     ruleId: String
     changeType: String!

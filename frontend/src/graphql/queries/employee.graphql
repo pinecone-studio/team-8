@@ -2,8 +2,8 @@ query GetDepartments {
   getDepartments
 }
 
-query GetEmployees($search: String, $department: String, $limit: Int) {
-  getEmployees(search: $search, department: $department, limit: $limit) {
+query GetEmployees($search: String, $department: String, $benefitId: String, $limit: Int) {
+  getEmployees(search: $search, department: $department, benefitId: $benefitId, limit: $limit) {
     id
     avatarUrl
     name
