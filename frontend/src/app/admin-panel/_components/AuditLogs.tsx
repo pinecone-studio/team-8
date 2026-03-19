@@ -133,7 +133,7 @@ function buildGrid(year: number, month: number): (Date | null)[] {
   return cells;
 }
 
-// ── MonthCalendar ─────────────────────────────────────────────────────────────
+
 
 function MonthCalendar({
   year,

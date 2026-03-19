@@ -228,6 +228,12 @@ export default function PendingRequestsPage() {
     }
   };
 
+  const fillDeclineReason = () => {
+    setDeclineReason(
+      "The request is incomplete. Please update your submission with the missing details.",
+    );
+  };
+
   const handleDecline = async () => {
     if (!declineModalId) return;
     setDecliningId(declineModalId);
@@ -341,42 +347,40 @@ export default function PendingRequestsPage() {
 
           {/* Queue tabs */}
           <div className="mt-6 flex gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 w-fit">
-            {requestsLoading ? (
-              // Skeleton tab placeholders — widths mirror "HR Queue" / "Finance Queue" / "All In-Progress"
-              [80, 104, 112].map((w, i) => (
-                <div
-                  key={i}
-                  className="rounded-lg bg-slate-200/80 animate-pulse"
-                  style={{ width: w, height: 32 }}
-                />
-              ))
-            ) : (
-              tabs.map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActiveQueue(tab.key)}
-                  className={`flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition ${
-                    activeQueue === tab.key
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  {tab.label}
-                  {tab.count !== undefined && tab.count > 0 && (
-                    <span
-                      className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
-                        activeQueue === tab.key
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-200 text-gray-600"
-                      }`}
-                    >
-                      {tab.count}
-                    </span>
-                  )}
-                </button>
-              ))
-            )}
+            {requestsLoading
+              ? // Skeleton tab placeholders — widths mirror "HR Queue" / "Finance Queue" / "All In-Progress"
+                [80, 104, 112].map((w, i) => (
+                  <div
+                    key={i}
+                    className="rounded-lg bg-slate-200/80 animate-pulse"
+                    style={{ width: w, height: 32 }}
+                  />
+                ))
+              : tabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveQueue(tab.key)}
+                    className={`flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+                      activeQueue === tab.key
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    {tab.label}
+                    {tab.count !== undefined && tab.count > 0 && (
+                      <span
+                        className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+                          activeQueue === tab.key
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-200 text-gray-600"
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
           </div>
 
           <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white">
@@ -386,23 +390,51 @@ export default function PendingRequestsPage() {
                   <tr>
                     {requestsLoading ? (
                       <>
-                        <th className="px-5 py-3"><div className="h-2.5 w-16 rounded-full bg-slate-200/80 animate-pulse" /></th>
-                        <th className="px-5 py-3"><div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" /></th>
-                        <th className="px-5 py-3"><div className="h-2.5 w-8 rounded-full bg-slate-200/80 animate-pulse" /></th>
-                        <th className="px-5 py-3"><div className="h-2.5 w-20 rounded-full bg-slate-200/80 animate-pulse" /></th>
-                        <th className="px-5 py-3"><div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" /></th>
-                        <th className="px-5 py-3"><div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" /></th>
-                        <th className="px-5 py-3"><div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                        <th className="px-5 py-3">
+                          <div className="h-2.5 w-16 rounded-full bg-slate-200/80 animate-pulse" />
+                        </th>
+                        <th className="px-5 py-3">
+                          <div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" />
+                        </th>
+                        <th className="px-5 py-3">
+                          <div className="h-2.5 w-8 rounded-full bg-slate-200/80 animate-pulse" />
+                        </th>
+                        <th className="px-5 py-3">
+                          <div className="h-2.5 w-20 rounded-full bg-slate-200/80 animate-pulse" />
+                        </th>
+                        <th className="px-5 py-3">
+                          <div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" />
+                        </th>
+                        <th className="px-5 py-3">
+                          <div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" />
+                        </th>
+                        <th className="px-5 py-3">
+                          <div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" />
+                        </th>
                       </>
                     ) : (
                       <>
-                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Employee</th>
-                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Benefit</th>
-                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Date</th>
-                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Amount / Subsidy</th>
-                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
-                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Policy</th>
-                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
+                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          Employee
+                        </th>
+                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          Benefit
+                        </th>
+                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          Date
+                        </th>
+                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          Amount / Subsidy
+                        </th>
+                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          Status
+                        </th>
+                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          Policy
+                        </th>
+                        <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          Actions
+                        </th>
                       </>
                     )}
                   </tr>
@@ -411,10 +443,12 @@ export default function PendingRequestsPage() {
                   {requestsLoading ? (
                     <>
                       {Array.from({
-                        length:
-                          requestsData?.allBenefitRequests?.length ?? 5,
+                        length: requestsData?.allBenefitRequests?.length ?? 5,
                       }).map((_, i) => (
-                        <tr key={i} className="border-b border-gray-100 last:border-b-0">
+                        <tr
+                          key={i}
+                          className="border-b border-gray-100 last:border-b-0"
+                        >
                           {/* Employee: avatar + name bar + email bar */}
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-2">
@@ -615,6 +649,14 @@ export default function PendingRequestsPage() {
             <div className="mt-4 flex gap-2">
               <button
                 type="button"
+                onClick={fillDeclineReason}
+                disabled={decliningId !== null}
+                className="flex-1 rounded-xl border border-slate-200 px-4 py-2 bg-yellow-400 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                Fill demo
+              </button>
+              <button
+                type="button"
                 onClick={() => setDeclineModalId(null)}
                 disabled={decliningId !== null}
                 className="flex-1 rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
@@ -683,8 +725,14 @@ function RequestDetailModal({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="flex w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="flex w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-start justify-between border-b border-gray-100 px-6 py-4">
           <div>
@@ -826,7 +874,9 @@ function RequestDetailModal({
                 </div>
                 <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 space-y-3">
                   {!req.requiresContract ? (
-                    <p className="text-xs text-gray-400">This benefit does not require a contract.</p>
+                    <p className="text-xs text-gray-400">
+                      This benefit does not require a contract.
+                    </p>
                   ) : (
                     <>
                       {req.contractVersionAccepted && (
@@ -844,7 +894,9 @@ function RequestDetailModal({
                         </div>
                       )}
                       {contractsLoading && (
-                        <p className="text-xs text-gray-400">Loading contract…</p>
+                        <p className="text-xs text-gray-400">
+                          Loading contract…
+                        </p>
                       )}
                       {!contractsLoading && contractUrl ? (
                         <>
@@ -883,7 +935,9 @@ function RequestDetailModal({
                 </div>
                 <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 space-y-3">
                   {!req.requiresContract ? (
-                    <p className="text-xs text-gray-400">This benefit does not require a signed copy.</p>
+                    <p className="text-xs text-gray-400">
+                      This benefit does not require a signed copy.
+                    </p>
                   ) : employeeSignedContractUrl ? (
                     <>
                       <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
@@ -916,7 +970,8 @@ function RequestDetailModal({
                     </>
                   ) : (
                     <p className="text-xs text-gray-400">
-                      No employee-uploaded signed copy has been attached to this request yet.
+                      No employee-uploaded signed copy has been attached to this
+                      request yet.
                     </p>
                   )}
                 </div>

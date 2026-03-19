@@ -1,5 +1,5 @@
 import Sidebar from "../_components/SideBar";
-import CompanyBenefits from "../_components/CompanyBenefits";
+import CompanyBenefits from "../_components/page";
 
 export default function CompanyBenefitsPage() {
   return (
