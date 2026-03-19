@@ -10,20 +10,18 @@ import {
 import { sendBenefitRequestApprovedEmail } from "../../../email/sendTransactionalEmail";
 import { writeAuditLog } from "../helpers/audit";
 
-// Statuses that can be transitioned by HR review
 const HR_REVIEWABLE = new Set([
-  "pending",           // legacy
+  "pending",
   "awaiting_hr_review",
-  "finance_approved",  // dual: finance already approved, now HR
+  "awaiting_payment_review",
+  "finance_approved",
 ]);
 
-// Statuses that can be transitioned by Finance review
 const FINANCE_REVIEWABLE = new Set([
   "awaiting_finance_review",
-  "hr_approved",  // dual: HR already approved, now Finance
+  "hr_approved",
 ]);
 
-/** HR / Finance admin: approve benefit request with role-based routing. */
 export const approveBenefitRequest = async (
   _: unknown,
   { requestId }: { requestId: string },
@@ -38,58 +36,66 @@ export const approveBenefitRequest = async (
   const req = requests[0];
   if (!req) throw new Error("Benefit request not found");
 
-  // Load benefit to determine policy
   const benefitRows = await db
     .select()
     .from(schema.benefits)
     .where(eq(schema.benefits.id, req.benefitId));
   const benefit = benefitRows[0];
   const approvalPolicy = benefit?.approvalPolicy ?? "hr";
+  const requiresEmployeePayment =
+    benefit?.flowType === "contract" && Boolean(benefit?.amount);
 
   const reviewerRole = getInternalRole(admin);
   const reviewerIsHr = canReviewHrBenefit(admin);
   const reviewerIsFinance = canReviewFinanceBenefit(admin);
-
   const status = req.status;
 
-  // Determine next status based on current status, policy, and reviewer role
   let nextStatus: string;
-  let auditAction: "REQUEST_APPROVED" | "REQUEST_HR_APPROVED" | "REQUEST_FINANCE_APPROVED" =
-    "REQUEST_APPROVED";
+  let auditAction:
+    | "REQUEST_APPROVED"
+    | "REQUEST_HR_APPROVED"
+    | "REQUEST_FINANCE_APPROVED" = "REQUEST_APPROVED";
 
   if (HR_REVIEWABLE.has(status)) {
     if (!reviewerIsHr) {
       throw new Error(
-        `This request (${status}) requires HR review. Your role (${reviewerRole}) does not have HR review permissions.`
+        `This request (${status}) requires HR review. Your role (${reviewerRole}) does not have HR review permissions.`,
       );
     }
-    if (approvalPolicy === "dual" && status !== "finance_approved") {
-      // Dual: HR approved, now waiting for Finance
+
+    if (status === "awaiting_payment_review") {
+      nextStatus = "approved";
+      auditAction = "REQUEST_APPROVED";
+    } else if (approvalPolicy === "dual" && status !== "finance_approved") {
       nextStatus = "hr_approved";
       auditAction = "REQUEST_HR_APPROVED";
+    } else if (requiresEmployeePayment) {
+      nextStatus = "awaiting_payment";
+      auditAction = "REQUEST_HR_APPROVED";
     } else {
-      // Single HR approval or second approval in dual path (finance_approved → approved)
       nextStatus = "approved";
       auditAction = "REQUEST_APPROVED";
     }
   } else if (FINANCE_REVIEWABLE.has(status)) {
     if (!reviewerIsFinance) {
       throw new Error(
-        `This request (${status}) requires Finance review. Your role (${reviewerRole}) does not have Finance review permissions.`
+        `This request (${status}) requires Finance review. Your role (${reviewerRole}) does not have Finance review permissions.`,
       );
     }
+
     if (approvalPolicy === "dual" && status !== "hr_approved") {
-      // Dual: Finance approved, now waiting for HR
       nextStatus = "finance_approved";
       auditAction = "REQUEST_FINANCE_APPROVED";
+    } else if (requiresEmployeePayment) {
+      nextStatus = "awaiting_payment";
+      auditAction = "REQUEST_FINANCE_APPROVED";
     } else {
-      // Single Finance approval or second approval in dual (hr_approved → approved)
       nextStatus = "approved";
       auditAction = "REQUEST_APPROVED";
     }
   } else {
     throw new Error(
-      `Request cannot be approved from status: ${status}. Only requests in a pending review state can be approved.`
+      `Request cannot be approved from status: ${status}. Only requests in a pending review state can be approved.`,
     );
   }
 
@@ -104,7 +110,6 @@ export const approveBenefitRequest = async (
     .where(eq(schema.benefitRequests.id, requestId))
     .returning();
 
-  // Phase 6: Create enrollment on final approval (idempotent)
   if (nextStatus === "approved" && benefit) {
     const existingEnrollments = await db
       .select()
@@ -114,7 +119,7 @@ export const approveBenefitRequest = async (
           eq(schema.employeeBenefitEnrollments.employeeId, req.employeeId),
           eq(schema.employeeBenefitEnrollments.benefitId, req.benefitId),
           eq(schema.employeeBenefitEnrollments.status, "active"),
-        )
+        ),
       );
 
     if (!existingEnrollments[0]) {
@@ -143,7 +148,6 @@ export const approveBenefitRequest = async (
     }
   }
 
-  // Phase 4: Audit log
   await writeAuditLog({
     db,
     actor: admin,
@@ -155,7 +159,7 @@ export const approveBenefitRequest = async (
     requestId,
     before: { status },
     after: { status: nextStatus },
-    metadata: { approvalPolicy, reviewerRole },
+    metadata: { approvalPolicy, reviewerRole, requiresEmployeePayment },
   });
 
   if (nextStatus === "approved" && benefit) {

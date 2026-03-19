@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -25,6 +25,8 @@ import Sidebar from "../../_components/SideBar";
 import PageLoading from "@/app/_components/PageLoading";
 import {
   useGetAdminBenefitsQuery,
+  useGetAllBenefitRequestsQuery,
+  useGetEmployeesQuery,
   useUpdateBenefitMutation,
   useGetEligibilityRulesQuery,
   useGetRuleProposalsQuery,
@@ -131,6 +133,17 @@ type ContractRow = {
   viewUrl?: string | null;
 };
 
+type EmployeeSignedContractRow = {
+  requestId: string;
+  employeeId: string;
+  employeeName: string;
+  employeeEmail: string;
+  fileName: string;
+  uploadedAt: string;
+  status: string;
+  viewUrl: string | null;
+};
+
 function getExpiryStatus(c: ContractRow, now: number): "active" | "expiring_soon" | "expired" | "inactive" {
   if (!c.isActive) return "inactive";
   const exp = new Date(c.expiryDate).getTime();
@@ -148,6 +161,45 @@ function ExpiryBadge({ contract, now }: { contract: ContractRow; now: number }) 
     return <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-amber-100 text-amber-700"><AlertTriangle className="h-2.5 w-2.5" />Expires in {days}d</span>;
   }
   return <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700">Active</span>;
+}
+
+function formatUploadedAt(iso: string): { date: string; time: string; relative: string } {
+  const date = new Date(iso);
+  return {
+    date: date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }),
+    time: date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    }),
+    relative: timeAgo(iso),
+  };
+}
+
+function formatContractStatus(status: string): string {
+  return status
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function EmployeeContractStatusBadge({ status }: { status: string }) {
+  const tone =
+    status === "attached_to_request"
+      ? "bg-emerald-100 text-emerald-700"
+      : status === "uploaded"
+        ? "bg-blue-100 text-blue-700"
+        : "bg-slate-100 text-slate-600";
+
+  return (
+    <span className={`inline-flex min-w-fit items-center justify-center whitespace-nowrap rounded-full px-3 py-1 text-center text-xs font-semibold leading-none ${tone}`}>
+      {formatContractStatus(status)}
+    </span>
+  );
 }
 
 // ── Section wrapper ───────────────────────────────────────────────────────────
@@ -612,9 +664,13 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
 }
 
 // ── VendorContractSection ─────────────────────────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function VendorContractSection({ benefitId }: { benefitId: string }) {
   const { getToken } = useAuth();
+  const { user, isLoaded: isUserLoaded } = useUser();
+  const { data: benefitData } = useGetAdminBenefitsQuery();
+  const benefit = benefitData?.adminBenefits?.find((item) => item.id === benefitId);
+  const { data: employeesData } = useGetEmployeesQuery();
+  const { data: requestsData } = useGetAllBenefitRequestsQuery();
   const { data, loading, error, refetch } = useGetContractsForBenefitQuery({ variables: { benefitId } });
   const contracts = (data?.contracts ?? []) as ContractRow[];
   const [now] = useState(Date.now);
@@ -661,6 +717,36 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
       setUploading(false);
     }
   }, [benefitId, file, form, getToken, refetch]);
+
+  if (!benefit?.requiresContract) return null;
+
+  const employeesById = new Map(
+    (employeesData?.getEmployees ?? []).map((employee) => [employee.id, employee]),
+  );
+
+  const employeeSignedContracts: EmployeeSignedContractRow[] = (
+    requestsData?.allBenefitRequests ?? []
+  )
+    .filter(
+      (request) =>
+        request.benefitId === benefitId && request.employeeSignedContract?.id,
+    )
+    .map((request) => {
+      const employee = employeesById.get(request.employeeId);
+      return {
+        requestId: request.id,
+        employeeId: request.employeeId,
+        employeeName: employee?.name ?? request.employeeId,
+        employeeEmail: employee?.email ?? "",
+        fileName:
+          request.employeeSignedContract?.fileName ?? "Signed contract",
+        uploadedAt: request.employeeSignedContract?.uploadedAt ?? request.updatedAt,
+        status: request.employeeSignedContract?.status ?? request.status,
+        viewUrl: getContractProxyUrl(request.employeeSignedContract?.viewUrl ?? null),
+      };
+    });
+
+  const clerkEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? null;
 
   return (
     <Section title="Vendor Contracts" icon={<FileText className="h-4 w-4 text-gray-400" />}>
@@ -718,6 +804,89 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
           </table>
         </div>
       )}
+
+      <div className="mt-6 border-t border-slate-100 pt-6">
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold text-slate-900">Employee Signed Contracts</h3>
+          <p className="mt-1 text-xs text-slate-500">
+            Signed contract copies uploaded by employees for this benefit.
+          </p>
+        </div>
+
+        {employeeSignedContracts.length === 0 ? (
+          <p className="text-sm text-slate-500">No employee-signed contracts uploaded yet.</p>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-slate-200">
+            <table className="min-w-full text-left">
+              <thead className="border-b border-slate-200 bg-white text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-4 py-3">Employee</th>
+                  <th className="px-4 py-3">File</th>
+                  <th className="px-4 py-3">Uploaded</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {employeeSignedContracts.map((row) => (
+                  <tr key={row.requestId} className="border-b last:border-b-0 hover:bg-slate-50/50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <EmployeeAvatar
+                          name={row.employeeName}
+                          imageUrl={
+                            isUserLoaded &&
+                            !!clerkEmail &&
+                            row.employeeEmail.toLowerCase() === clerkEmail
+                              ? user?.imageUrl ?? null
+                              : null
+                          }
+                        />
+                        <div>
+                          <div className="text-sm font-medium text-slate-900">{row.employeeName}</div>
+                          <div className="text-xs text-slate-500">{row.employeeEmail || row.employeeId}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-slate-600">{row.fileName}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {row.uploadedAt ? (
+                        <div>
+                          <div className="text-sm text-slate-500">
+                            {formatUploadedAt(row.uploadedAt).date}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <EmployeeContractStatusBadge status={row.status} />
+                    </td>
+                    <td className="px-4 py-3">
+                      {row.viewUrl ? (
+                        <a
+                          href={row.viewUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg text-sm font-medium text-blue-600 transition hover:text-blue-700"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          View
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-400">No preview</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Upload modal */}
       {modalOpen && (
@@ -781,6 +950,29 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+function EmployeeAvatar({ name, imageUrl }: { name: string; imageUrl?: string | null }) {
+  const initials = name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("") || "EM";
+
+  return (
+    imageUrl ? (
+      <img
+        src={imageUrl}
+        alt={name}
+        className="h-10 w-10 rounded-full object-cover"
+      />
+    ) : (
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
+        {initials}
+      </div>
+    )
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function BenefitDetailPage() {
@@ -818,9 +1010,11 @@ export default function BenefitDetailPage() {
             <BenefitDetails benefitId={benefitId} isHr={isHr} />
             {isHr && <ScreenTimeProgramLinkSection benefitId={benefitId} />}
             {isHr && <RuleConfigSection benefitId={benefitId} />}
+            {isHr && <VendorContractSection benefitId={benefitId} />}
           </div>
         </main>
       </div>
     </div>
   );
 }
+

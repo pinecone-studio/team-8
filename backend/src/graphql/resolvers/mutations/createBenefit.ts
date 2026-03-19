@@ -36,6 +36,12 @@ export const createBenefit = async (
   if (flowType === "screen_time" && input.requiresContract) {
     throw new Error("Screen time benefits cannot require a contract.");
   }
+  if (flowType === "contract" && (!input.amount || input.amount <= 0)) {
+    throw new Error("Contract-based benefits must include a valid total price.");
+  }
+  if (flowType === "contract" && input.subsidyPercent >= 100) {
+    throw new Error("Contract-based benefits must leave an employee payment share. Set company subsidy below 100%.");
+  }
   const [row] = await db
     .insert(schema.benefits)
     .values({

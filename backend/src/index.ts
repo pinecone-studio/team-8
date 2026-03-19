@@ -697,6 +697,141 @@ async function handleEmployeeContractUpload(
 }
 
 /**
+ * Employee payment submission for contract-based benefits.
+ *
+ * Moves a request from awaiting_payment -> awaiting_payment_review so HR can
+ * verify the transfer and activate the benefit.
+ */
+async function handleBenefitPaymentSubmit(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/api/benefit-requests/payment-submit" || request.method !== "POST") {
+    return null;
+  }
+
+  const db = createDb(env.DB);
+  const currentUser = await getCurrentUserFromRequest(request, env, db);
+  if (!currentUser.employee) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Authentication required." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  let body: { requestId?: string } = {};
+  try {
+    body = (await request.json()) as { requestId?: string };
+  } catch {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Invalid JSON body." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (!body.requestId) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "requestId is required." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const requestRows = await db
+    .select()
+    .from(schema.benefitRequests)
+    .where(eq(schema.benefitRequests.id, body.requestId))
+    .limit(1);
+  const benefitRequest = requestRows[0];
+  if (!benefitRequest) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "Benefit request not found." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (benefitRequest.employeeId !== currentUser.employee.id) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "You can only submit payment for your own request." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  if (benefitRequest.status !== "awaiting_payment") {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: `Payment cannot be submitted from status: ${benefitRequest.status}.` }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const benefitRows = await db
+    .select()
+    .from(schema.benefits)
+    .where(eq(schema.benefits.id, benefitRequest.benefitId))
+    .limit(1);
+  const benefit = benefitRows[0];
+  if (!benefit || benefit.flowType !== "contract" || !benefit.amount) {
+    return withCors(
+      request,
+      new Response(JSON.stringify({ error: "This request does not require employee payment." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  const now = new Date().toISOString();
+  const [updated] = await db
+    .update(schema.benefitRequests)
+    .set({
+      status: "awaiting_payment_review",
+      employeeApprovedAt: now,
+      updatedAt: now,
+    })
+    .where(eq(schema.benefitRequests.id, body.requestId))
+    .returning();
+
+  await writeAuditLog({
+    db,
+    actor: currentUser.employee,
+    actionType: "PAYMENT_SUBMITTED",
+    entityType: "benefit_request",
+    entityId: body.requestId,
+    targetEmployeeId: currentUser.employee.id,
+    benefitId: benefitRequest.benefitId,
+    requestId: body.requestId,
+    before: { status: benefitRequest.status },
+    after: { status: "awaiting_payment_review" },
+  });
+
+  return withCors(
+    request,
+    new Response(JSON.stringify(updated), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+}
+
+/**
  * Serve an employee-uploaded signed contract copy.
  *
  * Access rules:
@@ -1456,6 +1591,8 @@ export default {
     if (upload !== null) return upload;
     const employeeUpload = await handleEmployeeContractUpload(request, env);
     if (employeeUpload !== null) return employeeUpload;
+    const paymentSubmit = await handleBenefitPaymentSubmit(request, env);
+    if (paymentSubmit !== null) return paymentSubmit;
     const screenTimeUpload = await handleScreenTimeUpload(request, env);
     if (screenTimeUpload !== null) return screenTimeUpload;
     const imageUpload = await handleBenefitImageUpload(request, env);

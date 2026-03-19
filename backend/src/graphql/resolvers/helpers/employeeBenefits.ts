@@ -60,6 +60,8 @@ const IN_FLIGHT_REQUEST_STATUSES = new Set([
   "awaiting_contract_acceptance",
   "awaiting_hr_review",
   "awaiting_finance_review",
+  "awaiting_payment",
+  "awaiting_payment_review",
   "hr_approved",
   "finance_approved",
 ]);
