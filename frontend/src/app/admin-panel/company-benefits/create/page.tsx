@@ -108,7 +108,6 @@ const BENEFIT_TYPES: {
   },
 ];
 
-// ── Workflow steps ────────────────────────────────────────────────────────────
 
 type WorkflowStep = { icon: React.ReactNode; label: string; desc: string; color: string };
 
