@@ -40,7 +40,8 @@ type GraphqlFlowType =
   | "contract"
   | "normal"
   | "down_payment"
-  | "self_service";
+  | "self_service"
+  | "screen_time";
 
 type BenefitEligibilityResult = {
   benefit: GraphqlBenefit;
@@ -71,7 +72,8 @@ function normalizeFlowType(
     flowType === "contract" ||
     flowType === "normal" ||
     flowType === "down_payment" ||
-    flowType === "self_service"
+    flowType === "self_service" ||
+    flowType === "screen_time"
   ) {
     return flowType;
   }

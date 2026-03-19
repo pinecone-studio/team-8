@@ -8,7 +8,12 @@ import StatusBadge from "../../_components/benefits/StatusBadge";
 import Sidebar from "../../_components/SideBar";
 import BenefitRequestModal from "../../_components/benefits/BenefitRequestModal";
 import PageLoading from "@/app/_components/PageLoading";
-import { useGetMyBenefitsFullQuery, useGetBenefitRequestsQuery, useGetContractsForBenefitQuery } from "@/graphql/generated/graphql";
+import {
+  BenefitFlowType,
+  useGetMyBenefitsFullQuery,
+  useGetBenefitRequestsQuery,
+  useGetContractsForBenefitQuery,
+} from "@/graphql/generated/graphql";
 import { useCurrentEmployee } from "@/lib/use-current-employee";
 import { getContractProxyUrl } from "@/lib/contracts";
 
@@ -120,7 +125,7 @@ function NextStepsBox({
   failedRuleError,
   approvalPolicy,
   requiresContract,
-  isSelfService,
+  flowType,
   awaitingContract,
   onRequestBenefit,
 }: {
@@ -129,11 +134,12 @@ function NextStepsBox({
   failedRuleError?: string | null;
   approvalPolicy?: string | null;
   requiresContract: boolean;
-  isSelfService?: boolean;
+  flowType?: BenefitFlowType | null;
   awaitingContract?: boolean;
   onRequestBenefit?: () => void;
 }) {
   const p = (approvalPolicy ?? "hr").toLowerCase();
+  const isSelfService = flowType === BenefitFlowType.SelfService;
 
   // Pending sub-state: employee must accept a contract before review can proceed
   if (status === "PENDING" && awaitingContract) {
@@ -541,7 +547,7 @@ export default function BenefitDetailPage() {
                     failedRuleError={benefitEligibility.failedRule?.errorMessage}
                     approvalPolicy={policy}
                     requiresContract={benefit.requiresContract}
-                    isSelfService={isSelfService}
+                    flowType={benefit.flowType}
                     awaitingContract={awaitingContract}
                     onRequestBenefit={() => setRequestModalOpen(true)}
                   />
