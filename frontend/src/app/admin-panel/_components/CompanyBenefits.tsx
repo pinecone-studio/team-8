@@ -14,17 +14,29 @@ function BenefitTableRowSkeleton() {
   return (
     <tr className="border-b border-gray-50 last:border-b-0">
       {/* Name — prominent, wider bar */}
-      <td className="px-4 py-3"><div className="h-3.5 w-36 rounded-full bg-slate-200/80 animate-pulse" /></td>
+      <td className="px-4 py-3">
+        <div className="h-3.5 w-36 rounded-full bg-slate-200/80 animate-pulse" />
+      </td>
       {/* Status */}
-      <td className="px-4 py-3"><div className="h-3 w-14 rounded-full bg-slate-200/80 animate-pulse" /></td>
+      <td className="px-4 py-3">
+        <div className="h-3 w-14 rounded-full bg-slate-200/80 animate-pulse" />
+      </td>
       {/* Category */}
-      <td className="px-4 py-3"><div className="h-3 w-20 rounded-full bg-slate-200/80 animate-pulse" /></td>
+      <td className="px-4 py-3">
+        <div className="h-3 w-20 rounded-full bg-slate-200/80 animate-pulse" />
+      </td>
       {/* Subsidy % */}
-      <td className="px-4 py-3"><div className="h-3 w-10 rounded-full bg-slate-200/80 animate-pulse" /></td>
+      <td className="px-4 py-3">
+        <div className="h-3 w-10 rounded-full bg-slate-200/80 animate-pulse" />
+      </td>
       {/* Vendor */}
-      <td className="px-4 py-3"><div className="h-3 w-28 rounded-full bg-slate-200/80 animate-pulse" /></td>
+      <td className="px-4 py-3">
+        <div className="h-3 w-28 rounded-full bg-slate-200/80 animate-pulse" />
+      </td>
       {/* Contract yes/no */}
-      <td className="px-4 py-3"><div className="h-3 w-8 rounded-full bg-slate-200/80 animate-pulse" /></td>
+      <td className="px-4 py-3">
+        <div className="h-3 w-8 rounded-full bg-slate-200/80 animate-pulse" />
+      </td>
       {/* Approval policy badge — pill outline with inner text line */}
       <td className="px-4 py-3">
         <div className="inline-flex items-center rounded px-2 py-0.5 border border-slate-100">
@@ -80,7 +92,9 @@ function FeedbackToast({
           type="button"
           onClick={onClose}
           className={`shrink-0 rounded-md px-2 py-1 text-xs font-medium transition ${
-            isSuccess ? "text-green-800 hover:bg-green-100" : "text-red-800 hover:bg-red-100"
+            isSuccess
+              ? "text-green-800 hover:bg-green-100"
+              : "text-red-800 hover:bg-red-100"
           }`}
         >
           Close
@@ -97,21 +111,32 @@ export default function CompanyBenefits() {
   const { data, loading, error, previousData } = useGetAdminBenefitsQuery({
     skip: !hasAdminAccess,
   });
-  const skeletonCount = data?.adminBenefits?.length ?? previousData?.adminBenefits?.length ?? 5;
+  const skeletonCount =
+    data?.adminBenefits?.length ?? previousData?.adminBenefits?.length ?? 5;
   const [updateBenefit, { loading: updating }] = useUpdateBenefitMutation({
     refetchQueries: [{ query: GetAdminBenefitsDocument }],
-    onCompleted: () => setFeedback({ type: "success", message: "Benefit status updated." }),
-    onError: () => setFeedback({ type: "error", message: "Failed to update benefit status." }),
+    onCompleted: () =>
+      setFeedback({ type: "success", message: "Benefit status updated." }),
+    onError: () =>
+      setFeedback({
+        type: "error",
+        message: "Failed to update benefit status.",
+      }),
   });
 
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const handleToggleActive = async (id: string, nextActive: boolean) => {
     setUpdatingId(id);
     setFeedback(null);
     try {
-      await updateBenefit({ variables: { id, input: { isActive: nextActive } } });
+      await updateBenefit({
+        variables: { id, input: { isActive: nextActive } },
+      });
       setTimeout(() => setFeedback(null), 3000);
     } finally {
       setUpdatingId(null);
@@ -119,7 +144,9 @@ export default function CompanyBenefits() {
   };
 
   const allBenefits = data?.adminBenefits ?? [];
-  const benefits = allBenefits.filter((benefit) => benefit.flowType !== BenefitFlowType.ScreenTime);
+  const benefits = allBenefits.filter(
+    (benefit) => benefit.flowType !== BenefitFlowType.ScreenTime,
+  );
   const screenTimePrograms = allBenefits.filter(
     (benefit) => benefit.flowType === BenefitFlowType.ScreenTime,
   );
@@ -144,13 +171,27 @@ export default function CompanyBenefits() {
               <table className="min-w-full text-left">
                 <thead className="border-b border-gray-100">
                   <tr>
-                    <th className="px-4 py-3"><div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" /></th>
-                    <th className="px-4 py-3"><div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" /></th>
-                    <th className="px-4 py-3"><div className="h-2.5 w-16 rounded-full bg-slate-200/80 animate-pulse" /></th>
-                    <th className="px-4 py-3"><div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" /></th>
-                    <th className="px-4 py-3"><div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" /></th>
-                    <th className="px-4 py-3"><div className="h-2.5 w-14 rounded-full bg-slate-200/80 animate-pulse" /></th>
-                    <th className="px-4 py-3"><div className="h-2.5 w-14 rounded-full bg-slate-200/80 animate-pulse" /></th>
+                    <th className="px-4 py-3">
+                      <div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" />
+                    </th>
+                    <th className="px-4 py-3">
+                      <div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" />
+                    </th>
+                    <th className="px-4 py-3">
+                      <div className="h-2.5 w-16 rounded-full bg-slate-200/80 animate-pulse" />
+                    </th>
+                    <th className="px-4 py-3">
+                      <div className="h-2.5 w-12 rounded-full bg-slate-200/80 animate-pulse" />
+                    </th>
+                    <th className="px-4 py-3">
+                      <div className="h-2.5 w-10 rounded-full bg-slate-200/80 animate-pulse" />
+                    </th>
+                    <th className="px-4 py-3">
+                      <div className="h-2.5 w-14 rounded-full bg-slate-200/80 animate-pulse" />
+                    </th>
+                    <th className="px-4 py-3">
+                      <div className="h-2.5 w-14 rounded-full bg-slate-200/80 animate-pulse" />
+                    </th>
                     <th className="px-4 py-3 w-24" />
                   </tr>
                 </thead>
@@ -182,7 +223,9 @@ export default function CompanyBenefits() {
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Company Benefits</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Company Benefits
+            </h1>
             <p className="mt-1 text-sm text-gray-400">
               Add and view benefits offered by the company.
             </p>
@@ -202,9 +245,12 @@ export default function CompanyBenefits() {
 
         {screenTimePrograms.length > 0 && (
           <div className="rounded-xl border border-fuchsia-100 bg-fuchsia-50 px-4 py-3 text-sm text-fuchsia-800">
-            Screen time programs are managed separately from the benefits catalog.
-            {" "}
-            <Link href="/admin-panel/screen-time" className="font-medium underline underline-offset-2">
+            Screen time programs are managed separately from the benefits
+            catalog.{" "}
+            <Link
+              href="/admin-panel/screen-time"
+              className="font-medium underline underline-offset-2"
+            >
               Open Screen Time
             </Link>
           </div>
@@ -242,7 +288,9 @@ export default function CompanyBenefits() {
                         b.isActive ? "" : "opacity-70"
                       }`}
                     >
-                      <td className="px-4 py-3 font-medium text-gray-900">{b.name}</td>
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        {b.name}
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <span
                           className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
@@ -254,21 +302,30 @@ export default function CompanyBenefits() {
                           {b.isActive ? "Active" : "Inactive"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 capitalize">{b.category}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{b.subsidyPercent}%</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{b.vendorName ?? "—"}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 capitalize">
+                        {b.category}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {b.subsidyPercent}%
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {b.vendorName ?? "—"}
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {b.requiresContract ? "Yes" : "No"}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <span className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
-                          b.approvalPolicy === "dual"
-                            ? "bg-purple-50 text-purple-700"
-                            : b.approvalPolicy === "finance"
-                              ? "bg-blue-50 text-blue-700"
-                              : "bg-gray-100 text-gray-600"
-                        }`}>
-                          {APPROVAL_POLICY_LABELS[b.approvalPolicy ?? "hr"] ?? b.approvalPolicy}
+                        <span
+                          className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
+                            b.approvalPolicy === "dual"
+                              ? "bg-purple-50 text-purple-700"
+                              : b.approvalPolicy === "finance"
+                                ? "bg-blue-50 text-blue-700"
+                                : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {APPROVAL_POLICY_LABELS[b.approvalPolicy ?? "hr"] ??
+                            b.approvalPolicy}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -280,21 +337,6 @@ export default function CompanyBenefits() {
                             <ArrowRight className="h-3.5 w-3.5" />
                             View
                           </Link>
-                          {canCreate && (
-                            <button
-                              type="button"
-                              onClick={() => handleToggleActive(b.id, !b.isActive)}
-                              disabled={updating || updatingId !== null}
-                              className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-xs font-medium transition disabled:opacity-50 ${
-                                b.isActive
-                                  ? "border-gray-200 text-gray-600 hover:bg-gray-50"
-                                  : "border-green-200 text-green-700 hover:bg-green-50"
-                              }`}
-                              title={b.isActive ? "Deactivate benefit" : "Activate benefit"}
-                            >
-                              {b.isActive ? "Deactivate" : "Activate"}
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
