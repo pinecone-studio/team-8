@@ -57,7 +57,10 @@ function HistoricalVersionsSkeleton({ rows = 3 }: { rows?: number }) {
       <div className="border-b border-slate-200 bg-slate-50">
         <div className="grid grid-cols-[2fr_1.5fr_80px_140px_140px_60px] items-center gap-4 px-5 py-3">
           {["w-14", "w-12", "w-14", "w-16", "w-12"].map((w, i) => (
-            <div key={i} className={`h-2.5 ${w} rounded-full bg-slate-200/80 animate-pulse`} />
+            <div
+              key={i}
+              className={`h-2.5 ${w} rounded-full bg-slate-200/80 animate-pulse`}
+            />
           ))}
           <div className="h-2.5 w-8 rounded-full bg-slate-200/80 animate-pulse justify-self-end" />
         </div>
@@ -109,15 +112,19 @@ function ContractCardSkeleton() {
           Each cell = LABEL row (tiny uppercase) + VALUE row (larger) */}
       <div className="mt-4 grid grid-cols-3 divide-x divide-slate-100 rounded-xl border border-gray-100 bg-gray-50/60">
         {[
-          { label: "w-12", value: "w-8"  },   /* Version */
-          { label: "w-16", value: "w-20" },   /* Effective */
-          { label: "w-12", value: "w-20" },   /* Expires */
+          { label: "w-12", value: "w-8" } /* Version */,
+          { label: "w-16", value: "w-20" } /* Effective */,
+          { label: "w-12", value: "w-20" } /* Expires */,
         ].map((col, i) => (
           <div key={i} className="px-4 py-3 space-y-2">
             {/* Column label e.g. "VERSION" — tiny bar */}
-            <div className={`h-2 ${col.label} rounded-full bg-slate-200/80 animate-pulse`} />
+            <div
+              className={`h-2 ${col.label} rounded-full bg-slate-200/80 animate-pulse`}
+            />
             {/* Column value e.g. "v1.2" or "Jan 1, 2025" — larger bar */}
-            <div className={`h-3.5 ${col.value} rounded-full bg-slate-200/80 animate-pulse`} />
+            <div
+              className={`h-3.5 ${col.value} rounded-full bg-slate-200/80 animate-pulse`}
+            />
           </div>
         ))}
       </div>
@@ -151,7 +158,10 @@ function ContractPreviewModal({
       aria-modal="true"
       onClick={onClose}
     >
-      <div className="flex w-full max-w-3xl flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="flex w-full max-w-3xl flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden max-h-[92vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-4">
           <div>
@@ -209,9 +219,12 @@ function ContractPreviewModal({
               <FileText className="h-8 w-8 text-gray-400" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-700">Contract preview unavailable</p>
+              <p className="text-sm font-medium text-gray-700">
+                Contract preview unavailable
+              </p>
               <p className="mt-1 text-xs text-gray-500 max-w-xs">
-                The document preview link has not been generated yet. Please contact HR for a copy.
+                The document preview link has not been generated yet. Please
+                contact HR for a copy.
               </p>
             </div>
           </div>
@@ -241,7 +254,9 @@ function ActiveContractCard({
             <p className="text-[15px] font-semibold text-gray-900 leading-snug truncate">
               {contract.benefitName ?? contract.benefitId}
             </p>
-            <p className="mt-0.5 text-xs text-gray-400">{contract.vendorName}</p>
+            <p className="mt-0.5 text-xs text-gray-400">
+              {contract.vendorName}
+            </p>
           </div>
         </div>
         <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
@@ -251,17 +266,29 @@ function ActiveContractCard({
 
       <div className="mt-4 grid grid-cols-3 divide-x divide-gray-100 rounded-xl border border-gray-100 bg-gray-50/60">
         <div className="px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Version</p>
-          <p className="mt-1 text-sm font-semibold text-gray-800">v{contract.version}</p>
-        </div>
-        <div className="px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Effective</p>
-          <p className="mt-1 text-sm font-semibold text-gray-800">{formatDate(contract.effectiveDate)}</p>
-        </div>
-        <div className="px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Expires</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+            Version
+          </p>
           <p className="mt-1 text-sm font-semibold text-gray-800">
-            {contract.expiryDate ? formatDate(contract.expiryDate) : "No expiry"}
+            v{contract.version}
+          </p>
+        </div>
+        <div className="px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+            Effective
+          </p>
+          <p className="mt-1 text-sm font-semibold text-gray-800">
+            {formatDate(contract.effectiveDate)}
+          </p>
+        </div>
+        <div className="px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+            Expires
+          </p>
+          <p className="mt-1 text-sm font-semibold text-gray-800">
+            {contract.expiryDate
+              ? formatDate(contract.expiryDate)
+              : "No expiry"}
           </p>
         </div>
       </div>
@@ -286,22 +313,33 @@ type PageProps = { params?: Promise<Record<string, string | string[]>> };
 
 export default function ContractsPage({ params }: PageProps) {
   if (params) use(params);
-  const { data, loading, error, previousData } = useQuery<{ contracts: ContractRow[] }>(GET_CONTRACTS);
-  const [previewContract, setPreviewContract] = useState<ContractRow | null>(null);
+  const { data, loading, error, previousData } = useQuery<{
+    contracts: ContractRow[];
+  }>(GET_CONTRACTS);
+  const [previewContract, setPreviewContract] = useState<ContractRow | null>(
+    null,
+  );
 
   const contracts = data?.contracts ?? [];
   const active = contracts.filter((c) => c.isActive);
   const historical = contracts.filter((c) => !c.isActive);
 
   const prevContracts = previousData?.contracts ?? [];
-  const activeSkeletonCount = active.length || prevContracts.filter((c) => c.isActive).length || 4;
-  const historicalSkeletonRows = historical.length || prevContracts.filter((c) => !c.isActive).length || 3;
+  const activeSkeletonCount =
+    active.length || prevContracts.filter((c) => c.isActive).length || 4;
+  const historicalSkeletonRows =
+    historical.length || prevContracts.filter((c) => !c.isActive).length || 3;
 
   // Only declare these states true once data has actually been received
   const dataReceived = data !== undefined;
   const hasCurrentContracts = active.length > 0;
   const hasHistoricalVersions = historical.length > 0;
-  const showEmptyState = !loading && !error && dataReceived && !hasCurrentContracts && !hasHistoricalVersions;
+  const showEmptyState =
+    !loading &&
+    !error &&
+    dataReceived &&
+    !hasCurrentContracts &&
+    !hasHistoricalVersions;
 
   return (
     <>
@@ -312,29 +350,18 @@ export default function ContractsPage({ params }: PageProps) {
         />
       )}
 
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-gray-50">
         <Sidebar />
 
         <div className="flex flex-1 flex-col items-center">
           <main className="w-full max-w-5xl p-8">
-            <h1 className="text-xl font-semibold text-gray-900">Vendor Contracts</h1>
+            <h1 className="text-xl font-semibold text-gray-900">
+              Vendor Contracts
+            </h1>
             <p className="mt-1 text-sm text-gray-500">
-              Active contracts for benefits you are enrolled in or have a pending request for.
+              Active contracts for benefits you are enrolled in or have a
+              pending request for.
             </p>
-
-            {loading ? (
-              <div>
-                <div className="h-6 w-44 rounded-full bg-white/30 animate-pulse" />
-                <div className="mt-2 h-3.5 w-72 rounded-full bg-white/20 animate-pulse" />
-              </div>
-            ) : (
-              <>
-                <h1 className="text-xl font-semibold text-white">Vendor Contracts</h1>
-                <p className="mt-1 text-sm text-gray-500">
-                  Active contracts for benefits you are enrolled in or have a pending request for.
-                </p>
-              </>
-            )}
 
             {loading ? (
               <>
@@ -363,10 +390,13 @@ export default function ContractsPage({ params }: PageProps) {
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
                   <FileText className="h-6 w-6 text-gray-400" />
                 </div>
-                <p className="text-sm font-medium text-gray-600">No contracts available</p>
+                <p className="text-sm font-medium text-gray-600">
+                  No contracts available
+                </p>
                 <p className="mt-1 text-xs text-gray-400">
-                  You have no active enrollments or pending requests with vendor contracts attached.
-                  Once HR uploads a contract for a benefit you are enrolled in or requesting, it will appear here.
+                  You have no active enrollments or pending requests with vendor
+                  contracts attached. Once HR uploads a contract for a benefit
+                  you are enrolled in or requesting, it will appear here.
                 </p>
               </div>
             ) : (
@@ -399,28 +429,47 @@ export default function ContractsPage({ params }: PageProps) {
                       <table className="min-w-full text-left">
                         <thead className="border-b border-slate-200 bg-slate-50">
                           <tr>
-                            <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Benefit</th>
-                            <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Vendor</th>
-                            <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Version</th>
-                            <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Effective</th>
-                            <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Expired</th>
+                            <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Benefit
+                            </th>
+                            <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Vendor
+                            </th>
+                            <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Version
+                            </th>
+                            <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Effective
+                            </th>
+                            <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Expired
+                            </th>
                             <th className="px-5 py-3" />
                           </tr>
                         </thead>
                         <tbody>
                           {historical.map((row) => (
-                            <tr key={row.id} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50">
+                            <tr
+                              key={row.id}
+                              className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50"
+                            >
                               <td className="px-5 py-4 text-sm font-medium text-slate-700">
                                 {row.benefitName ?? row.benefitId}
                               </td>
-                              <td className="px-5 py-4 text-sm text-slate-500">{row.vendorName}</td>
+                              <td className="px-5 py-4 text-sm text-slate-500">
+                                {row.vendorName}
+                              </td>
                               <td className="px-5 py-4">
                                 <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
                                   v{row.version}
                                 </span>
                               </td>
-                              <td className="px-5 py-4 text-sm text-slate-500">{formatDate(row.effectiveDate)}</td>
-                              <td className="px-5 py-4 text-sm text-slate-500">{formatDate(row.expiryDate)}</td>
+                              <td className="px-5 py-4 text-sm text-slate-500">
+                                {formatDate(row.effectiveDate)}
+                              </td>
+                              <td className="px-5 py-4 text-sm text-slate-500">
+                                {formatDate(row.expiryDate)}
+                              </td>
                               <td className="px-5 py-4 text-right">
                                 <button
                                   type="button"

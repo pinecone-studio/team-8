@@ -95,16 +95,7 @@ export default function SignInPage() {
           position: absolute;
           left: 0; right: 0;
           height: 1px;
-          background: linear-gradient(
-            90deg,
-            transparent 0%,
-            rgba(9,18,148,0.0) 5%,
-            #395acf 30%,
-            #091294 50%,
-            #395acf 70%,
-            rgba(9,18,148,0.0) 95%,
-            transparent 100%
-          );
+          background: #395acf;
           animation: sweepH 5s linear infinite;
           pointer-events: none;
           filter: drop-shadow(0 0 4px rgba(9,18,148,0.6));
@@ -148,14 +139,14 @@ export default function SignInPage() {
           color:#7097e0 !important; font-size:11px !important;
         }
         .cl-formButtonPrimary {
-          background: linear-gradient(135deg,#395acf 0%,#091294 100%) !important;
+          background: #395acf !important;
           font-family:'DM Mono',monospace !important; font-weight:500 !important;
           letter-spacing:0.07em !important; border-radius:10px !important;
           box-shadow:0 6px 24px rgba(9,18,148,0.28) !important; border:none !important;
           transition: all 0.2s !important;
         }
         .cl-formButtonPrimary:hover {
-          background: linear-gradient(135deg,#7097e0 0%,#395acf 100%) !important;
+          background: #7097e0 !important;
           transform:translateY(-1px) !important;
         }
         .cl-formFieldInput {
@@ -191,16 +182,7 @@ export default function SignInPage() {
       `}</style>
 
       {/* ── BIG grid — 120px cells, thin 1px lines ── */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `
-          linear-gradient(rgba(57,90,207,0.08) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(57,90,207,0.08) 1px, transparent 1px)
-        `,
-          backgroundSize: "120px 120px",
-        }}
-      />
+      <div className="absolute inset-0 pointer-events-none" />
 
       {/* ── content ── */}
       <div className="relative z-10 flex flex-col items-center gap-6">
@@ -216,7 +198,7 @@ export default function SignInPage() {
               style={{
                 width: 28,
                 height: 1,
-                background: "linear-gradient(90deg, transparent, #7097e0)",
+                background: "#7097e0",
               }}
             />
             <span
@@ -234,7 +216,7 @@ export default function SignInPage() {
               style={{
                 width: 28,
                 height: 1,
-                background: "linear-gradient(90deg, #7097e0, transparent)",
+                background: "#7097e0",
               }}
             />
           </div>

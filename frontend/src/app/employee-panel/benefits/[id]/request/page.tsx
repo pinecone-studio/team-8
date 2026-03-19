@@ -161,7 +161,7 @@ export default function BenefitRequestPage() {
   // ── Guards ────────────────────────────────────────────────────────────────
   if (employeeLoading || loading) {
     return (
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-gray-50">
         <Sidebar />
         <div className="flex flex-1 flex-col items-center">
           <main className="flex w-full max-w-7xl items-center justify-center p-8">
@@ -174,7 +174,7 @@ export default function BenefitRequestPage() {
 
   if (error || !benefitEligibility || !benefit) {
     return (
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-gray-50">
         <Sidebar />
         <div className="flex flex-1 flex-col items-center">
           <main className="w-full max-w-7xl p-8">
@@ -192,7 +192,7 @@ export default function BenefitRequestPage() {
 
   if (benefitEligibility.status !== BenefitEligibilityStatus.Eligible) {
     return (
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-gray-50">
         <Sidebar />
         <div className="flex flex-1 flex-col items-center">
           <main className="w-full max-w-7xl p-8">
@@ -210,7 +210,7 @@ export default function BenefitRequestPage() {
 
   if (isSelfService) {
     return (
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-gray-50">
         <Sidebar />
         <div className="flex flex-1 flex-col items-center">
           <main className="w-full max-w-7xl p-8">
@@ -232,7 +232,7 @@ export default function BenefitRequestPage() {
   const employeePays = unitPrice ? unitPrice - (companyPays ?? 0) : null;
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
       <div className="flex flex-1 flex-col items-center">
         <main className="w-full max-w-7xl p-8">

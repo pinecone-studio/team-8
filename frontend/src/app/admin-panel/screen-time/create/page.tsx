@@ -174,7 +174,7 @@ export default function CreateScreenTimeProgramPage() {
             Back to screen time
           </Link>
 
-          <div className="mt-4 rounded-3xl border border-fuchsia-100 bg-gradient-to-br from-fuchsia-50 via-white to-sky-50 p-8">
+          <div className="mt-4 rounded-3xl border border-fuchsia-100 bg-white p-8">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-fuchsia-600 text-white">
                 <Smartphone className="h-6 w-6" />
