@@ -228,7 +228,7 @@ export default function SignInPage() {
             path="/sign-in"
             routing="path"
             withSignUp={false}
-            fallbackRedirectUrl="/employee-panel"
+            fallbackRedirectUrl="/"
           />
         </div>
 
