@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
+  BenefitFlowType,
   useGetAdminBenefitsQuery,
   useUpdateBenefitMutation,
   GetAdminBenefitsDocument,
@@ -144,7 +145,7 @@ export default function CompanyBenefits() {
 
   const allBenefits = data?.adminBenefits ?? [];
   const benefits = allBenefits.filter(
-    (benefit) => benefit.flowType !== "SCREEN_TIME",
+    (benefit) => benefit.flowType !== BenefitFlowType.ScreenTime,
   );
   const isLoading = employeeLoading || loading;
 
