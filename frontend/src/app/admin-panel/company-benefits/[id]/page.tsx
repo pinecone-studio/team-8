@@ -1285,13 +1285,18 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
   }, [uploading]);
 
   const handleUpload = useCallback(async () => {
-    if (
-      !form.version ||
-      !form.effectiveDate ||
-      !form.expiryDate ||
-      !file?.size
-    ) {
-      setUploadError("Please fill all required fields and select a PDF file.");
+    const missing: string[] = [];
+    if (!form.version) missing.push("Version");
+    if (!form.effectiveDate) missing.push("Effective date");
+    if (!form.expiryDate) missing.push("Expiry date");
+    if (!file) missing.push("PDF file");
+
+    if (missing.length > 0) {
+      setUploadError(`Please provide: ${missing.join(", ")}.`);
+      return;
+    }
+    if (!file) {
+      setUploadError("Please provide: PDF file.");
       return;
     }
     setUploadError(null);
@@ -1569,7 +1574,10 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
                   type="text"
                   value={form.version}
                   onChange={(e) =>
-                    setForm((f) => ({ ...f, version: e.target.value }))
+                    {
+                      setUploadError(null);
+                      setForm((f) => ({ ...f, version: e.target.value }));
+                    }
                   }
                   placeholder="e.g. 1.0"
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
@@ -1583,7 +1591,10 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
                   type="date"
                   value={form.effectiveDate}
                   onChange={(e) =>
-                    setForm((f) => ({ ...f, effectiveDate: e.target.value }))
+                    {
+                      setUploadError(null);
+                      setForm((f) => ({ ...f, effectiveDate: e.target.value }));
+                    }
                   }
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                 />
@@ -1596,7 +1607,10 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
                   type="date"
                   value={form.expiryDate}
                   onChange={(e) =>
-                    setForm((f) => ({ ...f, expiryDate: e.target.value }))
+                    {
+                      setUploadError(null);
+                      setForm((f) => ({ ...f, expiryDate: e.target.value }));
+                    }
                   }
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                 />
@@ -1609,7 +1623,10 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
                   type="text"
                   value={form.vendorName}
                   onChange={(e) =>
-                    setForm((f) => ({ ...f, vendorName: e.target.value }))
+                    {
+                      setUploadError(null);
+                      setForm((f) => ({ ...f, vendorName: e.target.value }));
+                    }
                   }
                   placeholder="Vendor"
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
@@ -1622,7 +1639,10 @@ function VendorContractSection({ benefitId }: { benefitId: string }) {
                 <input
                   type="file"
                   accept=".pdf,application/pdf"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  onChange={(e) => {
+                    setUploadError(null);
+                    setFile(e.target.files?.[0] ?? null);
+                  }}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                 />
               </div>

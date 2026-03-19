@@ -19,6 +19,7 @@ const DECLINABLE_STATUSES = new Set([
   "awaiting_payment_review",
   "hr_approved",
   "finance_approved",
+  "awaiting_employee_signed_contract",
 ]);
 
 // States where HR reviewer is the appropriate party
@@ -29,6 +30,7 @@ const HR_PHASE_STATUSES = new Set([
   "awaiting_payment",
   "awaiting_payment_review",
   "finance_approved", // dual: finance done, HR is next
+  "awaiting_employee_signed_contract",
 ]);
 
 // States where Finance reviewer is the appropriate party

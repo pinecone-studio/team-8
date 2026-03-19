@@ -249,7 +249,9 @@ export async function getCurrentUserFromRequest(
     }
   }
 
-  if (!token || !env.CLERK_SECRET_KEY) {
+  const canVerifyWithClerk =
+    Boolean(env.CLERK_SECRET_KEY?.trim()) || Boolean(env.CLERK_JWT_KEY?.trim());
+  if (!token || !canVerifyWithClerk) {
     return {
       email: null,
       employee: null,
@@ -259,10 +261,14 @@ export async function getCurrentUserFromRequest(
   }
 
   try {
-    const verified = await verifyToken(token, {
-      secretKey: env.CLERK_SECRET_KEY,
-      ...(env.CLERK_JWT_KEY ? { jwtKey: env.CLERK_JWT_KEY } : {}),
-    });
+    const verified = await verifyToken(
+      token,
+      {
+        // `secretKey` is required by some Clerk setups; `jwtKey` can be used in others.
+        ...(env.CLERK_SECRET_KEY ? { secretKey: env.CLERK_SECRET_KEY } : {}),
+        ...(env.CLERK_JWT_KEY ? { jwtKey: env.CLERK_JWT_KEY } : {}),
+      } as any,
+    );
 
     const verifiedClaims = verified as Record<string, unknown>;
     const email = await resolveEmailFromClaims(verifiedClaims, env);
@@ -284,7 +290,8 @@ export async function getCurrentUserFromRequest(
       accessLevel,
       isAdmin: accessLevel === "admin",
     };
-  } catch {
+  } catch (err) {
+    console.error("[auth] Clerk verifyToken failed:", err);
     return {
       email: null,
       employee: null,

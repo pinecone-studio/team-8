@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { schema } from "../../../db";
 import { getBenefitConfig } from "../../../eligibility";
-import { createContractViewToken, getContractViewUrl } from "../../../contracts";
+import { getOrCreateContractViewToken, getContractViewUrl } from "../../../contracts";
 import type { GraphQLContext } from "../../context";
 import { requireAuth, isAdminEmployee } from "../../../auth";
 import { getBenefitsForEmployee } from "../helpers/employeeBenefits";
@@ -16,6 +16,7 @@ const CONTRACT_RELEVANT_STATUSES = new Set([
   "awaiting_finance_review",
   "hr_approved",
   "finance_approved",
+  "awaiting_employee_signed_contract",
   "approved",
 ]);
 
@@ -116,13 +117,13 @@ export const getContracts = async (
         const meta = canViewAllContracts
           ? undefined
           : { employeeId: employee.id, contractId: row.id };
-        const token = await createContractViewToken(
+        const token = await getOrCreateContractViewToken(
           env.CONTRACT_VIEW_TOKENS,
           row.r2ObjectKey,
           undefined,
           meta,
         );
-        viewUrl = getContractViewUrl(baseUrl, token);
+        if (token) viewUrl = getContractViewUrl(baseUrl, token);
       } catch {
         viewUrl = null;
       }

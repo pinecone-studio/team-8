@@ -23,6 +23,7 @@ const IN_FLIGHT_STATUSES = new Set([
   "awaiting_finance_review",
   "hr_approved",
   "finance_approved",
+  "awaiting_employee_signed_contract",
 ]);
 
 function normalizeStatus(status: string | null | undefined) {
@@ -195,8 +196,10 @@ export const getAdminDashboardSummary = async (
     hrQueueCount: requestRows.filter(
       (row) => normalizeStatus(row.status) === "awaiting_hr_review"
     ).length,
-    financeQueueCount: requestRows.filter(
-      (row) => normalizeStatus(row.status) === "awaiting_finance_review"
+    financeQueueCount: requestRows.filter((row) =>
+      ["awaiting_finance_review", "hr_approved"].includes(
+        normalizeStatus(row.status),
+      )
     ).length,
     awaitingContractCount: requestRows.filter(
       (row) => normalizeStatus(row.status) === "awaiting_contract_acceptance"

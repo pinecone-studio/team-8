@@ -292,6 +292,56 @@ export async function sendBenefitRequestApprovedEmail(
   });
 }
 
+/** After HR + Finance approve a down_payment benefit: employee must sign & upload contract. */
+export async function sendDownPaymentReadyForSignedContractEmail(
+  env: Env,
+  employee: Employee,
+  benefit: Benefit,
+): Promise<void> {
+  const name = employeeName(employee);
+  const subject = `PineQuest: sign contract for ${benefit.name}`;
+  const text =
+    `Hi ${name},\n\n` +
+    `HR and Finance have approved your request for ${benefit.name}.\n` +
+    "Open the benefit in PineQuest EBMS, download the HR contract, sign it, and upload your signed copy to finish enrollment.\n\n" +
+    "PineQuest EBMS";
+
+  await sendEmail(env, {
+    to: employee.email,
+    subject,
+    text,
+    html: shell(
+      subject,
+      `${escapeHtml(name)}, HR and Finance have approved your request for <strong>${escapeHtml(benefit.name)}</strong>. Open the benefit in PineQuest EBMS, download the HR contract, sign it, and upload your signed copy to finish enrollment.`,
+    ),
+  });
+}
+
+/** Notify HR / Finance that an employee uploaded a signed contract (down_payment completion). */
+export async function sendSignedContractUploadedToAdminsEmail(
+  env: Env,
+  toEmail: string,
+  employeeName: string,
+  benefitName: string,
+): Promise<void> {
+  const subject = `PineQuest: Signed contract uploaded — ${benefitName}`;
+  const text =
+    `Hi,\n\n` +
+    `${employeeName} uploaded a signed contract for ${benefitName}.\n` +
+    "Sign in to PineQuest EBMS › Admin Panel to review if needed.\n\n" +
+    "PineQuest EBMS";
+
+  await sendEmail(env, {
+    to: toEmail,
+    subject,
+    text,
+    html: shell(
+      "Signed contract uploaded",
+      `<strong>${escapeHtml(employeeName)}</strong> uploaded a signed contract for <strong>${escapeHtml(benefitName)}</strong>. Sign in to PineQuest EBMS › Admin Panel to review if needed.`,
+    ),
+  });
+}
+
 export async function sendBenefitRequestRejectedEmail(
   env: Env,
   employee: Employee,
