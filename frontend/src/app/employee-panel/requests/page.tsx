@@ -80,7 +80,7 @@ function getStatusBadgeConfig(status: string): StatusBadgeConfig {
     case "awaiting_payment_review":
       return { label: "Payment Review", className: "bg-indigo-50 text-indigo-700 border border-indigo-200" };
     case "awaiting_contract_acceptance":
-      return { label: "Contract Pending", className: "bg-amber-50 text-amber-700 border border-amber-200" };
+      return { label: "Contract Pending", className: "bg-gray-50 text-gray-700 border border-gray-200" };
     case "awaiting_hr_review":
       return { label: "HR Review", className: "bg-amber-50 text-amber-700 border border-amber-200" };
     case "awaiting_finance_review":
@@ -88,7 +88,7 @@ function getStatusBadgeConfig(status: string): StatusBadgeConfig {
     case "awaiting_employee_decision":
       return { label: "Offer Review", className: "bg-cyan-50 text-cyan-700 border border-cyan-200" };
     case "awaiting_employee_signed_contract":
-      return { label: "Upload Signed Contract", className: "bg-violet-50 text-violet-700 border border-violet-200" };
+      return { label: "Upload Signed Contract", className: "bg-gray-50 text-gray-700 border border-gray-200" };
     case "awaiting_final_finance_approval":
       return { label: "Final Finance Approval", className: "bg-indigo-50 text-indigo-700 border border-indigo-200" };
     case "pending":
@@ -106,13 +106,33 @@ function getCardAccentClass(status: string): string {
   if (s === "approved" || s === "finance_approved") return "border-l-emerald-400";
   if (s === "rejected" || s === "declined" || s === "cancelled") return "border-l-red-300";
   if (s === "hr_approved") return "border-l-teal-400";
+  if (s === "awaiting_hr_review" || s === "awaiting_finance_review" || s === "pending") {
+    return "border-l-amber-400";
+  }
   if (s === "awaiting_payment") return "border-l-blue-400";
   if (s === "awaiting_payment_review") return "border-l-indigo-400";
   if (s === "awaiting_employee_decision") return "border-l-cyan-400";
   if (s === "awaiting_employee_signed_contract") return "border-l-violet-400";
   if (s === "awaiting_final_finance_approval") return "border-l-indigo-400";
   if (s === "awaiting_contract_acceptance") return "border-l-amber-400";
-  return "border-l-amber-400";
+  return "border-l-gray-300";
+}
+
+function getCardBorderClass(status: string): string {
+  const s = normalizeRequestStatus(status);
+  if (s === "approved" || s === "finance_approved") return "border-emerald-200";
+  if (s === "rejected" || s === "declined" || s === "cancelled") return "border-red-200";
+  if (s === "hr_approved") return "border-teal-200";
+  if (s === "awaiting_hr_review" || s === "awaiting_finance_review" || s === "pending") {
+    return "border-amber-200";
+  }
+  if (s === "awaiting_payment") return "border-blue-200";
+  if (s === "awaiting_payment_review") return "border-indigo-200";
+  if (s === "awaiting_employee_decision") return "border-cyan-200";
+  if (s === "awaiting_employee_signed_contract") return "border-violet-200";
+  if (s === "awaiting_final_finance_approval") return "border-indigo-200";
+  if (s === "awaiting_contract_acceptance") return "border-amber-200";
+  return "border-gray-200";
 }
 
 function canCancelRequest(status: string): boolean {
@@ -391,13 +411,13 @@ function RequestTimeline({
   );
 
   return (
-    <div className="flex items-start">
+    <div className="flex w-full items-start overflow-hidden">
       {steps.map((step, i) => (
         <Fragment key={step.id}>
-          <div className="flex flex-col items-center gap-1 shrink-0">
+          <div className="flex min-w-0 flex-col items-center gap-1">
             <TimelineDot state={step.state} />
             <span
-              className={`text-[10px] font-medium whitespace-nowrap leading-tight text-center ${
+              className={`text-[10px] font-medium leading-tight text-center break-words sm:whitespace-nowrap ${
                 step.state === "active"
                   ? "text-amber-600"
                   : step.state === "done"
@@ -413,7 +433,7 @@ function RequestTimeline({
           {i < steps.length - 1 && (
             <div
               aria-hidden="true"
-              className={`flex-1 h-px mt-2.5 mx-2 rounded-full ${
+              className={`mt-2.5 mx-1 h-px min-w-[8px] flex-1 rounded-full sm:mx-2 ${
                 step.state === "done" ? "bg-emerald-200" : "bg-gray-200"
               }`}
             />
@@ -1113,16 +1133,17 @@ function RequestsContent() {
                     req.status === "rejected" || req.status === "declined";
                   const badge = getStatusBadgeConfig(req.status);
                   const accentClass = getCardAccentClass(req.status);
+                  const borderClass = getCardBorderClass(req.status);
                   const tooltip = getStatusTooltip(req.status);
 
                   return (
                     <div
                       key={req.id}
-                      className={`overflow-hidden rounded-2xl border border-gray-200 border-l-4 ${accentClass} bg-white shadow-sm hover:shadow-md transition-shadow`}
+                      className={`overflow-hidden rounded-2xl border border-l-4 ${borderClass} ${accentClass} bg-white shadow-sm hover:shadow-md transition-shadow`}
                     >
                       {/* Top row: title · status badge · reviewer · date */}
-                      <div className="flex items-start justify-between gap-4 px-5 pt-4 pb-3">
-                        <div className="min-w-0">
+      <div className="flex flex-col gap-3 px-5 pt-4 pb-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <h2 className="text-[15px] font-semibold text-gray-900 leading-snug">
                               {req.benefitLabel}
@@ -1186,11 +1207,11 @@ function RequestsContent() {
 
                       {normalizeRequestStatus(req.status) ===
                         "awaiting_employee_signed_contract" && (
-                        <div className="mx-5 mb-3 rounded-lg border border-violet-100 bg-violet-50 px-4 py-3">
-                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-violet-600">
+                        <div className="mx-5 mb-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-700">
                             Signed Contract Needed
                           </p>
-                          <p className="text-xs text-violet-700">
+                          <p className="text-xs text-gray-700">
                             You accepted the finance offer. Upload your signed contract to continue.
                           </p>
                         </div>
@@ -1299,8 +1320,8 @@ function RequestsContent() {
 
                       {/* Contract action callout */}
                       {isContractPending && (
-                        <div className="mx-5 mb-3 flex items-center justify-between gap-3 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2">
-                          <p className="text-xs text-amber-700">
+                        <div className="mx-5 mb-3 flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                          <p className="min-w-0 text-xs text-gray-700">
                             Action required — please review and accept the vendor contract to
                             continue.
                           </p>
@@ -1314,7 +1335,7 @@ function RequestsContent() {
                                 requiresContract: req.requiresContract,
                               })
                             }
-                            className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-amber-700"
+                            className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 sm:w-auto sm:shrink-0"
                           >
                             <FileCheck className="h-3.5 w-3.5" aria-hidden="true" />
                             Review & Accept
@@ -1323,8 +1344,8 @@ function RequestsContent() {
                       )}
 
                       {req.employeeSignedContractViewUrl && (
-                        <div className="mx-5 mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
-                          <p className="text-xs text-blue-700">
+                        <div className="mx-5 mb-3 flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                          <p className="min-w-0 text-xs text-gray-700">
                             Your signed contract copy is stored with this request.
                           </p>
                           <a
@@ -1334,7 +1355,7 @@ function RequestsContent() {
                             }
                             target="_blank"
                             rel="noreferrer"
-                            className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100"
+                            className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-100 sm:w-auto sm:shrink-0"
                           >
                             <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                             {req.employeeSignedContractFileName
@@ -1345,8 +1366,8 @@ function RequestsContent() {
                       )}
 
                       {/* Timeline + actions — single row */}
-                      <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-4 py-3">
-                        <div className="flex-1 min-w-[160px]">
+                      <div className="flex flex-col gap-3 border-t border-gray-100 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center">
+                        <div className="min-w-0 flex-1">
                           <RequestTimeline
                             status={req.status}
                             policy={req.approvalPolicy}
@@ -1355,7 +1376,7 @@ function RequestsContent() {
                             flowType={req.flowType}
                           />
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2 sm:shrink-0">
                           {isCancellable && (
                             <button
                               type="button"
@@ -1365,7 +1386,7 @@ function RequestsContent() {
                                 cancelRequest({ variables: { requestId: req.id } });
                               }}
                               disabled={cancellingId === req.id}
-                              className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-1.5 text-xs font-medium text-red-600 shadow-sm transition hover:bg-red-50 hover:border-red-300 disabled:opacity-50 whitespace-nowrap"
+                              className="inline-flex w-full items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-1.5 text-xs font-medium text-red-600 shadow-sm transition hover:bg-red-50 hover:border-red-300 disabled:opacity-50 sm:w-auto sm:whitespace-nowrap"
                             >
                               {cancellingId === req.id ? "Cancelling…" : "Cancel Request"}
                             </button>
@@ -1393,7 +1414,7 @@ function RequestsContent() {
                                   payment: req.payment,
                                 });
                               }}
-                              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-1.5 text-xs font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:border-gray-300 whitespace-nowrap"
+                              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-1.5 text-xs font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:border-gray-300 sm:w-auto sm:whitespace-nowrap"
                             >
                               <Eye className="h-3 w-3" aria-hidden="true" />
                               {normalizeRequestStatus(req.status) === "awaiting_payment_review"
@@ -1403,7 +1424,7 @@ function RequestsContent() {
                           ) : (
                             <Link
                               href={`/employee-panel/benefits/${req.benefitId}`}
-                              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-1.5 text-xs font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:border-gray-300 whitespace-nowrap"
+                              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-1.5 text-xs font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:border-gray-300 sm:w-auto sm:whitespace-nowrap"
                             >
                               <Eye className="h-3 w-3" aria-hidden="true" />
                               {[
