@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -117,6 +117,30 @@ type WorkflowStep = {
   label: string;
   desc: string;
   color: string;
+};
+
+type BenefitFormState = {
+  name: string;
+  description: string;
+  category: string;
+  subsidyPercent: number;
+  vendorName: string;
+  amount: string;
+  location: string;
+  effectiveDate: string;
+  expiryDate: string;
+};
+
+const EMPTY_FORM: BenefitFormState = {
+  name: "",
+  description: "",
+  category: "wellness",
+  subsidyPercent: 50,
+  vendorName: "",
+  amount: "",
+  location: "",
+  effectiveDate: "",
+  expiryDate: "",
 };
 
 const WORKFLOWS: Record<BenefitTypeKey, WorkflowStep[]> = {
@@ -487,17 +511,7 @@ export default function CreateBenefitPage() {
 
   const [hasPricing, setHasPricing] = useState(false);
   const [viewOnlySubsidyEnabled, setViewOnlySubsidyEnabled] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    category: "wellness",
-    subsidyPercent: 50,
-    vendorName: "",
-    amount: "" as string,
-    location: "",
-    effectiveDate: "",
-    expiryDate: "",
-  });
+  const [form, setForm] = useState<BenefitFormState>(EMPTY_FORM);
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [contractMeta, setContractMeta] = useState({
     version: "1.0",
@@ -520,6 +534,136 @@ export default function CreateBenefitPage() {
   const workflowPreviewSteps = selectedType
     ? getWorkflowPreviewSteps(selectedType, { hasPricing })
     : [];
+
+  useEffect(() => {
+    if (!selectedType) return;
+    setForm(EMPTY_FORM);
+    setHasPricing(false);
+    setViewOnlySubsidyEnabled(false);
+    setContractFile(null);
+    setContractMeta({ version: "1.0", effectiveDate: "", expiryDate: "" });
+    setScreenTimeWinnerPercent("");
+    setScreenTimeRewardAmountMnt("");
+    setError(null);
+  }, [selectedType]);
+
+  function handleAutofill() {
+    if (!selectedType) return;
+    const today = new Date();
+    const toIsoDate = (date: Date) => date.toISOString().split("T")[0];
+    const nextYear = new Date(today);
+    nextYear.setFullYear(today.getFullYear() + 1);
+    const todayIso = toIsoDate(today);
+    const nextYearIso = toIsoDate(nextYear);
+
+    const presets: Record<
+      BenefitTypeKey,
+      {
+        form: Partial<BenefitFormState>;
+        hasPricing?: boolean;
+        viewOnlySubsidyEnabled?: boolean;
+        screenTime?: { winnerPercent: string; rewardAmountMnt: string };
+        contractMeta?: { version: string; effectiveDate: string; expiryDate: string };
+      }
+    > = {
+      contract: {
+        form: {
+          name: "Gym Membership — Pulse 50%",
+          description:
+            "Company-subsidized gym access at Pulse Fitness. 50% covered by employer.",
+          category: "wellness",
+          subsidyPercent: 50,
+          vendorName: "Pulse Fitness",
+          amount: "120000",
+          effectiveDate: "",
+          expiryDate: "",
+        },
+        contractMeta: { version: "1.0", effectiveDate: todayIso, expiryDate: nextYearIso },
+      },
+      normal: {
+        form: {
+          name: "UX Tools — 60% Subsidy",
+          description:
+            "Monthly tools allowance for designers and researchers. HR approval required.",
+          category: "career",
+          subsidyPercent: 60,
+          vendorName: "Internal",
+          amount: "150000",
+          effectiveDate: todayIso,
+          expiryDate: nextYearIso,
+        },
+        hasPricing: true,
+      },
+      finance: {
+        form: {
+          name: "Down Payment Assistance",
+          description:
+            "Short-term, interest-free employee loan managed by Finance.",
+          category: "financial",
+          subsidyPercent: 0,
+          vendorName: "Finance Team",
+          amount: "",
+          effectiveDate: "",
+          expiryDate: "",
+        },
+      },
+      viewonly: {
+        form: {
+          name: "Remote Work Eligibility",
+          description:
+            "Automatically visible benefit for eligible teams and roles.",
+          category: "flexibility",
+          subsidyPercent: 0,
+          vendorName: "Operations",
+          amount: "",
+          effectiveDate: todayIso,
+          expiryDate: nextYearIso,
+        },
+        viewOnlySubsidyEnabled: false,
+      },
+      screen_time: {
+        form: {
+          name: "Screen Time Challenge",
+          description:
+            "Monthly competition to reward the lowest average screen time.",
+          category: "wellness",
+          subsidyPercent: 0,
+          vendorName: "Bonum",
+          amount: "",
+          effectiveDate: "",
+          expiryDate: "",
+        },
+        screenTime: { winnerPercent: "20", rewardAmountMnt: "100000" },
+      },
+    };
+
+    const preset = presets[selectedType];
+    if (!preset) return;
+
+    setHasPricing(selectedType === "normal" ? preset.hasPricing ?? false : false);
+    setViewOnlySubsidyEnabled(
+      selectedType === "viewonly" ? preset.viewOnlySubsidyEnabled ?? false : false,
+    );
+    setForm((prev) => ({
+      ...prev,
+      name: preset.form.name ?? "",
+      description: preset.form.description ?? "",
+      category: preset.form.category ?? prev.category,
+      subsidyPercent: preset.form.subsidyPercent ?? prev.subsidyPercent,
+      vendorName: preset.form.vendorName ?? "",
+      amount: preset.form.amount ?? "",
+      location: preset.form.location ?? "",
+      effectiveDate: preset.form.effectiveDate ?? "",
+      expiryDate: preset.form.expiryDate ?? "",
+    }));
+    if (preset.contractMeta && selectedType === "contract") {
+      setContractMeta((m) => ({ ...m, ...preset.contractMeta }));
+    }
+    if (preset.screenTime && selectedType === "screen_time") {
+      setScreenTimeWinnerPercent(preset.screenTime.winnerPercent);
+      setScreenTimeRewardAmountMnt(preset.screenTime.rewardAmountMnt);
+    }
+  }
 
   function addRule() {
     const field = RULE_FIELDS[0];
@@ -837,13 +981,28 @@ export default function CreateBenefitPage() {
               <div
                 className={`rounded-2xl border bg-white p-6 transition-opacity ${!selectedType ? "opacity-40 pointer-events-none" : "border-gray-100"}`}
               >
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">
-                    2
-                  </span>
-                  <h2 className="text-base font-semibold text-gray-900">
-                    Basic Information
-                  </h2>
+                <div className="mb-1 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">
+                      2
+                    </span>
+                    <h2 className="text-base font-semibold text-gray-900">
+                      Basic Information
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAutofill}
+                    disabled={!selectedType}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                      selectedType
+                        ? "border-gray-200 text-gray-600 hover:bg-gray-50"
+                        : "cursor-not-allowed border-gray-100 text-gray-300"
+                    }`}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Auto-fill
+                  </button>
                 </div>
                 <p className="mb-5 ml-8 text-sm text-gray-400">
                   Name and configuration for this benefit
