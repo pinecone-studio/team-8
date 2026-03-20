@@ -439,7 +439,7 @@ function NextStepsBox({
         </div>
         <Link
           href="/employee-panel/requests"
-          className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-amber-600 text-sm font-semibold text-white transition hover:bg-amber-700 active:scale-[0.98]"
+          className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-gray-900 text-sm font-semibold text-white transition hover:bg-gray-800 active:scale-[0.98]"
         >
           Review &amp; Accept Contract →
         </Link>
