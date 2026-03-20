@@ -950,10 +950,7 @@ export default function CreateBenefitPage() {
                       </>
                     )}
                   </div>
-                  {selectedType !== "normal" &&
-                    selectedType !== "viewonly" &&
-                    selectedType !== "finance" &&
-                    selectedType !== "contract" && (
+                  {selectedType === "screen_time" && (
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-gray-600">
                         Company Subsidy (%)
@@ -962,7 +959,7 @@ export default function CreateBenefitPage() {
                         <input
                           type="number"
                           min={0}
-                          max={selectedType === "contract" ? 99 : 100}
+                          max={100}
                           value={form.subsidyPercent}
                           onChange={(e) =>
                             setForm((f) => ({
