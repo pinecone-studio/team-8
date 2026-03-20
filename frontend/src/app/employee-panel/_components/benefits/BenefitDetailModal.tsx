@@ -242,7 +242,7 @@ export default function BenefitDetailModal({
               <>
                 {isScreenTime ? (
                   <a
-                    href={`/employee-panel/screen-time/${benefit.benefitId}`}
+                    href={`/employee-panel/screen-time/${benefit.benefit.id}`}
                     className="inline-flex rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-gray-800 hover:shadow-lg active:scale-[0.99]"
                   >
                     Open Tracker
@@ -250,14 +250,14 @@ export default function BenefitDetailModal({
                 ) : onRequestBenefit ? (
                   <button
                     type="button"
-                    onClick={() => onRequestBenefit(benefit.benefitId)}
+                    onClick={() => onRequestBenefit(benefit.benefit.id)}
                     className="rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-gray-800 hover:shadow-lg active:scale-[0.99]"
                   >
                     Request
                   </button>
                 ) : (
                   <a
-                    href={`/employee-panel/benefits/${benefit.benefitId}/request`}
+                    href={`/employee-panel/benefits/${benefit.benefit.id}/request`}
                     className="inline-flex rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-gray-800 hover:shadow-lg active:scale-[0.99]"
                   >
                     Request

@@ -67,7 +67,7 @@ export default function BenefitCard({ benefit, onClick }: Props) {
 
   return (
     <Link
-      href={`/employee-panel/benefits/${benefit.benefitId}`}
+      href={`/employee-panel/benefits/${benefit.benefit.id}`}
       className="block h-full w-full min-w-0 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:border-gray-200 hover:shadow-md"
     >
       {content}

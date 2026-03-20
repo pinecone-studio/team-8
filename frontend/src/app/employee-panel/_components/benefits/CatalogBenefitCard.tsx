@@ -40,7 +40,7 @@ export default function CatalogBenefitCard({ benefit }: Props) {
 
   return (
     <Link
-      href={`/employee-panel/benefits/${benefit.benefitId}`}
+      href={`/employee-panel/benefits/${benefit.benefit.id}`}
       className="block rounded-2xl border border-gray-200 bg-white p-6 transition duration-200 hover:border-gray-300 hover:shadow-md hover:bg-gray-50/50 active:scale-[0.98] active:bg-gray-50 active:shadow-inner"
     >
       <div className="flex items-start gap-4">

@@ -35,7 +35,7 @@ export default function EmployeeScreenTimeHubPage() {
 
   useEffect(() => {
     if (!loading && screenTimePrograms.length === 1) {
-      router.replace(`/employee-panel/screen-time/${screenTimePrograms[0].benefitId}`);
+      router.replace(`/employee-panel/screen-time/${screenTimePrograms[0].benefit.id}`);
     }
   }, [loading, router, screenTimePrograms]);
 
@@ -146,7 +146,7 @@ export default function EmployeeScreenTimeHubPage() {
                             : "You can still open the tracker to review the rules and your current month standing."}
                         </div>
                         <Link
-                          href={`/employee-panel/screen-time/${program.benefitId}`}
+                          href={`/employee-panel/screen-time/${program.benefit.id}`}
                           className="inline-flex items-center gap-1.5 rounded-xl bg-fuchsia-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-fuchsia-700"
                         >
                           Open tracker

@@ -5,6 +5,38 @@ import { requireAuth } from "../../../auth";
 import { recomputeEligibilityForEmployees, eligibilityCacheKey } from "../helpers/recomputeEligibility";
 import { schema } from "../../../db";
 
+type CachedBenefitRecord = {
+  benefitId?: unknown;
+  benefit?: {
+    id?: unknown;
+  } | null;
+};
+
+function isValidCachedBenefitsPayload(
+  cached: unknown,
+  activeBenefitIds: Set<string>,
+): cached is CachedBenefitRecord[] {
+  if (!Array.isArray(cached)) return false;
+
+  return cached.every((item) => {
+    if (!item || typeof item !== "object") return false;
+
+    const benefitId =
+      typeof (item as CachedBenefitRecord).benefitId === "string"
+        ? (item as CachedBenefitRecord).benefitId
+        : null;
+    const nestedBenefitId =
+      typeof (item as CachedBenefitRecord).benefit?.id === "string"
+        ? (item as CachedBenefitRecord).benefit?.id
+        : null;
+
+    if (!benefitId || !nestedBenefitId) return false;
+    if (benefitId !== nestedBenefitId) return false;
+
+    return activeBenefitIds.has(benefitId);
+  });
+}
+
 /**
  * Eligibility snapshots older than this threshold are considered stale.
  * On stale detection we fire a background recompute so this response already
@@ -31,7 +63,19 @@ export const getMyBenefits = async (
   try {
     const cached = await env.ELIGIBILITY_CACHE.get(cacheKey, "json");
     if (cached !== null) {
-      return cached;
+      const activeBenefitRows = await db
+        .select({ id: schema.benefits.id })
+        .from(schema.benefits)
+        .where(eq(schema.benefits.isActive, true));
+      const activeBenefitIds = new Set(activeBenefitRows.map((row) => row.id));
+
+      if (isValidCachedBenefitsPayload(cached, activeBenefitIds)) {
+        return cached;
+      }
+
+      env.ELIGIBILITY_CACHE.delete(cacheKey).catch((err) =>
+        console.error("[getMyBenefits] Failed to delete invalid KV cache entry:", err),
+      );
     }
   } catch (err) {
     // KV read failure must not block the query — fall through to D1 path.

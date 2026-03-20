@@ -11,6 +11,8 @@ export function ApolloWrapper({ children }: { children: React.ReactNode }) {
   const { getToken, isLoaded, userId } = useAuth();
 
   const client = useMemo(() => {
+    const cacheIdentity = userId ?? "anonymous";
+    void cacheIdentity;
     const httpLink = createHttpLink();
     const isLocalGraphql =
       graphqlUri.includes("127.0.0.1") || graphqlUri.includes("localhost");
@@ -49,7 +51,7 @@ export function ApolloWrapper({ children }: { children: React.ReactNode }) {
       link: authLink.concat(httpLink),
       cache: new InMemoryCache(),
     });
-  }, [getToken]);
+  }, [getToken, userId]);
 
   if (!isLoaded) {
     return (
