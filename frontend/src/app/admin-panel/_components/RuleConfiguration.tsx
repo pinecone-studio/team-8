@@ -283,7 +283,7 @@ export default function RuleConfiguration() {
             </>
           ) : (
             <>
-              <h1 className="text-xl font-semibold text-white">
+              <h1 className="text-xl font-semibold text-black">
                 Rule Configuration
               </h1>
               <p className="mt-1 text-sm text-gray-500">
