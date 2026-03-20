@@ -1,4 +1,4 @@
-# Team 8
+# PineCare
 
 Monorepo with a **Next.js 14** frontend and an **Apollo GraphQL** backend running on **Cloudflare Workers** with **D1** (SQLite) and **Drizzle ORM**.
 

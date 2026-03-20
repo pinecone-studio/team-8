@@ -5,8 +5,8 @@ import { CurrentEmployeeProvider } from "@/lib/current-employee-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Team 8",
-  description: "Team 8 Application",
+  title: "PineCare",
+  description: "PineCare Application",
 };
 
 type LayoutProps = {
