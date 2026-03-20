@@ -11,10 +11,8 @@ import {
   CreditCard,
   Eye,
   FileText,
-  ImageIcon,
   Info,
   LayoutGrid,
-  MapPin,
   Monitor,
   Plus,
   RefreshCw,
@@ -508,8 +506,6 @@ export default function CreateBenefitPage() {
     effectiveDate: "",
     expiryDate: "",
   });
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [contractMeta, setContractMeta] = useState({
     version: "1.0",
@@ -661,28 +657,6 @@ export default function CreateBenefitPage() {
       const uploadHeaders = token
         ? { Authorization: `Bearer ${token}` }
         : undefined;
-
-      // Upload image if selected
-      if (benefitId && imageFile) {
-        const imgData = new FormData();
-        imgData.append("benefitId", benefitId);
-        imgData.append("file", imageFile);
-        const imageRes = await fetch(
-          `${apiBaseUrl}/api/benefits/upload-image`,
-          {
-            method: "POST",
-            body: imgData,
-            headers: uploadHeaders,
-          },
-        );
-        const imageJson = await imageRes.json().catch(() => ({}));
-        if (!imageRes.ok) {
-          throw new Error(
-            imageJson?.error ||
-              "Benefit was created, but the image upload failed.",
-          );
-        }
-      }
 
       // Upload contract only for generic contract-based benefits.
       if (
@@ -978,7 +952,8 @@ export default function CreateBenefitPage() {
                   </div>
                   {selectedType !== "normal" &&
                     selectedType !== "viewonly" &&
-                    selectedType !== "finance" && (
+                    selectedType !== "finance" &&
+                    selectedType !== "contract" && (
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-gray-600">
                         Company Subsidy (%)
@@ -1261,60 +1236,27 @@ export default function CreateBenefitPage() {
                         )}
                       </div>
                       <div>
-                        <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600">
-                          <MapPin className="h-3.5 w-3.5" />
-                          Location{" "}
-                          <span className="text-gray-300">(optional)</span>
+                        <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                          Company Subsidy (%)
                         </label>
-                        <input
-                          type="text"
-                          value={form.location}
-                          onChange={(e) =>
-                            setForm((f) => ({ ...f, location: e.target.value }))
-                          }
-                          placeholder="e.g. Ulaanbaatar, Khan-Uul"
-                          className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm placeholder-gray-300 transition focus:border-violet-400 focus:outline-none"
-                        />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600">
-                          <ImageIcon className="h-3.5 w-3.5" />
-                          Benefit Image{" "}
-                          <span className="text-gray-300">(optional)</span>
-                        </label>
-                        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 transition hover:border-violet-300 hover:bg-violet-50">
-                          {imagePreview ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={imagePreview}
-                              alt="Preview"
-                              className="h-24 w-auto rounded-lg object-cover"
-                            />
-                          ) : (
-                            <>
-                              <Upload className="h-6 w-6 text-gray-300" />
-                              <p className="text-xs text-gray-400">
-                                Click to upload an image (JPG, PNG, WEBP)
-                              </p>
-                            </>
-                          )}
+                        <div className="relative">
                           <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const f = e.target.files?.[0] ?? null;
-                              setImageFile(f);
-                              if (f) setImagePreview(URL.createObjectURL(f));
-                              else setImagePreview(null);
-                            }}
+                            type="number"
+                            min={0}
+                            max={99}
+                            value={form.subsidyPercent}
+                            onChange={(e) =>
+                              setForm((f) => ({
+                                ...f,
+                                subsidyPercent: Number(e.target.value) || 0,
+                              }))
+                            }
+                            className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm transition focus:border-violet-400 focus:outline-none"
                           />
-                        </label>
-                        {imageFile && (
-                          <p className="mt-1 text-xs text-gray-500">
-                            {imageFile.name}
-                          </p>
-                        )}
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                            Employee: {100 - form.subsidyPercent}%
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
