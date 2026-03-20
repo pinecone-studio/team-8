@@ -11,7 +11,6 @@ import {
   ChevronDown,
   ShieldCheck,
   ClipboardList,
-  FlaskConical,
   Smartphone,
 } from "lucide-react";
 import { useCurrentEmployee } from "@/lib/current-employee-provider";
@@ -39,10 +38,6 @@ const mainNavItems = [
   },
   { href: "/employee-panel/requests", label: "Requests", icon: ClipboardList },
   { href: "/employee-panel/contracts", label: "Contracts", icon: FileText },
-];
-
-const devNavItems = [
-  { href: "/test", label: "Test (Employee & Benefits)", icon: FlaskConical },
 ];
 
 export default function Sidebar() {
@@ -140,31 +135,6 @@ export default function Sidebar() {
             })}
           </nav>
 
-          <nav className="mt-6 space-y-0.5 border-t border-gray-100 pt-4">
-            {!collapsed && (
-              <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-gray-400">
-                Dev
-              </p>
-            )}
-            {devNavItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  title={collapsed ? item.label : undefined}
-                  className={`flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm font-medium transition active:scale-[0.98] ${collapsed ? "justify-center" : "gap-3"} ${
-                    isActive(item.href)
-                      ? "bg-gray-100 text-gray-900"
-                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-                  }`}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  {!collapsed && <span>{item.label}</span>}
-                </Link>
-              );
-            })}
-          </nav>
         </div>
 
         <div className="shrink-0 border-t border-gray-100 px-2 py-3">
