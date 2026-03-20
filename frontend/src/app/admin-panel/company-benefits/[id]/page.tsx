@@ -232,6 +232,14 @@ function getPlainLanguageRuleSummary(rule: {
   }
 }
 
+function getDefaultRuleErrorMessage(rule: {
+  ruleType: string;
+  operator: string;
+  value: string;
+}) {
+  return `${getPlainLanguageRuleSummary(rule)}.`;
+}
+
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(diff / 60000);
@@ -843,13 +851,20 @@ function BenefitDetails({
 
 // ── RuleConfigSection ─────────────────────────────────────────────────────────
 
-const defaultRuleForm = {
-  ruleType: "employment_status",
-  operator: "eq",
-  value: "",
-  errorMessage: "",
-  priority: 0,
-};
+function getDefaultRuleForm() {
+  const initialField = RULE_FIELDS[0];
+  return {
+    ruleType: initialField.key,
+    operator: initialField.operators[0].value,
+    value: initialField.defaultValue,
+    errorMessage: getDefaultRuleErrorMessage({
+      ruleType: initialField.key,
+      operator: initialField.operators[0].value,
+      value: initialField.defaultValue,
+    }),
+    priority: 0,
+  };
+}
 
 function RuleConfigSection({ benefitId }: { benefitId: string }) {
   const { employee: me } = useCurrentEmployee();
@@ -886,43 +901,70 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
 
   const [mode, setMode] = useState<RuleMode | null>(null);
   const [editingRule, setEditingRule] = useState<EligibilityRule | null>(null);
-  const [form, setForm] = useState(defaultRuleForm);
+  const [form, setForm] = useState(getDefaultRuleForm);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
   const rules = (rulesData?.eligibilityRules ?? []) as EligibilityRule[];
 
   const isSaving = creating || updating || deleting;
 
+  function updateRuleFormFields(
+    patch: Partial<typeof form>,
+    options?: { preserveErrorMessage?: boolean },
+  ) {
+    setForm((current) => {
+      const next = { ...current, ...patch };
+      if (!options?.preserveErrorMessage) {
+        next.errorMessage = getDefaultRuleErrorMessage({
+          ruleType: next.ruleType,
+          operator: next.operator,
+          value: next.value,
+        });
+      }
+      return next;
+    });
+  }
+
   function openCreateRule() {
     setMode("create");
     setEditingRule(null);
-    setForm(defaultRuleForm);
+    setForm(getDefaultRuleForm());
     setActionError(null);
+    setActionFeedback(null);
   }
 
   function openEditRule(rule: EligibilityRule) {
+    const normalizedRuleType = (
+      RULE_FIELDS.some((field) => field.key === rule.ruleType)
+        ? rule.ruleType
+        : RULE_FIELDS[0].key
+    ) as RuleFieldKey;
     setMode("update");
     setEditingRule(rule);
     setForm({
-      ruleType: rule.ruleType,
+      ruleType: normalizedRuleType,
       operator: rule.operator,
       value: rule.value,
       errorMessage: rule.errorMessage,
       priority: rule.priority,
     });
     setActionError(null);
+    setActionFeedback(null);
   }
 
   function openDeleteRule(rule: EligibilityRule) {
     setMode("delete");
     setEditingRule(rule);
     setActionError(null);
+    setActionFeedback(null);
   }
 
   function closeEditor() {
     setMode(null);
     setEditingRule(null);
     setActionError(null);
+    setForm(getDefaultRuleForm());
   }
 
   async function saveRule() {
@@ -949,6 +991,7 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
             },
           },
         });
+        setActionFeedback("Rule added.");
       } else if (mode === "update") {
         if (!editingRule) {
           throw new Error("Rule not found.");
@@ -966,12 +1009,14 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
             },
           },
         });
+        setActionFeedback("Rule updated.");
       } else {
         if (!editingRule) {
           throw new Error("Rule not found.");
         }
 
         await deleteRule({ variables: { id: editingRule.id } });
+        setActionFeedback("Rule deleted.");
       }
 
       closeEditor();
@@ -1008,6 +1053,12 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
         </div>
       )}
 
+      {actionFeedback && (
+        <div className="mb-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+          {actionFeedback}
+        </div>
+      )}
+
       {mode && (
         <div
           className={`mb-4 rounded-2xl border p-4 ${mode === "delete" ? "border-red-100 bg-red-50" : "border-gray-100 bg-white"}`}
@@ -1037,17 +1088,18 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
                 </label>
                 <select
                   value={form.ruleType}
-                  onChange={(e) => {
-                    const newField =
-                      RULE_FIELDS.find(
-                        (f) => f.key === (e.target.value as RuleFieldKey),
-                      ) ?? RULE_FIELDS[0];
-                    setForm((f) => ({
-                      ...f,
-                      ruleType: e.target.value,
-                      operator: newField.operators[0].value,
-                      value: newField.defaultValue,
-                    }));
+                                  onChange={(e) => {
+                                    const nextRuleType = e.target
+                                      .value as RuleFieldKey;
+                                    const newField =
+                                      RULE_FIELDS.find(
+                                        (f) => f.key === nextRuleType,
+                                      ) ?? RULE_FIELDS[0];
+                                    updateRuleFormFields({
+                                      ruleType: nextRuleType,
+                                      operator: newField.operators[0].value,
+                                      value: newField.defaultValue,
+                                    });
                   }}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                 >
@@ -1064,9 +1116,7 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
                 </label>
                 <select
                   value={form.operator}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, operator: e.target.value }))
-                  }
+                  onChange={(e) => updateRuleFormFields({ operator: e.target.value })}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                 >
                   {fieldCfg.operators.map((op) => (
@@ -1084,9 +1134,7 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
                 fieldCfg.valueType === "boolean" ? (
                   <select
                     value={form.value}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, value: e.target.value }))
-                    }
+                    onChange={(e) => updateRuleFormFields({ value: e.target.value })}
                     className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   >
                     {fieldCfg.options!.map((opt) => (
@@ -1099,9 +1147,7 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
                   <input
                     type={fieldCfg.valueType === "number" ? "number" : "text"}
                     value={form.value}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, value: e.target.value }))
-                    }
+                    onChange={(e) => updateRuleFormFields({ value: e.target.value })}
                     className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   />
                 )}
@@ -1113,7 +1159,10 @@ function RuleConfigSection({ benefitId }: { benefitId: string }) {
                 <input
                   value={form.errorMessage}
                   onChange={(e) =>
-                    setForm((f) => ({ ...f, errorMessage: e.target.value }))
+                    updateRuleFormFields(
+                      { errorMessage: e.target.value },
+                      { preserveErrorMessage: true },
+                    )
                   }
                   placeholder="Shown to employee when rule fails"
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"

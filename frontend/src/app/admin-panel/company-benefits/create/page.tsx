@@ -30,8 +30,8 @@ import Sidebar from "../../_components/SideBar";
 import {
   BenefitFlowType,
   useCreateBenefitMutation,
+  useCreateEligibilityRuleMutation,
   useGetAdminBenefitsQuery,
-  useProposeRuleChangeMutation,
   useUpsertScreenTimeProgramMutation,
   GetAdminBenefitsDocument,
 } from "@/graphql/generated/graphql";
@@ -525,7 +525,7 @@ export default function CreateBenefitPage() {
   const [createBenefit] = useCreateBenefitMutation({
     refetchQueries: [{ query: GetAdminBenefitsDocument }],
   });
-  const [proposeRule] = useProposeRuleChangeMutation();
+  const [createEligibilityRule] = useCreateEligibilityRuleMutation();
   const [upsertScreenTimeProgram] = useUpsertScreenTimeProgramMutation();
 
   const selectedTypeConfig = BENEFIT_TYPES.find((t) => t.key === selectedType);
@@ -585,6 +585,7 @@ export default function CreateBenefitPage() {
     }
     setSaving(true);
     setError(null);
+    let createdBenefitId: string | undefined;
     try {
       const typeConfig = BENEFIT_TYPES.find((t) => t.key === selectedType)!;
       const apiBaseUrl = getApiBaseUrl();
@@ -657,6 +658,7 @@ export default function CreateBenefitPage() {
         },
       });
       const benefitId = result.data?.createBenefit.id;
+      createdBenefitId = benefitId;
       const token = await getToken();
       const uploadHeaders = token
         ? { Authorization: `Bearer ${token}` }
@@ -726,22 +728,16 @@ export default function CreateBenefitPage() {
       }
 
       if (benefitId && rules.length > 0) {
-        for (const rule of rules) {
-          const fieldCfg = RULE_FIELDS.find((f) => f.key === rule.fieldKey)!;
-          await proposeRule({
+        for (const [priority, rule] of rules.entries()) {
+          await createEligibilityRule({
             variables: {
               input: {
                 benefitId,
-                changeType: "create",
-                proposedData: JSON.stringify({
-                  ruleType: rule.fieldKey,
-                  operator: rule.operator,
-                  value: rule.value,
-                  errorMessage: rule.errorMessage,
-                  priority: rules.indexOf(rule),
-                  isActive: true,
-                }),
-                summary: `Add rule: ${fieldCfg.preview(rule.operator, rule.value)}`,
+                ruleType: rule.fieldKey,
+                operator: rule.operator,
+                value: rule.value,
+                errorMessage: rule.errorMessage,
+                priority,
               },
             },
           });
@@ -765,6 +761,9 @@ export default function CreateBenefitPage() {
         message = err.networkError.result.message;
       else if (err?.networkError?.message) message = err.networkError.message;
       else if (err?.message) message = err.message;
+      if (createdBenefitId) {
+        message = `${message} The benefit itself was created, but part of the setup did not finish. Open the benefit detail page to complete the rules.`;
+      }
       setError(message);
       setSaving(false);
     }
@@ -1560,8 +1559,8 @@ export default function CreateBenefitPage() {
                   <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 p-3">
                     <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                     <p className="text-xs text-amber-700">
-                      Rules will be submitted as proposals and require approval
-                      from a second HR admin before taking effect.
+                      These rules will be created as active eligibility rules
+                      when you save the benefit.
                     </p>
                   </div>
                 )}

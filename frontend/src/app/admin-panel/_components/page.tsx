@@ -1,12 +1,8 @@
 "use client";
-
-import { useState } from "react";
 import Link from "next/link";
 import {
   BenefitFlowType,
   useGetAdminBenefitsQuery,
-  useUpdateBenefitMutation,
-  GetAdminBenefitsDocument,
 } from "@/graphql/generated/graphql";
 import { ArrowRight, Plus } from "lucide-react";
 
@@ -43,14 +39,13 @@ function BenefitTableRowSkeleton() {
           <div className="h-3 w-12 rounded-full bg-slate-200/80 animate-pulse" />
         </div>
       </td>
-      {/* Actions: View button + toggle */}
+      {/* Actions: View button */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-1.5">
           <div className="inline-flex items-center gap-1 rounded-lg border border-slate-100 px-2.5 py-1">
             <div className="h-3 w-3 rounded-sm bg-slate-200/80 animate-pulse shrink-0" />
             <div className="h-3 w-6 rounded-full bg-slate-200/80 animate-pulse" />
           </div>
-          <div className="h-7 w-16 rounded-lg bg-slate-200/80 animate-pulse" />
         </div>
       </td>
     </tr>
@@ -65,45 +60,6 @@ const APPROVAL_POLICY_LABELS: Record<string, string> = {
   dual: "Dual",
 };
 
-function FeedbackToast({
-  feedback,
-  onClose,
-}: {
-  feedback: { type: "success" | "error"; message: string } | null;
-  onClose: () => void;
-}) {
-  if (!feedback) return null;
-
-  const isSuccess = feedback.type === "success";
-
-  return (
-    <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 sm:justify-end sm:px-6">
-      <div
-        role="status"
-        aria-live="polite"
-        className={`pointer-events-auto flex w-full max-w-md items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm shadow-lg backdrop-blur ${
-          isSuccess
-            ? "border-green-200 bg-green-50/95 text-green-900"
-            : "border-red-200 bg-red-50/95 text-red-900"
-        }`}
-      >
-        <span className="leading-5">{feedback.message}</span>
-        <button
-          type="button"
-          onClick={onClose}
-          className={`shrink-0 rounded-md px-2 py-1 text-xs font-medium transition ${
-            isSuccess
-              ? "text-green-800 hover:bg-green-100"
-              : "text-red-800 hover:bg-red-100"
-          }`}
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function CompanyBenefits() {
   const { employee, loading: employeeLoading } = useCurrentEmployee();
   const hasAdminAccess = isAdminEmployee(employee);
@@ -113,35 +69,6 @@ export default function CompanyBenefits() {
   });
   const skeletonCount =
     data?.adminBenefits?.length ?? previousData?.adminBenefits?.length ?? 5;
-  const [updateBenefit, { loading: updating }] = useUpdateBenefitMutation({
-    refetchQueries: [{ query: GetAdminBenefitsDocument }],
-    onCompleted: () =>
-      setFeedback({ type: "success", message: "Benefit status updated." }),
-    onError: () =>
-      setFeedback({
-        type: "error",
-        message: "Failed to update benefit status.",
-      }),
-  });
-
-  const [feedback, setFeedback] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-
-  const handleToggleActive = async (id: string, nextActive: boolean) => {
-    setUpdatingId(id);
-    setFeedback(null);
-    try {
-      await updateBenefit({
-        variables: { id, input: { isActive: nextActive } },
-      });
-      setTimeout(() => setFeedback(null), 3000);
-    } finally {
-      setUpdatingId(null);
-    }
-  };
 
   const allBenefits = data?.adminBenefits ?? [];
   const benefits = allBenefits.filter(
@@ -237,9 +164,6 @@ export default function CompanyBenefits() {
             </Link>
           )}
         </div>
-
-        <FeedbackToast feedback={feedback} onClose={() => setFeedback(null)} />
-
         <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
           {error ? (
             <div className="p-8 text-center text-red-600">
@@ -321,27 +245,6 @@ export default function CompanyBenefits() {
                             <ArrowRight className="h-3.5 w-3.5" />
                             View
                           </Link>
-                          {canCreate && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleToggleActive(b.id, !b.isActive)
-                              }
-                              disabled={updating || updatingId !== null}
-                              className={`inline-flex items-center justify-center rounded-lg border px-2.5 py-1 text-xs font-medium transition disabled:opacity-50 ${
-                                b.isActive
-                                  ? "border-gray-200 text-gray-600 hover:bg-gray-50"
-                                  : "border-green-200 text-green-700 hover:bg-green-50"
-                              }`}
-                              title={
-                                b.isActive
-                                  ? "Deactivate benefit"
-                                  : "Activate benefit"
-                              }
-                            >
-                              {b.isActive ? "Deactivate" : "Activate"}
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
