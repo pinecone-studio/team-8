@@ -122,39 +122,27 @@ type WorkflowStep = {
 const WORKFLOWS: Record<BenefitTypeKey, WorkflowStep[]> = {
   contract: [
     {
-      icon: <Send className="h-4 w-4" />,
-      label: "Employee Request",
-      desc: "Employee submits a benefit request",
+      icon: <Eye className="h-4 w-4" />,
+      label: "Review Contract",
+      desc: "The employee reviews the terms and conditions of the benefit contract.",
       color: "bg-slate-100 text-slate-600",
     },
     {
       icon: <FileText className="h-4 w-4" />,
-      label: "Contract Generated",
-      desc: "Contract is automatically created",
-      color: "bg-violet-100 text-violet-600",
-    },
-    {
-      icon: <Eye className="h-4 w-4" />,
-      label: "Employee Signs",
-      desc: "Employee reviews and signs the contract",
+      label: "Sign & Upload",
+      desc: "The employee downloads the contract, signs it, and uploads it back to submit the request.",
       color: "bg-violet-100 text-violet-600",
     },
     {
       icon: <UserCheck className="h-4 w-4" />,
-      label: "HR Review",
-      desc: "HR admin reviews the request",
+      label: "HR Approval",
+      desc: "HR reviews the submitted request and decides to approve or reject it.",
       color: "bg-blue-100 text-blue-600",
-    },
-    {
-      icon: <CheckCircle2 className="h-4 w-4" />,
-      label: "Approved",
-      desc: "Benefit becomes active",
-      color: "bg-emerald-100 text-emerald-600",
     },
     {
       icon: <CreditCard className="h-4 w-4" />,
       label: "Payment",
-      desc: "Processed by vendor",
+      desc: "Based on the approved request, the employee makes the payment and the benefit becomes active.",
       color: "bg-emerald-100 text-emerald-600",
     },
   ],
@@ -181,26 +169,26 @@ const WORKFLOWS: Record<BenefitTypeKey, WorkflowStep[]> = {
   finance: [
     {
       icon: <Wallet className="h-4 w-4" />,
-      label: "Loan Request",
-      desc: "Employee submits the amount and repayment term they need",
+      label: "Amount Request",
+      desc: "The employee submits a request for the required amount.",
       color: "bg-slate-100 text-slate-600",
     },
     {
       icon: <LayoutGrid className="h-4 w-4" />,
-      label: "Finance Offer",
-      desc: "Finance prepares the final amount, term, and request-specific contract",
+      label: "Finance Contract Upload",
+      desc: "Once approved, the finance team prepares and uploads the contract to the system.",
       color: "bg-blue-100 text-blue-600",
     },
     {
       icon: <UserCheck className="h-4 w-4" />,
-      label: "Employee Review",
-      desc: "Employee accepts the offer or declines it",
+      label: "Employee Contract Upload",
+      desc: "The employee downloads the contract, signs it, and uploads it back to proceed with the request.",
       color: "bg-amber-100 text-amber-600",
     },
     {
       icon: <FileText className="h-4 w-4" />,
-      label: "Signed Contract Upload",
-      desc: "Employee signs the finance contract and uploads the signed copy",
+      label: "HR / Finance Approval",
+      desc: "HR and Finance review the request and provide final approval.",
       color: "bg-violet-100 text-violet-600",
     },
     {
@@ -269,6 +257,10 @@ function getWorkflowPreviewSteps(
       { icon: <CreditCard className="h-4 w-4" />, label: "Bonum Payment", desc: "Employee pays the remaining balance through Bonum", color: "bg-amber-100 text-amber-600" },
       { icon: <CheckCircle2 className="h-4 w-4" />, label: "Approved", desc: "Benefit becomes active automatically after payment", color: "bg-emerald-100 text-emerald-600" },
     ];
+  }
+
+  if (type === "finance") {
+    return WORKFLOWS.finance.slice(0, 4);
   }
 
   return WORKFLOWS[type];
